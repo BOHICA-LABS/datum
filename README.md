@@ -20,9 +20,40 @@ interface to all vsdd-factory artifacts, replacing the `factory-artifacts` orpha
 | `poc/test_locking.py` | 6 tests — is the factory lock still needed? |
 | `poc/test_cas_patterns.py` | 5-pattern concurrency comparison (which CAS actually holds) |
 | `poc/test_serverless_lock.py` | 5 tests — cross-machine exclusion with **no server** |
-| `poc/db/`, `poc/mm/`, `poc/sl/` | Dolt data dirs (gitignored) |
+| `poc/clonelock.py` | `flock` write mutex for a single shared clone |
+| `poc/test_mutex.py` | 8 tests — single clone + mutex (cross-process) |
+| `poc/db/`, `poc/mm/`, `poc/sl/`, `poc/mx/` | Dolt data dirs (gitignored) |
 
-**38/38 passing** against the live corpus.
+**46/46 passing** against the live corpus.
+
+## Recommended topology: ONE clone + a local `flock` mutex
+
+No daemon, no single point of failure, and **no unique-token discipline** — because
+serialized writers cannot merge, ordinary `UPDATE x SET n = n + 1` becomes safe again
+(8/8, `poc/test_mutex.py` + `poc/clonelock.py`, agents as separate processes).
+
+| Without the mutex | With it |
+|---|---|
+| 8 writers → 3 ok, **5 fail** `cannot update manifest`; **5 increments lost** | 8/8 ok, counter exactly 8 |
+
+Why it beats the alternatives:
+
+- **Removes the token tax.** `n = n + 1` totals exactly N. The same shape
+  (`fence = fence + 1`) fails 30/30 on a shared server — see the trap below.
+- **Crash-safe for free.** `SIGKILL` the holder and the kernel releases the lock; a
+  `holder`/`expires_at` row lease would stay held for its full 45-minute TTL and needs
+  stale-lock detection plus a break-glass path.
+- **Loud, not silent.** Every un-mutexed loss is a non-zero exit, so a partial rollout
+  degrades into visible errors rather than corruption.
+
+**One operational rule:** cost is per *invocation* (~140–270 ms), not per write. A
+1,959-BC import is **531 s** one-statement-at-a-time versus **13.4 s** batching 300
+statements per lock hold — so `fa` must take the mutex once per unit of work and do all
+that unit's writes in one Dolt session.
+
+Limits: one host / one filesystem (several clones need push-as-CAS below), and adding a
+local `sql-server` for speed is ~2.4× faster per write but **reinstates the merge
+hazard**, so batching is the better trade.
 
 ## Do you need to run a central server? No.
 
@@ -76,8 +107,9 @@ beads calls this the "zombie-merge bug"; Dolt issue
 - **3 dangling references** and **1 identity violation** exist right now. A `FOREIGN KEY`
   and a `PRIMARY KEY` make both classes unrepresentable.
 - The factory lock is a YAML block inside `STATE.md` guarded by `push --force-with-lease`,
-  with a **TOCTOU race the skill documents itself** (CWE-367). The CAS replacement survives
-  16 concurrent acquirers with exactly one winner.
+  with a **TOCTOU race the skill documents itself** (CWE-367). It is replaceable — but see
+  the concurrency trap above: the *obvious* CAS replacement is unsafe, and the
+  single-clone mutex is the cleanest fix.
 - Dolt data rides in the project's **existing git remote** under `refs/dolt/data` — the
   orphan branch is replaceable with no new hosting.
 - Modelling the **full spec graph** (story → BC → VP → NFR/DI, epics, subsystems, the
@@ -88,19 +120,32 @@ beads calls this the "zombie-merge bug"; Dolt issue
   have no verifying VP**; subsystem SS-10 has 58 BCs and zero.
 - **Cell-level merge works across machines** — A edits `title`, B edits `capability`, same
   row, zero conflicts. A markdown store cannot do that.
-- Hard cost: **one shared server is mandatory.** Embedded Dolt is single-writer, and the CAS
-  lock is provably *incorrect* across independent clones — both machines acquired it and each
-  believed it won. That means a daemon and a single point of failure, not a footnote.
+- Ad-hoc per-clone locking is provably broken: two machines each acquired the same lock and
+  each believed it won. You need *an* arbiter — but that can be a local mutex (one clone) or
+  the remote (many clones), **not necessarily a daemon**.
 
 ## Quick start
 
 ```bash
 brew install dolt                                                  # 2.2.3 verified
+
+# The POC's own suites use a server on 3308 purely for convenience.
 (cd poc/db && dolt sql-server --host 127.0.0.1 --port 3308 &)       # no --user in 2.2.x
 .venv/bin/python poc/fa.py init
 .venv/bin/python poc/fa.py import ~/Dev/vsdd-factory/.factory
-.venv/bin/python -u poc/test_spike.py                              # 13/13
+.venv/bin/python poc/graph_import.py ~/Dev/vsdd-factory/.factory   # graph + findings
+
+.venv/bin/python -u poc/test_spike.py            # 13/13  store
+.venv/bin/python -u poc/test_graph.py            #  8/8   relationship graph
+.venv/bin/python -u poc/test_multimachine.py     #  6/6   two clones, one remote
+.venv/bin/python -u poc/test_locking.py          #  6/6   is the lock still needed?
+.venv/bin/python -u poc/test_serverless_lock.py  #  5/5   no-server push-as-CAS
+.venv/bin/python -u poc/test_mutex.py            #  8/8   single clone + flock mutex
+.venv/bin/python -u poc/test_cas_patterns.py     #  which CAS patterns are safe
 ```
+
+The mutex, server-less, and multi-machine suites provision their own clones and remotes
+under `poc/mx/`, `poc/sl/`, `poc/mm/` and need no running server.
 
 ## Sources
 

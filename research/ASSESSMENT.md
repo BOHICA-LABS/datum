@@ -2,7 +2,7 @@
 title: Dolt as the sole interface to factory artifacts — feasibility assessment
 date: 2026-07-30
 status: research spike complete, POC verified
-verdict: GO (phased) — no daemon required; see §3c token discipline and §3d server-less option
+verdict: GO (phased) — recommended topology = ONE clone + local flock mutex (§3e); no daemon, no token discipline
 ---
 
 # Dolt as the sole interface to factory artifacts
@@ -12,13 +12,15 @@ as the only interface to all vsdd-factory artifacts?
 
 **Verdict: GO, phased.** The current design is a hand-maintained relational database
 implemented in markdown files, and it is measurably failing at exactly the guarantees a
-database provides for free. **38/38 POC tests pass** against the live corpus across five
-suites (13 store + 8 relationship-graph + 6 multi-machine + 6 locking + 5 server-less),
-plus a 5-pattern concurrency comparison. Three hard constraints apply: markdown must
-become a generated export; **every guarded write must carry a per-attempt unique token**
-or Dolt silently merges concurrent updates (§3c); and cross-machine exclusion needs an
-arbiter — but that can be the **remote** rather than a server (§3d), so no daemon is
-required to adopt this.
+database provides for free. **46/46 POC tests pass** against the live corpus across six
+suites (13 store + 8 relationship-graph + 6 multi-machine + 6 locking + 5 server-less +
+8 single-clone mutex), plus a 5-pattern concurrency comparison.
+
+**Recommended topology: ONE clone + a local `flock` write mutex (§3e).** It needs no
+daemon, no single point of failure, and — because serialized writers cannot merge — none
+of the unique-token discipline that a shared server would require. The single hard
+constraint that remains is that markdown must become a generated export, plus one
+operational rule: batch a unit of work into one Dolt session per lock hold (§3e X8).
 
 Modelling the full spec graph surfaced **38 dangling references and 44 type violations**
 that no existing gate catches, and quantified coverage nobody had measured: **90.2% of
@@ -448,6 +450,75 @@ many agents per host) actually needs sub-second, up-front exclusion.
 This materially reduces the adoption cost: **the daemon and its single point of failure
 are no longer entry requirements.**
 
+## 3e. Single clone + local write mutex — the recommended topology
+
+If the deployment is **one clone**, with N agents as separate processes on that host,
+a local write mutex is enough — and it is the *simplest and safest* of the three
+options tested. 8/8 (`poc/test_mutex.py`, `poc/clonelock.py`).
+
+Mechanism: `fcntl.flock` on a lockfile inside the clone. Cross-process (agents are
+processes, not threads), kernel-released on crash, zero network cost. Bounded wait via
+non-blocking flock + jittered poll, so a wedged holder cannot hang the fleet.
+
+| # | Test | Result |
+|---|---|---|
+| X1 | 8 writers, **no** mutex → failures quantified | 3 ok, **5 failed** `cannot update manifest`; counter 3 of 8 — **5 increments lost** |
+| X2 | 8 writers **with** the mutex | 8/8 ok, zero errors |
+| X3 | **no lost updates**: 8 increments total exactly 8 | PASS |
+| X4 | `SIGKILL` the holder → kernel releases the lock | PASS |
+| X5 | wedged holder does not hang others (1 s bounded wait) | PASS |
+| X6 | cost vs a local `sql-server` on the same clone | 141 ms/write vs 58 ms/write |
+| X8 | batching: 300 statements per mutex hold | 6.8 ms/write, **40× faster** |
+| X7 | the mutex — not Dolt — is what makes non-unique writes safe | PASS |
+
+### Why this is the best option
+
+**X3 removes the token tax.** Under the mutex, `UPDATE ctr SET n = n + 1` totals
+exactly N. That is the *same shape* as `fence = fence + 1`, which §3c proved UNSAFE on
+a server (30/30 trials, all 6 writers "won"). Serialized writers cannot merge, so the
+whole zombie-merge hazard class disappears — and with it the permanent correctness tax
+I flagged as the main objection in §3c. **Ordinary read-modify-write SQL becomes safe.**
+
+**X4 beats a row lease.** The kernel releases `flock` the instant the holder dies. A
+`holder`/`expires_at` row lease stays held for its full TTL after an agent crash (up to
+45 minutes of a wedged factory), and needs stale-lock detection and a break-glass
+`--force` path — the current design has exactly that. None of it is needed here.
+
+**X1's failure mode is loud, not silent.** Without the mutex you lose writes, but every
+loss is a non-zero exit with `cannot update manifest`. That matters: it means an
+incomplete rollout degrades into visible errors rather than silent corruption.
+
+### The one operational rule
+
+X8 is a constraint, not a nicety. Cost is per **invocation** (~140–270 ms of process
+spawn + storage open), not per write. Per-statement invocations extrapolate to **531 s**
+for a 1,959-BC import; batching 300 statements into one session gives **13.4 s** —
+matching the 12.7 s server-based import. So: **`fa` must take the mutex once per unit of
+work and do all of that unit's writes in one Dolt session.** A naive implementation that
+shells out per row is ~40× slower and will feel broken.
+
+### Where this stops working
+
+- **More than one clone.** The mutex is one host / one filesystem. Two clones need
+  push-as-CAS (§3d) — the mutex says nothing across machines.
+- **Adding a local `sql-server` for speed reinstates the hazard.** X6 shows a local
+  server is ~2.4× faster per write, but X7 is the warning: its concurrent writers can
+  merge again, so the unique-token discipline comes back with it. Batching (X8) closes
+  the speed gap without giving up the safety, which is why the mutex is preferred.
+- **Writes that must be visible to other machines** still need a push; the mutex only
+  orders local writes.
+
+### Revised topology recommendation
+
+| Topology | Exclusion | Token discipline | Moving parts |
+|---|---|---|---|
+| **One clone + flock mutex** (recommended) | local, immediate, crash-safe | **not needed** (X3) | none |
+| Many clones + push-as-CAS | ~0.6–3 s, after-the-fact | not needed (serialized per clone) | none beyond git |
+| Shared `sql-server` | ~1 ms, up front | **required** (§3c) | daemon + SPOF |
+
+The single-clone mutex is the only option that needs neither a daemon nor the token
+discipline. Adopt it first; it is also the least code.
+
 ## 4. Gaps, risks, and things that are worse
 
 Honest accounting. These are real and some are unattractive.
@@ -575,6 +646,7 @@ brew install dolt                                   # 2.2.3 verified
 .venv/bin/python -u poc/test_multimachine.py        #  6/6   multi-machine (self-provisions)
 .venv/bin/python -u poc/test_locking.py             #  6/6   is the lock still needed?
 .venv/bin/python -u poc/test_serverless_lock.py     #  5/5   no-server push-as-CAS
+.venv/bin/python -u poc/test_mutex.py               #  8/8   single clone + flock mutex
 .venv/bin/python -u poc/test_cas_patterns.py        #  which CAS patterns are safe
 ```
 
