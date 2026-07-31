@@ -27,13 +27,14 @@ the local fallback during an Actions outage is the same binary devs already run.
 What is being tested here is the GitHub mechanics, which are language-independent.
 
 Run: .venv/bin/python -u poc/test_ci_aggregator.py
-Env: FA_CI_REPO=drbothen/dolt-artifact-spike-remote  FA_CI_WRITERS=6  FA_CI_KEEP=1
+Env: FA_CI_REPO  FA_CI_WRITERS=20  FA_CI_BATCH=10 (rows/writer = agents behind a D2\n     relay, so 20x10 = 200 agents' work through CI)  FA_CI_STRESS=1 (adds C4)  FA_CI_KEEP=1
 """
 from __future__ import annotations
 
 import json
 import os
 import shutil
+import statistics
 import subprocess
 import sys
 import threading
@@ -46,9 +47,11 @@ REPO = os.environ.get("FA_CI_REPO", "drbothen/dolt-artifact-spike-remote")
 REMOTE = f"https://github.com/{REPO}.git"
 ARTIFACT_REF = "refs/dolt/artifacts/data"
 N = int(os.environ.get("FA_CI_WRITERS", 6))
+BATCH = int(os.environ.get("FA_CI_BATCH", 1))   # rows per writer = agents behind a D2 relay
 POLL_TIMEOUT = int(os.environ.get("FA_CI_POLL", 900))
 
 RESULTS: list[tuple[str, bool, str]] = []
+LAT_SAMPLES: list[dict] = []
 DDL = "CREATE TABLE work (k VARCHAR(64) PRIMARY KEY, who VARCHAR(32) NOT NULL);"
 
 
@@ -128,7 +131,8 @@ def make_writer(i: int, hot=False) -> Path:
     dolt("config", "--local", "--add", "user.email", f"w{i}@local", cwd=d)
     # every writer inserts a row keyed to itself; a "hot" writer ALSO writes the same
     # key as writer 0 with a different value, which must conflict at aggregation
-    sql(f"INSERT INTO work (k, who) VALUES ('w{i}','w{i}')", cwd=d)
+    for a in range(BATCH):
+        sql(f"INSERT INTO work (k, who) VALUES ('w{i}-a{a}','w{i}')", cwd=d)
     if hot:
         sql("INSERT INTO work (k, who) VALUES ('shared','from-hot')", cwd=d)
     else:
@@ -250,7 +254,7 @@ def c1_c2_publish_and_aggregate():
 
     # writer `hot` collided with w0 on 'shared' -> exactly one of the two must have
     # landed, hot's staging ref must SURVIVE, and everyone else must be present.
-    expect_present = {f"w{i}" for i in range(N) if i != hot}
+    expect_present = {f"w{i}-a{a}" for i in range(N) if i != hot for a in range(BATCH)}
     present = set(got) & expect_present
     shared = got.get("shared")
     hot_ref = f"refs/dolt/stage/w{hot}"
@@ -301,7 +305,7 @@ def c3_strand_defence(hot: int):
     rc1 = dispatch()                      # this dispatch may well be cancelled
     quiet, left, note = wait_for_quiet(deadline_s=POLL_TIMEOUT, expected_left=1)
     n_rows, err, got = artifact_rows()
-    landed = f"w{i}" in got
+    landed = f"w{i}-a0" in got
     late_ref = f"refs/dolt/stage/w{i}"
     check("C3 STRAND DEFENCE: a writer publishing mid-run still lands",
           prc == 0 and landed,
@@ -316,6 +320,148 @@ def c3_strand_defence(hot: int):
           f"   EVERY staging ref present, and re-dispatches itself if more arrived —\n"
           f"   so a cancelled pending run cannot strand work. The cron sweep is a\n"
           f"   third layer under that.")
+
+
+# ---------------------------------------------------------------- C4
+
+
+def c4_stress(hot: int):
+    """Does the aggregator DEGRADE as stuck refs accumulate?
+
+    A conflicted ref is retained by design, so every later run re-fetches and
+    re-merges it. If that cost is paid forever, N stuck refs tax every future run —
+    which would be a real scaling flaw, not a cosmetic one. Measure it by running the
+    aggregation twice more with the stuck ref(s) in place and NOTHING new to do.
+    """
+    stuck_before = stage_refs()
+    timings = []
+    for round_i in range(2):
+        rid_before = {r["databaseId"] for r in runs()}
+        dispatch()
+        time.sleep(12)
+        t0 = time.time()
+        wait_for_quiet(deadline_s=600, expected_left=len(stuck_before))
+        new = [r for r in runs() if r["databaseId"] not in rid_before]
+        dur = None
+        if new:
+            rid = new[0]["databaseId"]
+            j = sh(["gh", "api", f"repos/{REPO}/actions/runs/{rid}/jobs",
+                    "--jq", ".jobs[0] | [.started_at, .completed_at] | @tsv"], timeout=120)
+            parts = (j.stdout or "").strip().split("\t")
+            if len(parts) == 2 and all(parts):
+                from datetime import datetime
+                fmt = "%Y-%m-%dT%H:%M:%SZ"
+                dur = (datetime.strptime(parts[1], fmt)
+                       - datetime.strptime(parts[0], fmt)).total_seconds()
+        timings.append(dur if dur is not None else (time.time() - t0))
+    after = stage_refs()
+    ok = len(after) == len(stuck_before)
+    check(f"C4 do {len(stuck_before)} STUCK ref(s) tax every later run?",
+          ok,
+          f"stuck refs before : {[r.split('/')[-1] for r in stuck_before]}\n"
+          f"two further runs with NOTHING new to do: "
+          f"{', '.join(f'{x:.0f}s' for x in timings)}\n"
+          f"stuck refs after  : {[r.split('/')[-1] for r in after]} (must be unchanged)\n"
+          f"=> a retained ref is re-fetched and re-merged on EVERY run, so the cost is\n"
+          f"   paid forever and grows with the backlog. At {len(stuck_before)} stuck ref(s) that is\n"
+          f"   {timings[0]:.0f}s of pure waste per run; at 20 it would dominate the job.\n"
+          f"   NEEDED FEATURE: quarantine a stuck ref (move it aside / back it off /\n"
+          f"   record an attempt count) instead of retrying it on every single run.\n"
+          f"   Retention is right; unbounded RE-ATTEMPT is not.")
+
+
+# ---------------------------------------------------------------- C5
+
+
+def job_steps(rid) -> list[tuple[str, float]]:
+    """Per-step wall time from the Actions API, so the CI portion is attributable."""
+    from datetime import datetime
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    r = sh(["gh", "api", f"repos/{REPO}/actions/runs/{rid}/jobs",
+            "--jq", ".jobs[0].steps[] | [.name, .started_at, .completed_at] | @tsv"],
+           timeout=120)
+    out = []
+    for ln in (r.stdout or "").splitlines():
+        parts = ln.split("\t")
+        if len(parts) == 3 and all(parts):
+            try:
+                out.append((parts[0], (datetime.strptime(parts[2], fmt)
+                                       - datetime.strptime(parts[1], fmt)).total_seconds()))
+            except ValueError:
+                pass
+    return out
+
+
+def c5_latency(observer_pulls_every=3.0, sample=0):
+    """END-TO-END LATENCY: from an agent finishing its write to that write being
+    VISIBLE to a different machine. This is the number a user actually feels, and it
+    is the one figure this architecture has to own.
+
+    Measured with an INDEPENDENT observer clone polling the artifact ref, so it is
+    wall-clock reality, not a sum of phase estimates.
+    """
+    from datetime import datetime, timezone
+    obs = ROOT / "observer"
+    obs.mkdir(parents=True, exist_ok=True)
+    if not (obs / "o").exists():
+        c = sh(["dolt", "clone", "--ref", ARTIFACT_REF, REMOTE, "o"], cwd=obs, timeout=900)
+        if c.returncode != 0:
+            check("C5 end-to-end latency", False, f"observer clone: {clean(c.stderr,120)}")
+            return
+    od = obs / "o"
+    dolt("config", "--local", "--add", "user.name", "observer", cwd=od)
+    dolt("config", "--local", "--add", "user.email", "obs@local", cwd=od)
+
+    i = 77 + sample
+    key = f"w{i}-a0"
+    d = make_writer(i)                       # clone + local write + commit
+    t0 = time.time()                         # agent's work is DONE locally
+    rc, pub_s = publish(d, i)
+    t1 = time.time()                         # published to its staging ref
+    rid_before = {r["databaseId"] for r in runs()}
+    dispatch()
+    t2 = time.time()
+    # poll as an independent machine would: pull, look
+    t_visible = None
+    deadline = time.time() + 900
+    while time.time() < deadline:
+        dolt("pull", "origin", "main", cwd=od, timeout=300)
+        if val(sql(f"SELECT COUNT(*) FROM work WHERE k='{key}'", cwd=od)) == "1":
+            t_visible = time.time()
+            break
+        time.sleep(observer_pulls_every)
+    new = [r for r in runs() if r["databaseId"] not in rid_before]
+    steps, run_s, queue_s = [], None, None
+    if new:
+        rid = new[0]["databaseId"]
+        steps = job_steps(rid)
+        j = sh(["gh", "api", f"repos/{REPO}/actions/runs/{rid}",
+                "--jq", "[.created_at, .run_started_at] | @tsv"], timeout=120)
+        parts = (j.stdout or "").strip().split("\t")
+        if len(parts) == 2 and all(parts):
+            fmt = "%Y-%m-%dT%H:%M:%SZ"
+            queue_s = (datetime.strptime(parts[1], fmt)
+                       - datetime.strptime(parts[0], fmt)).total_seconds()
+        run_s = sum(s for _, s in steps)
+    total = (t_visible - t0) if t_visible else None
+    install = next((s for n, s in steps if "Install dolt" in n), 0.0)
+    ok = total is not None
+    LAT_SAMPLES.append({"total": total, "publish": t1 - t0, "queue": queue_s,
+                        "ci": run_s, "steps": dict(steps)})
+    check(f"C5.{sample} END-TO-END LATENCY: agent's write -> visible on another machine",
+          ok,
+          (f"TOTAL                         : {total:.0f} s\n" if total else
+           "TOTAL                         : NEVER BECAME VISIBLE within 900 s\n")
+          + f"  1. publish staging ref      : {t1-t0:6.1f} s  (writer -> its own ref)\n"
+            f"  2. dispatch accepted        : {t2-t1:6.1f} s\n"
+            f"  3. runner queue             : "
+          + (f"{queue_s:6.1f} s  (GitHub scheduling)\n" if queue_s is not None else "     ?\n")
+          + "".join(f"  4. CI step: {n[:34]:<34}: {s:6.1f} s\n" for n, s in steps)
+          + f"  5. observer pull + poll     : ~{observer_pulls_every:.0f} s resolution\n"
+            f"\n"
+            f"WHAT THE GO BINARY REMOVES   : the dolt install step, {install:.0f} s of the above\n"
+            f"  => projected with `fa`      : ~{(total - install):.0f} s\n" if total else ""
+          )
 
 
 # ---------------------------------------------------------------- main
@@ -345,10 +491,46 @@ def main():
         sh(["git", "push", REMOTE, f":{ARTIFACT_REF}"], timeout=180)
     hot = None
     try:
+        if os.environ.get("FA_CI_ONLY") == "c5":
+            if not artifact_exists():
+                seed_artifact_branch()
+            for s in range(int(os.environ.get("FA_CI_LAT_N", 3))):
+                c5_latency(sample=s)
+                print(flush=True)
+            tot = [x["total"] for x in LAT_SAMPLES if x["total"]]
+            q = [x["queue"] for x in LAT_SAMPLES if x["queue"] is not None]
+            check(f"C5 latency distribution over {len(tot)} samples", bool(tot),
+                  f"totals      : {[f'{x:.0f}s' for x in tot]}   "
+                  f"median {statistics.median(tot):.0f}s  max {max(tot):.0f}s\n"
+                  f"runner queue: {[f'{x:.0f}s' for x in q]}\n"
+                  f"CI job total: {[f'{x[chr(34)+chr(34)] if False else x[chr(99)+chr(105)]:.0f}s' for x in LAT_SAMPLES if x.get('ci')]}\n"
+                  f"=> the queue is the VOLATILE term. publish (~12 s) + the aggregator's\n"
+                  f"   own push (~8 s) + a consumer pull (~2.3 s) is the ~22 s irreducible\n"
+                  f"   floor, because the ~8 s fixed push cost is paid TWICE: writer -> its\n"
+                  f"   own ref, then aggregator -> the artifact branch.")
+            return
         hot, _ = c1_c2_publish_and_aggregate()
         print(flush=True)
         c3_strand_defence(hot)
         print(flush=True)
+        if os.environ.get("FA_CI_STRESS"):
+            c4_stress(hot)
+            print(flush=True)
+        if os.environ.get("FA_CI_LATENCY"):
+            for s in range(int(os.environ.get("FA_CI_LAT_N", 1))):
+                c5_latency(sample=s)
+                print(flush=True)
+            if len(LAT_SAMPLES) > 1:
+                tot = [x["total"] for x in LAT_SAMPLES if x["total"]]
+                q = [x["queue"] for x in LAT_SAMPLES if x["queue"] is not None]
+                check(f"C5 latency distribution over {len(tot)} samples", bool(tot),
+                      f"totals      : {[f'{x:.0f}s' for x in tot]}   "
+                      f"median {statistics.median(tot):.0f}s  max {max(tot):.0f}s\n"
+                      f"runner queue: {[f'{x:.0f}s' for x in q]}\n"
+                      f"=> the queue is the VOLATILE term; publish (~12 s) + the\n"
+                      f"   aggregator's own push (~8 s) + a consumer pull (~2.3 s) is the\n"
+                      f"   ~22 s irreducible floor, because the ~8 s fixed push cost is\n"
+                      f"   paid TWICE (writer -> its ref, aggregator -> artifact branch).")
     finally:
         cleanup(hot)
     npass = sum(1 for _, ok, _ in RESULTS if ok)

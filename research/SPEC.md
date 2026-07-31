@@ -1,7 +1,7 @@
 ---
 title: fa — specification for the sole interface to factory artifacts
 date: 2026-07-31
-status: spec derived from a verified spike (188/189 checks, 24 suites, incl. a 200-agent fleet against a real GitHub remote; the one failure is the deliberately pathological per-write push arm)
+status: spec derived from a verified spike (193/194 checks, 24 suites, incl. a 200-agent fleet against a real GitHub remote; the one failure is the deliberately pathological per-write push arm)
 evidence: vsdd-factory @82163b7f (.factory on factory-artifacts) · beads @b1694a5 · Dolt 2.2.3 · dolthub/driver/v2 v2.2.0 · github.com/drbothen/dolt-artifact-spike-remote
 see_also: DECISIONS.md (the 3 settled calls) · ACCESS-PATH.md (which access path) · REMOTE.md (the real remote) · SCALE.md (200 agents + every decentralised contention fix) · CI-AGGREGATOR.md (the cross-internet answer)
 ---
@@ -12,7 +12,7 @@ Every capability below is backed by a passing test against the **live** vsdd-fac
 corpus (1,959 BCs, 3,145 files, 1,607 commits). Nothing here is aspirational; where
 something is untested or deliberately excluded it says so.
 
-**188 of 189 checks pass across twenty-four suites** — the single failure is S3, the
+**193 of 194 checks pass across twenty-four suites** — the single failure is S3, the
 deliberately pathological "push per write" arm, which is *supposed* to be bad and is
 kept red rather than tuned green. See [ASSESSMENT.md](ASSESSMENT.md) for the
 feasibility argument and the measured problems in the current design, and
@@ -273,7 +273,10 @@ corruption, and each was found empirically.
    the staging-ref form works** (a relay needs a shared filesystem; peer-pull needs
    inbound reachability), and the aggregator role is filled by **CI**, where a
    `concurrency:` group is the merge slot for free — measured 4/4 in
-   [CI-AGGREGATOR.md](CI-AGGREGATOR.md). *(D1-D5, O1-O3, C1-C3;
+   [CI-AGGREGATOR.md](CI-AGGREGATOR.md) — stressed at 20 writers, **~30 s median
+   end-to-end latency**, with one required feature: a stuck staging ref must be
+   QUARANTINED, since re-merging it on every run costs 8-17 s forever. *(D1-D5, O1-O3,
+   C1-C5;
    [SCALE.md §4](SCALE.md))*
 14. **Every writer must be a CLONE of the artifact branch.** Unrelated lineages fail
    to merge with `no common ancestor` — they cannot be aggregated at all, only

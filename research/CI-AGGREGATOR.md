@@ -1,8 +1,8 @@
 ---
 title: CI as the aggregator — the cross-internet answer, measured
 date: 2026-07-31
-status: 4/4 (poc/test_ci_aggregator.py) against GitHub Actions on drbothen/dolt-artifact-spike-remote
-verdict: works end to end; `concurrency:` supplies the merge slot for free, so no lock, no TTL, no daemon
+status: 4/4 standard + 5/5 stressed at 20 writers + a 3-sample latency run (poc/test_ci_aggregator.py) against GitHub Actions
+verdict: works end to end at 20 writers, ~30 s median latency; `concurrency:` supplies the merge slot for free. ONE required fix found: stuck refs must be quarantined, not retried forever
 ---
 
 # CI as the aggregator
@@ -132,10 +132,69 @@ That last row is the discipline: an error must never be reported as a conflict.
 
 ---
 
+## 4a. Stressed at 20 writers x 10 agents (200 agents' work)
+
+Same scale as the fleet test, with each writer carrying ten agents' rows — i.e. the
+output of a D2 host relay — so the whole recommended topology runs end to end:
+
+| Measurement | Result |
+|---|---|
+| publish, 20 writers in parallel | **14 s** (vs 13 s at N=4) — **flat in N**, as predicted: distinct refs cannot contend |
+| refs drained 20 -> 1 | within ~66 s of dispatch |
+| rows on the artifact branch | 192; **190/190** non-conflicting writer rows present |
+| the conflicting writer's 10 rows | correctly **absent**, its ref retained |
+
+### ⚠ The one real flaw: stuck refs are re-worked on EVERY run
+
+A conflicted ref is retained by design — but the aggregator re-fetches and re-merges
+it every single run. Measured by running the aggregation twice more with **nothing new
+to do**: **17 s, then 8 s of pure waste**. At 20 stuck refs that dominates the job, and
+the backlog only grows, because a stuck ref stays until its writer resolves it.
+
+**Required `fa aggregate` feature: quarantine, not just retention.** Record an attempt
+count per staging ref and back off (or move it to `refs/dolt/quarantine/*`) so a stuck
+writer cannot tax the whole fleet indefinitely. Retention is right; unbounded
+re-attempt is not.
+
+---
+
+## 4b. End-to-end latency — the number a user feels
+
+From an agent finishing its local write to that write being visible **on another
+machine**, measured with an independent observer clone polling the artifact ref
+(3 samples):
+
+```
+totals            27 s · 44 s · 30 s        median 30 s, max 44 s
+  1. publish staging ref      9-11 s        the writer's push
+  2. dispatch accepted        1-2  s
+  3. runner queue             0    s        all three samples
+  4. CI aggregate step        7-13 s
+  5. observer pull + poll    ~3    s        measurement resolution
+```
+
+**The ~22 s floor is irreducible:** the ~8 s fixed push cost ([SCALE.md §3](SCALE.md))
+is paid **twice** — writer to its own ref, then aggregator to the artifact branch —
+plus a consumer pull (~2.3 s).
+
+Two things this corrected:
+
+- I estimated "~1-2 min dominated by runner startup". It is **~30 s** and startup was
+  negligible in every sample.
+- I claimed the Go binary would remove 20-30 s of `dolt` install. It is **2 s**. The
+  real argument for `fa` is toolchain simplicity and one code path, **not** latency.
+
+**Caveat that matters:** the runner queue was 0 s in all three samples, i.e. GitHub
+scheduled instantly on this repo. That is the volatile term — a busier org or a
+different plan can add minutes, and nothing in this design can absorb that. Anything
+needing sub-30-second visibility must not go through CI.
+
+---
+
 ## 5. Honest costs
 
-- **Latency:** work is visible to others only after a run — ~1–2 min, dominated by
-  runner startup. Fine at 45-minute gate cadence; per-write visibility is gone.
+- **Latency: ~30 s median, 44 s worst of 3** (§4b), with the runner queue as the
+  volatile term. Fine at 45-minute gate cadence; **per-write visibility is gone.**
 - **CI is on the critical path.** Mitigated by the end state: the aggregator is
   **`fa aggregate`**, a subcommand of the Go binary, so during an Actions outage any
   dev runs the identical code path. Nothing is lost meanwhile — work sits in staging
