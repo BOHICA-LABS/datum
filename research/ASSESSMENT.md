@@ -12,8 +12,14 @@ as the only interface to all vsdd-factory artifacts?
 
 **Verdict: GO, phased.** The current design is a hand-maintained relational database
 implemented in markdown files, and it is measurably failing at exactly the guarantees a
-database provides for free. 13/13 POC tests pass against the live corpus. Two hard
-constraints apply (server mode is mandatory; markdown must become a generated export).
+database provides for free. **27/27 POC tests pass** against the live corpus across three
+suites (13 store + 8 relationship-graph + 6 multi-machine). Two hard constraints apply:
+**one shared server is mandatory** — the lock is provably incorrect across independent
+clones — and markdown must become a generated export.
+
+Modelling the full spec graph surfaced **38 dangling references and 44 type violations**
+that no existing gate catches, and quantified coverage nobody had measured: **90.2% of
+behavioral contracts have no verifying verification property.**
 
 Every number below was measured, not estimated. Sources: `/Users/jmagady/Dev/vsdd-factory`
 @ `82163b7f`, its `.factory` worktree on `factory-artifacts`; beads @ `b1694a5`; Dolt 2.2.3.
@@ -162,18 +168,151 @@ capability assigned.** That is one `WHERE capability IS NULL`.
 
 ---
 
+## 3a. The full relationship graph (second pass)
+
+The first pass did **not** test referencing — `bc_trace` was empty because the
+frontmatter parser skipped every line beginning with whitespace or `-`, which
+discarded every list-valued edge in the corpus. Corrected and re-run.
+
+The corpus declares a real graph in frontmatter: BCs carry `subsystem`,
+`capability`, `replacement`; VPs carry `bcs[]`, `domain_invariants[]`, `nfrs[]`,
+`source_bc`, `scope`; stories carry `epic_id`, `behavioral_contracts[]`,
+`verification_properties[]`, `functional_requirements[]`, `subsystems[]`, and a
+`depends_on[]`/`blocks[]` dependency DAG.
+
+Modelled as 10 node types and 9 edge tables; **1,490 edges loaded** from the live
+corpus. Node universes were built from authoritative declaring documents only
+(`capabilities.md`, `invariants.md`, `pass-4-nfr-catalog.md`, `prd.md`,
+architecture ADR headings, `stories/epics/`) — not from grep-over-everything,
+which would make every reference resolve trivially and prove nothing.
+
+### Graph tests (8/8, `poc/test_graph.py`)
+
+| # | Test | Result |
+|---|---|---|
+| G1 | story → epic / BC → subsystem / VP → NFR + DI **in one query** | PASS |
+| G2 | reverse blast radius: BC → verifying VPs + implementing stories | PASS |
+| G3 | coverage gaps quantified | PASS |
+| G4 | `A blocks B` vs `B depends_on A` reconciled by JOIN | PASS |
+| G5 | cycle detection + transitive closure (recursive CTE) | PASS |
+| G6 | cascade delete removes edges; rollback restores | PASS |
+| G7 | **all 8 edge tables** reject a reference to a non-existent node | PASS |
+| G8 | whole-corpus 4-hop rollup in 3ms | PASS |
+
+G1 output — the artifact that does not exist anywhere in the markdown corpus:
+
+```
+story S-1.04 (epic E-1: dispatcher foundation)
+  BC-1.05.001 [SS-01] -> VP-004 (unit-test) NFR=NFR-SEC-001,NFR-SEC-009 DI=DI-004
+  BC-1.05.002 [SS-01] -> VP-021 (unit-test) NFR=NFR-SEC-001,NFR-SEC-005,... DI=DI-004,DI-005
+  BC-1.05.005 [SS-01] -> None            (no VP verifies this contract)
+```
+
+### What the graph exposed
+
+**Coverage (G3) — no artifact in the corpus states any of this:**
+
+| Measure | Value |
+|---|---|
+| BCs with **no verifying VP** | **1,767 of 1,959 (90.2%)** |
+| BCs with **no implementing story** | **1,648 of 1,959 (84.1%)** |
+| Stories anchored to no BC | 67 |
+| VPs verifying nothing | 0 |
+| Least-verified subsystems | SS-10 **0/58**, SS-08 2/218, SS-06 8/586 |
+
+SS-10 has 58 behavioral contracts and zero verification properties pointing at any
+of them. That is one `LEFT JOIN … WHERE IS NULL`, and it is invisible to grep.
+
+**Dangling references (38) — targets that do not exist:**
+
+- **27 × `story.blocks` → missing story.** `S-8.09` declares it blocks
+  `S-8.11`–`S-8.29`; the corpus contains `S-8.00`–`S-8.10` and `S-8.30`. Those 19
+  stories were never written. `S-9.00` blocks `S-9.01`–`S-9.04`, also absent.
+  Verified absent from the whole tree, not just the import.
+- **5 × `story.behavioral_contracts` → missing BC.** `S-4.05` and `S-4.07` claim to
+  implement `BC-1.06.011`, `BC-3.07.003`, `BC-3.07.004` — **the same three phantom
+  BCs cited by `BC-INDEX.md`.** So the traceability chain terminates in nothing from
+  both ends: the index lists them and stories claim to implement them, and no
+  record exists.
+- **6 × `story.functional_requirements` → missing FR** (`FR-RESOLVER-001`, a
+  namespace absent from the PRD registry).
+
+**Type violations (44) — field contains something other than its declared type:**
+
+- 16 × `VP.scope` multi-valued (`"SS-01, SS-03"`) in a scalar-declared field.
+- 8 × `VP.bcs` holds an ID plus prose; **7 × `VP.bcs` is not an ID at all** —
+  including literal unfilled placeholders `BC-4.NN.001`, `BC-6.NN.002`, and the
+  string `"see PO output for actual IDs — state-manager will cross-link"` sitting
+  in a structured traceability field.
+- 4 × `story.functional_requirements` contains **CAP** ids (`CAP-002`, `CAP-003`,
+  `CAP-008`) — wrong namespace entirely.
+- 3 × `story.depends_on` contains **epic** ids (`E-8`, `E-9`) in a story-typed field.
+- 2 × `bc.replacement` holds a prose sentence where a BC id belongs.
+- 2 × `story.subsystems` holds `"SS-04 (Plugin Ecosystem)"`.
+
+**Dependency-direction disagreement (G4):** the corpus records `depends_on` and
+`blocks` independently, so they can disagree. 22 `blocks` edges have no matching
+`depends_on`, and 31 `depends_on` edges have no matching `blocks` — 53 one-directional
+declarations. A scheduler reading only one field sees a different graph than one
+reading the other.
+
+**Good news, stated plainly:** the dependency graph is **acyclic** (26,130
+transitive paths, traversed to depth 12), every referenced DI and NFR resolves
+(all 18 DIs and 50 NFRs are declared — the NFR registry is real, it just lives in
+`phase-0-ingestion/` rather than under `specs/`), and no VP verifies nothing.
+
+## 3b. Multi-machine concurrency (the flagged gap)
+
+Two **independent clones** — separate data directories, separate `dolt sql-server`
+processes on ports 3401/3402, one shared remote. 6/6 (`poc/test_multimachine.py`).
+
+| # | Test | Result |
+|---|---|---|
+| M1 | disjoint writes on 2 machines converge via push/pull | PASS |
+| M2 | stale push refused (`! [rejected] non-fast-forward`) | PASS |
+| M3 | **cell-level merge: same row, different columns, zero conflicts** | PASS |
+| M4 | same-cell edit surfaces `CONFLICT (content): Merge conflict in bc` | PASS |
+| M5 | **CAS lock does NOT span machines** (expected negative) | PASS |
+| M6 | one shared server → exactly one of two clients acquires | PASS |
+
+**M3 is the strongest positive result in the whole spike.** Machine A changed
+`title` and machine B changed `capability` **on the same row**; the merge produced
+`{'title': 'A edits title', 'capability': 'CAP-777'}` with zero conflicts. A
+line-based store cannot do this — in markdown, two agents editing different
+frontmatter fields of the same BC file is a textual conflict.
+
+**M5 is the load-bearing negative result.** With independent clones, each machine's
+`factory_lock` row is local until sync, so **both machines acquired the same lock
+and each believed it won** (A saw `holder=machineA`, B saw `holder=machineB`, both
+`ROW_COUNT()==1`). Per-machine clones give *convergence*, not *exclusion*.
+
+Consequence for the design: **the CAS lock only works if every agent talks to ONE
+shared `dolt sql-server`** (M6 confirms exclusion is restored there). A
+clone-per-machine topology needs a different mechanism entirely. This materially
+tightens constraint 4.1.1 — server mode is not merely convenient, it is the only
+topology in which the lock is correct.
+
+Operational finding: a fresh `dolt clone` inherits **no author identity**, and
+`dolt pull` creates a merge commit — so every pull fails with
+`Author identity unknown` until `user.name`/`user.email` are configured in the
+clone. This silently broke 3 of these tests on the first run, and one of them
+*passed for the wrong reason* (a "conflict detected" that was really an identity
+error). Clone provisioning must set identity.
+
 ## 4. Gaps, risks, and things that are worse
 
 Honest accounting. These are real and some are unattractive.
 
 ### 4.1 Hard constraints
 
-1. **Server mode is mandatory, so there is now a daemon.** Embedded Dolt is single-writer;
-   the CAS lock needs a real transaction. That means a `dolt sql-server` process, a port,
-   liveness/health handling, and a startup dependency for every agent. The current design's
-   genuine advantage — zero moving parts beyond git — is lost. beads carries an entire
-   `internal/doltserver` package (7,750 lines incl. tests) plus circuit breakers and a
-   `doctor` subsystem for exactly this. Budget for it.
+1. **One shared server is mandatory, so there is now a daemon — and a single point of
+   failure.** Embedded Dolt is single-writer, and M5 proves the CAS lock does **not** hold
+   across independent clones (both machines acquired it). So correctness requires every
+   agent to reach *one* `dolt sql-server`: a process, a port, liveness/health handling, a
+   startup dependency for every agent, and a component whose loss halts the factory. The
+   current design's genuine advantage — zero moving parts beyond git — is lost. beads
+   carries an entire `internal/doltserver` package (7,750 lines incl. tests) plus circuit
+   breakers and a `doctor` subsystem for exactly this. Budget for it.
 
 2. **Markdown must become a generated export.** The value only materializes if the DB is
    the sole writer. If agents keep editing `.md` directly, you get two truths and strictly
@@ -211,13 +350,20 @@ Honest accounting. These are real and some are unattractive.
 
 ### 4.4 Unverified
 
-- **Multi-machine concurrent writes.** Verified 16 concurrent writers against one local
-  server. Not tested: two machines, push/pull contention, or the merge-on-pull path under
-  real conflict. This is the main remaining technical risk.
 - **`dolt gc` / long-term growth.** The DB is 29–41 MB for a 36 MB corpus at 1,607 commits
   and grew ~12 MB across a handful of test runs. Growth under years of commits is untested.
-- **Trace edges were not migrated.** `bc_trace` is empty — traceability lives in BC prose,
-  so extracting it is real migration work (and will surface more dangling refs).
+- **Prose-embedded references.** The graph was built from *frontmatter*. BC/VP bodies also
+  cite ADRs, ECs, and other BCs in prose; those edges are not extracted and would surface
+  more dangling references. The 38 found are a floor, not a total.
+- **Story-ID normalization.** 148 story rows imported; graph edges were only attached to
+  stories already present under a canonical `story_id`. Stories in legacy subdirectories
+  with variant ID forms may contribute additional unmeasured edges.
+- **Real network remote.** Multi-machine used a `file://` remote as the stand-in. Push/pull
+  against GitHub over the network (auth, large-object handling, partial-failure recovery)
+  is untested.
+- **Conflict resolution *policy*.** M4 proves conflicts surface. Who resolves them, and how
+  an agent is supposed to, is undesigned — and an unresolved conflict **blocks every
+  subsequent transaction on that server** until cleared, which is a live outage mode.
 
 ---
 
@@ -268,10 +414,16 @@ brew install dolt                                   # 2.2.3 verified
 (cd poc/db && dolt sql-server --host 127.0.0.1 --port 3308 &)   # NOTE: no --user in 2.2.x
 .venv/bin/python poc/fa.py init
 .venv/bin/python poc/fa.py import ~/Dev/vsdd-factory/.factory
+.venv/bin/python poc/graph_import.py ~/Dev/vsdd-factory/.factory   # graph + findings report
 .venv/bin/python poc/fa.py count --by-subsystem
 .venv/bin/python poc/fa.py validate
-.venv/bin/python poc/fa.py lock acquire --holder me
-.venv/bin/python -u poc/test_spike.py               # 13/13
+
+.venv/bin/python -u poc/test_spike.py               # 13/13  store
+.venv/bin/python -u poc/test_graph.py               #  8/8   relationship graph
+.venv/bin/python -u poc/test_multimachine.py        #  6/6   multi-machine (self-provisions)
 ```
+
+All three suites are re-runnable and idempotent. `test_multimachine.py` builds its own
+remote and two clones under `poc/mm/` and tears down its servers.
 
 Evidence pinned at: vsdd-factory `82163b7f`, beads `b1694a5`, Dolt 2.2.3, 2026-07-30.

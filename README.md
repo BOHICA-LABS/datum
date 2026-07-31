@@ -10,10 +10,16 @@ interface to all vsdd-factory artifacts, replacing the `factory-artifacts` orpha
 | Path | What |
 |---|---|
 | `research/ASSESSMENT.md` | The feasibility assessment — findings, gaps, phased recommendation |
-| `poc/schema.sql` | Relational schema for factory artifacts (BCs, VPs, stories, traces, lock) |
+| `poc/schema.sql` | Core schema (BCs, VPs, stories, subsystems, lock) |
+| `poc/graph.sql` | Full relationship graph — 10 node types, 9 edge tables |
 | `poc/fa.py` | `fa` — the sole-interface CLI (init/import/count/get/history/validate/lock/render) |
-| `poc/test_spike.py` | 13 tests, each targeting a failure mode measured in the live corpus |
-| `poc/db/` | Dolt data dir (gitignored) |
+| `poc/graph_import.py` | Loads the graph from live frontmatter; reports every dangling ref |
+| `poc/test_spike.py` | 13 tests — store-level failure modes |
+| `poc/test_graph.py` | 8 tests — traversal + referential integrity |
+| `poc/test_multimachine.py` | 6 tests — two clones, one remote (self-provisioning) |
+| `poc/db/`, `poc/mm/` | Dolt data dirs (gitignored) |
+
+**27/27 passing** against the live corpus.
 
 ## Headline findings
 
@@ -27,8 +33,17 @@ interface to all vsdd-factory artifacts, replacing the `factory-artifacts` orpha
   16 concurrent acquirers with exactly one winner.
 - Dolt data rides in the project's **existing git remote** under `refs/dolt/data` — the
   orphan branch is replaceable with no new hosting.
-- Hard cost: **server mode is mandatory** (embedded Dolt is single-writer), so this
-  introduces a daemon. That is a real architectural trade, not a footnote.
+- Modelling the **full spec graph** (story → BC → VP → NFR/DI, epics, subsystems, the
+  story dependency DAG; 1,490 edges) surfaced **38 dangling references** and **44 type
+  violations** no gate catches — including 19 stories `S-8.09` claims to block that were
+  never written, and unfilled placeholders like `BC-4.NN.001` sitting in traceability fields.
+- It also answered a question nothing in the corpus states: **90.2% of behavioral contracts
+  have no verifying VP**; subsystem SS-10 has 58 BCs and zero.
+- **Cell-level merge works across machines** — A edits `title`, B edits `capability`, same
+  row, zero conflicts. A markdown store cannot do that.
+- Hard cost: **one shared server is mandatory.** Embedded Dolt is single-writer, and the CAS
+  lock is provably *incorrect* across independent clones — both machines acquired it and each
+  believed it won. That means a daemon and a single point of failure, not a footnote.
 
 ## Quick start
 
