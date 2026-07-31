@@ -205,15 +205,16 @@ cleanly.
 
 | # | Gap | Severity |
 |---|---|---|
-| 1 | **Real network remote.** All multi-machine/instance tests used `file://`. GitHub latency, auth, partial-failure recovery untested; 640 ms/acquire is a floor. | High for planning |
-| 2 | **Conflict-resolution policy.** I6/D3 prove conflicts surface; *who* resolves and with what authority is undesigned. | High |
+| 1 | ~~**Real network remote.**~~ **CLOSED 2026-07-31** — 10/10 against github.com ([REMOTE.md](REMOTE.md)). The 640 ms acquire is really **~10 s**; payload size is irrelevant; and a new finding (one data ref per remote ⇒ global push contention) became invariant 12. | closed |
+| 2 | ~~**Conflict-resolution policy.**~~ **CLOSED** — designed in [DECISIONS.md D1](DECISIONS.md): abort mechanically, record, the push-race loser re-applies intent as a validated write, cross-actor collisions escalate to the orchestrator, and a conflict inside a leased scope is reported as a lease-scoping defect. | closed |
 | 3 | **Prose-embedded references.** Graph built from frontmatter only; BC/VP bodies cite ADRs and BCs in prose. The 38 dangling refs are a **floor**. | Medium |
 | 4 | `state-runtime-regression`, `po-obligations`, and the 4 config types are ◐ by analogy, not tested. | Low |
-| 5 | **Instance-count ceiling.** Tested 3 instances on one machine. Disk and mutex behaviour at 10+ unknown. | Medium |
-| 6 | **Cross-zone integrity tooling.** If zone-directories are chosen, the holdout→BC link needs a validator (A6). | Medium |
-| 7 | **Embedded driver not benchmarked.** All timings shell out (~140–270 ms/invocation). | Medium |
+| 5 | **Instance-count ceiling.** Tested 3 instances on one machine (12 clones in SC4). Disk and mutex behaviour at 10+ concurrent *pushers* is now bounded by gap 1's finding: O(N) retries × ~10 s. | Medium |
+| 6 | **Cross-zone integrity tooling.** Zone-directories are now **selected** ([DECISIONS.md D2](DECISIONS.md)), so the holdout→BC validator (A6) is a **required deliverable**, not a contingency. | Medium — scoped |
+| 7 | ~~**Embedded driver not benchmarked.**~~ **CLOSED** — 13/13 ([ACCESS-PATH.md](ACCESS-PATH.md)). It is ~2× on cold start, ~4,000× warm, and needs no `dolt` binary — but the **biggest lever was a missing `BEGIN`/`COMMIT` (17×), available from the CLI**. Deferred to phase 3. | closed |
 | 8 | One unreproduced anomaly (7 agents ok / 6 increments landed). | Low — invariant 3 avoids the class |
 | 9 | **Multi-repo mode** (`.factory-project/` + `factory-project-artifacts`) not modelled. | Medium if used |
+| 10 | **Linux identity re-run.** macOS `ps eww` leaks a sibling's env; Linux gates it behind `PTRACE_MODE_READ_FSCREDS`. Researched and cited, not run. | Low — tier 1 does not depend on it |
 
 ---
 

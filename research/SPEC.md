@@ -1,8 +1,9 @@
 ---
 title: fa — specification for the sole interface to factory artifacts
-date: 2026-07-30
-status: spec derived from a verified spike (112/112 tests against the live corpus)
-evidence: vsdd-factory @82163b7f (.factory on factory-artifacts) · beads @b1694a5 · Dolt 2.2.3
+date: 2026-07-31
+status: spec derived from a verified spike (160/160 tests, 19 suites, against the live corpus and a real GitHub remote)
+evidence: vsdd-factory @82163b7f (.factory on factory-artifacts) · beads @b1694a5 · Dolt 2.2.3 · dolthub/driver/v2 v2.2.0 · github.com/drbothen/dolt-artifact-spike-remote
+see_also: DECISIONS.md (the 3 settled calls) · ACCESS-PATH.md (which access path) · REMOTE.md (the real remote)
 ---
 
 # `fa` — the sole interface to factory artifacts
@@ -11,8 +12,10 @@ Every capability below is backed by a passing test against the **live** vsdd-fac
 corpus (1,959 BCs, 3,145 files, 1,607 commits). Nothing here is aspirational; where
 something is untested or deliberately excluded it says so.
 
-**112/112 tests, fourteen suites.** See [ASSESSMENT.md](ASSESSMENT.md) for the
-feasibility argument and the measured problems in the current design.
+**160/160 tests, nineteen suites.** See [ASSESSMENT.md](ASSESSMENT.md) for the
+feasibility argument and the measured problems in the current design, and
+[DECISIONS.md](DECISIONS.md) for the three design calls that were open until
+2026-07-31 and are now settled.
 
 ---
 
@@ -209,12 +212,19 @@ corruption, and each was found empirically.
    On a shared clone a push publishes siblings' commits too, so "my push failed" does
    not mean "my work was not published". A duplicate-key error on retry means *already
    applied* and must fall through to push, not bail — bailing strands the earlier
-   commit, which the next reset discards. *(D5b)*
+   commit, which the next reset discards. *(D5b; re-confirmed against github.com in
+   G6, so it is not an artefact of the `file://` remote)*
 5. **Pull at the start of every unit of work.**
    There is no cross-machine read consistency without it (~150 ms). *(D7)*
-6. **One mutex hold = one unit of work, batched into one Dolt session.**
-   Cost is per *invocation*, not per write: a 1,959-BC import is 531 s
-   one-statement-at-a-time versus 13.4 s batched. *(X8)*
+6. **One TRANSACTION per unit of work.**
+   *(Restated 2026-07-31 — the original wording named the wrong cause. See
+   [ACCESS-PATH.md](ACCESS-PATH.md).)* There are two taxes, not one. Process
+   spawn (~140 ms) is the outer one, and batching statements into one session
+   removes it: 531 s → 15.7 s for a 1,959-BC import. But **per-statement
+   autocommit costs another ~5–7 ms in every path** — identical in the batched
+   CLI (6.77 ms) and the embedded driver (5.53 ms). Wrapping the same batch in
+   one explicit transaction takes it to **0.9 s**, a further **17×**, and that is
+   also exactly the boundary atomicity requires. *(X8; B5, B6, B13)*
 7. **A `PRIMARY KEY` is not a concurrency control.**
    Two concurrent writers inserting byte-identical rows merge silently; naive ID
    allocation produced `[1,1,1,1,1,1]`. Allocators need a per-attempt token. *(L4 locking)*
@@ -232,6 +242,14 @@ corruption, and each was found empirically.
    *(I9)*
 11. **Leases are per-scope, never singular.** One global lock serializes the whole
    project and makes parallel instances pointless. *(I3)*
+12. **A remote data ref is ONE lineage — instance branches are not independent on
+   the wire.** All Dolt branches live inside a single git ref (`refs/dolt/data`);
+   pushing a new Dolt branch creates no new git ref, it rewrites that one. So
+   push contention is **global across instances**, not per-instance, and a fresh
+   unrelated database pushing to an existing data ref is a non-fast-forward.
+   `dolt remote add --ref` gives each instance its own data ref and decouples
+   pushes — at the cost of forfeiting cross-instance merge on the remote, since
+   each ref is a separate lineage. *(G7; measured against github.com)*
 
 Invariants 1–7 exist because Dolt's conflict detection is documented as "too lenient"
 ([#7681](https://github.com/dolthub/dolt/issues/7681), strict mode unimplemented). They
@@ -290,12 +308,13 @@ Stated explicitly so scope does not drift:
   screenshots are untested here and deliberately excluded.
 - **No shared `sql-server`.** Only if a future phase needs sub-second, up-front
   exclusion for many agents per host — and it reinstates invariant 1 (X7).
-- **`fa` does not resolve merge conflicts automatically.** It aborts cleanly and
-  reports. Resolution policy is a separate decision, undesigned.
+- **`fa` does not resolve merge conflicts automatically.** It aborts cleanly,
+  records the conflict, and requires the loser of the push race to re-apply its
+  intent as a validated operation. **Policy now designed —
+  [DECISIONS.md D1](DECISIONS.md).**
 - **`fa` does not replace git for source code.** Only artifacts.
 - **Multi-repo mode** (`.factory-project/` + `factory-project-artifacts`) is not
   modelled; single-project only.
-- **Conflict-resolution policy** is out of scope. `fa` surfaces and aborts cleanly.
 
 ---
 
@@ -303,9 +322,9 @@ Stated explicitly so scope does not drift:
 
 | Phase | Scope | Risk | Value |
 |---|---|---|---|
-| **1** | Read-only shadow: `import` + `validate` in CI. Markdown stays truth. | Very low — zero agent changes, no daemon | Catches all 82 findings, including the four-way count drift |
+| **1** | Read-only shadow: `import` + `validate` in CI **plus a dated baseline allowlist of the 82 existing findings**. Markdown stays truth. Python + `dolt sql -f` in one transaction (0.9 s import); no Go, no remote, no daemon. | Very low — zero agent changes, additive, read-only | Catches all 82 findings, including the four-way count drift. **The baseline is not optional:** a gate that blocks every PR on day one gets switched off. |
 | **2** | Move the lease to `fa lease` (push-as-CAS). Delete the STATE.md YAML lock, the `--force-with-lease` machinery, and `verify-sha-currency.sh`. | Low | Closes a documented CWE-367 |
-| **3** | Invert authority for **record-shaped** artifacts only (BC/VP/story/subsystem/phase). Markdown becomes `fa render` output. | Medium — touches `state-manager` and every `create-*` skill | Drift becomes unrepresentable; 90.2%-style coverage gaps become visible |
+| **3** | Invert authority for **record-shaped** artifacts only (BC/VP/story/subsystem/phase). Markdown becomes `fa render` output. **Decide the access path here** — this is where a long-lived process is worth ~4,000× on reads and where the embedded driver removes the `dolt` binary from the toolchain ([ACCESS-PATH.md](ACCESS-PATH.md)). | Medium — touches `state-manager` and every `create-*` skill | Drift becomes unrepresentable; 90.2%-style coverage gaps become visible |
 | **4** | Parallel wave branches. | Medium | Concurrency the single-orphan-branch design forbids today |
 
 Phase 1 delivers most of the correctness benefit at almost none of the cost, which is
@@ -315,23 +334,31 @@ why it goes first.
 
 ## 8. Known gaps
 
-Honest list of what is **not** proven:
+Honest list of what is **not** proven. **Gaps 1, 4 and 6 were closed on 2026-07-31**
+and are struck through below rather than deleted, so the record of what was once
+unproven survives.
 
-1. **Real network remote.** Every multi-machine test used a `file://` remote. GitHub
-   latency, auth, and partial-failure recovery are untested; the 640 ms/acquire figure
-   is a floor.
+1. ~~**Real network remote.**~~ **CLOSED** — 10/10 against github.com
+   ([REMOTE.md](REMOTE.md)). An acquire costs **~10 s**, not 640 ms; payload size is
+   irrelevant (33 MB and 2 rows both push in ~10 s); a full-corpus clone back is 2.2 s;
+   and one new finding became invariant 12.
 2. **Prose-embedded references.** The graph was built from frontmatter. BC/VP bodies
    also cite ADRs and other BCs in prose; those edges are unextracted, so the 38
    dangling references are a **floor**, not a total.
 3. **One unreproduced anomaly.** An 8-agent run of the cross-machine counter test
    produced 7 agents reporting success while only 6 increments landed. Not reproducible
    in the controlled setup; logged rather than explained. Invariant 3 avoids the class.
-4. **Conflict-resolution policy** is undesigned (who resolves, how, and with what
-   authority).
+4. ~~**Conflict-resolution policy** is undesigned.~~ **CLOSED** — designed in
+   [DECISIONS.md D1](DECISIONS.md): mechanical abort, an append-only conflict record,
+   the push-race loser re-applies intent as a validated write, cross-actor collisions
+   escalate to the orchestrator, and a conflict inside a leased scope is reported as a
+   lease-scoping defect.
 5. **Long-horizon growth.** ~6 KB/commit measured over 40 commits; years of history and
    `gc` cadence are unmodelled.
-6. **Embedded driver not benchmarked.** All timings shell out to `dolt sql`, paying
-   ~140–270 ms of process spawn per invocation. beads' embedded `dolthub/driver/v2` path
-   would keep one handle open under a single mutex hold and give real transactions —
-   likely faster and cleaner than invariant 4's idempotent-retry shape. Benchmark before
-   committing to an implementation.
+6. ~~**Embedded driver not benchmarked.**~~ **CLOSED** — 13/13
+   ([ACCESS-PATH.md](ACCESS-PATH.md)), and the guess in this line was wrong. The embedded
+   driver is ~2× on cold start, ~4,000× warm on a held handle, gives real cross-statement
+   transactions, and needs no `dolt` binary — but it does **not** remove the write mutex
+   (a second opener silently becomes read-only) and does **not** touch invariant 4, which
+   is a git-level property. The actual lever was a missing `BEGIN`/`COMMIT`, worth 17–23×
+   and reachable from the CLI. Decide the access path at phase 3.

@@ -1,77 +1,103 @@
 # HANDOFF — dolt-artifact-spike
 
-## ⭐ CURRENT SNAPSHOT (2026-07-30)
+## ⭐ CURRENT SNAPSHOT (2026-07-31)
 
 **Active workstream:** research spike — can [Dolt](https://github.com/dolthub/dolt) back a
 tool (`fa`) that is the **sole interface to all vsdd-factory artifacts**, replacing the
 `factory-artifacts` orphan git branch?
 
-**Status: SPIKE COMPLETE. Verdict GO (phased). 137/137 tests, 17 suites, all re-runnable
-against the LIVE vsdd-factory corpus.** No product code written — this is a spike plus a
-specification. Nothing has been changed in vsdd-factory itself.
+**Status: SPIKE COMPLETE + all three blocking decisions SETTLED. Verdict GO (phased).
+160/160 tests, 19 suites**, re-runnable against the LIVE vsdd-factory corpus and — new —
+against a **real GitHub remote**. No product code written yet: this is a spike, a
+specification, and now a decision record. Nothing in vsdd-factory has been changed.
 
 **Repo state:** `~/Dev/scrap/dolt-artifact-spike`, **local-only git (NO remote)**, clean.
-9 spike passes. HEAD before this wrap = `001f166`.
+10 spike passes. HEAD before this wrap = `919bfd3`.
 
 **Reference repos (both READ-ONLY here; we changed neither):**
 | Repo | Where | Pin |
 |---|---|---|
 | vsdd-factory | `~/Dev/vsdd-factory` (exists, branch `develop`) | `82163b7f` |
 | its artifact corpus | `~/Dev/vsdd-factory/.factory` (worktree on `factory-artifacts`) | 3,145 files / 1,959 BCs / 1,607 commits |
-| beads (Dolt reference product) | **was `/tmp/_bd/b` — EPHEMERAL, re-clone on resume** | `b1694a5` |
+| beads (Dolt reference product) | **`/tmp/_bd/b` — EPHEMERAL, re-clone on resume** | pin `b1694a5`; a `--depth=1` clone now lands on `9fddc56` |
 | Dolt | `brew install dolt` | 2.2.3 |
+| Go — NEW, only for the embedded harness | `brew install go` | 1.26.5 + Xcode clang (CGO) |
+| **test remote — NEW** | `https://github.com/drbothen/dolt-artifact-spike-remote` (private) | seeded `main`; each run uses per-run `refs/dolt/run-*` and deletes them afterwards |
 
-**ONE-LINE RESUME POINTER:** read `research/SPEC.md` → `research/GAP-MATRIX.md` →
-`research/ACCESS-CONTROL.md`, then decide the 3 open design questions in TOP PRIORITY
-NEXT before writing any `fa` code.
+**ONE-LINE RESUME POINTER:** read `research/DECISIONS.md` first (the three settled calls),
+then `research/SPEC.md`, then `research/ACCESS-PATH.md` + `research/REMOTE.md` for what the
+last pass measured. **Phase 1 is signed off — the next work is building it.**
 
 ---
 
 ## ▶▶▶ TOP PRIORITY NEXT
 
-### Decisions to settle BEFORE building (all three are the user's call)
+### The three blocking decisions are SETTLED — `research/DECISIONS.md`
 
-1. **Conflict-resolution policy — undesigned, and now the biggest gap.** Conflicts
-   provably surface (D3, I6, M4) but *who* resolves them, how, and with what authority is
-   unspecified. This matters more as instances multiply.
-2. **Zone granularity: per-directory or per-table?** **Tier 1 is SELECTED** (tiers 2/3
-   are structurally unavailable — Claude Code runs all agents in one OS process). Default
-   = per-**directory** zone dirs, no daemon. Per-**table** is still reachable but the
-   enforcement point must move out of the DB into the harness (deny `Bash`, allow only
-   `fa`, inject the role via a `PreToolUse` hook so the agent cannot forge it) — strictly
-   more machinery, so only if genuinely needed. See ACCESS-CONTROL §4.2.
-3. **Phase-1 scope sign-off.** Recommended: read-only shadow (`fa import` + `fa validate`
-   in CI, markdown stays truth). Catches all 82 findings, zero agent changes, no daemon.
+1. **Conflict-resolution policy — DESIGNED (D1).** `fa` never auto-resolves. Abort
+   mechanically on any conflict (invariant 2), record it in an append-only `conflict`
+   table, and the **loser of the push race re-applies its intent as a validated write**
+   (`--reapply | --take-theirs | --take-mine`); cross-actor collisions escalate to the
+   orchestrator; and **a conflict inside a leased scope is reported as a lease-scoping
+   defect**, because that is what it is. Only mutable record cells can conflict at all —
+   derived data and append-only tables structurally cannot.
+2. **Zone granularity — per-DIRECTORY, ratified (D2).** Tier 1 remains the only
+   enforceable option, and two new measurements strengthen it: a zone opens in ~25 ms
+   in-process and one process can hold both handles (so the ~144 ms per-zone cost
+   objection is gone), and an embedded `fa` needs no `dolt` binary (so "deny `Bash`,
+   allow only `fa`" becomes practical). **New required deliverable:** a cross-zone
+   integrity pass in `fa validate`, since splitting zones removes that FK (A6).
+3. **Phase 1 — SIGNED OFF (D3).** Read-only shadow: `import` + `validate` in CI, markdown
+   stays truth, **plus a dated baseline allowlist of the 82 existing findings** — without
+   it the gate blocks every PR on day one and gets switched off. Python + `dolt sql -f` in
+   ONE transaction; the corpus import lands at **0.9 s**. No Go, no remote, no daemon,
+   zero blast radius.
 
 ### Then, in order
 
-4. **Benchmark the embedded driver** (`dolthub/driver/v2`, as beads uses it) against the
-   `dolt sql` CLI path. **This is the highest-leverage engineering task:** measured spawn
-   floor is **141 ms/invocation vs ~0–2 ms/query** (~14,000× for a `COUNT(*)`). The
-   embedded driver keeps one handle open under a single mutex hold and gives real
-   transactions — it would likely simplify invariant 4 (idempotent retry) out of existence.
-5. **Re-verify the identity findings on Linux.** macOS `ps eww` leaks a sibling's env;
+4. **BUILD PHASE 1.** Nothing blocks it now. Deliverables: `fa import`; `fa validate` with
+   the gates as SQL (W8); the dated baseline of 38 dangling refs + 44 type violations; a
+   CI job that fails on *new* violations only; and D2's cross-zone check.
+   **Exit criterion into phase 2:** baseline at zero (or each item explicitly waived)
+   **and** the gate has caught ≥1 real regression in a real PR.
+5. **Extract prose-embedded references.** The graph was built from frontmatter only; BC/VP
+   bodies also cite ADRs and BCs in prose, so the **38 dangling refs are a floor**.
+6. **Re-verify the identity findings on Linux.** macOS `ps eww` leaks a sibling's env;
    Linux gates `/proc/<pid>/environ` behind `PTRACE_MODE_READ_FSCREDS` (safer). Depends on
    deployment `ptrace_scope`/`hidepid`/dumpable, so it must be run, not reasoned about.
-6. **Test push-as-CAS against a REAL network remote (GitHub).** Everything used `file://`,
-   so 640 ms/acquire is a floor and auth/partial-failure recovery is untested.
-7. **Extract prose-embedded references.** The graph was built from frontmatter only; BC/VP
-   bodies also cite ADRs and BCs in prose, so the **38 dangling refs are a floor**.
-8. Instance-count ceiling above 12 (disk + push contention is O(N) retries for N pushers).
+   Low priority — tier 1 does not depend on the answer.
+7. **Instance-count ceiling above 12** — and note it is *worse* than modelled: all Dolt
+   branches share ONE git ref, so push contention is **global** across instances at ~10 s
+   per retry (new invariant 12 / G7). `--ref` per instance decouples pushes but forfeits
+   cross-instance merge on the remote.
+8. **Decide the access path at phase 3, not now** (`research/ACCESS-PATH.md`): embedded is
+   ~2× on cold start, ~4,000× warm, and removes the `dolt` binary from the toolchain — but
+   it is Go+CGO, 155 indirect deps, a 147 MB binary, and phase 1 does not need it.
 9. Multi-repo mode (`.factory-project/`) is declared out of scope — revisit if needed.
+10. **Offered and NOT chosen:** a DoltLite-from-Rust spike. DoltLite is a shipped C library
+    (SQLite fork, prolly tree, `dolt_*` functions and `dolt_log`/`dolt_diff_*` virtual
+    tables, v0.11.38, bindings for Python/Ruby/Node/WASM/Swift/Android but **not Rust**),
+    so Rust *can* embed it via `rusqlite` — but it is a **different engine and on-disk
+    format** whose remotes are `.doltlite` files or an HTTP `doltlite-remotesrv`, not the
+    project's git remote. That makes it an architecture decision, not a language one.
+    Dolt itself has **no C API and no Rust bindings**
+    ([dolt#8953](https://github.com/dolthub/dolt/issues/8953) is open), so the embedded
+    measurement can only be made from Go.
 
 ### Session task list (ephemeral tracker — mirrored here)
 
-All 20 tasks from this session are **✓ complete**: scan factory-artifacts layer · harvest
-beads · research Dolt · write assessment · build+test POC · model the full graph · test
-graph integrity · multi-machine · write API · render round-trip · schema evolution ·
-lifecycle · capability SPEC · 46-type gap matrix · asymmetry walls · wave/state/context/
-tasks/templates · multi-instance · scale ceilings · zone design · agent identity.
-**Nothing in progress. No WIP, no uncommitted work.**
+Pass 10 tasks all **✓ complete**: benchmark the embedded driver (13/13) · add the missing
+`BEGIN`/`COMMIT` control that overturned the pass-9 headline · settle the three decisions ·
+real-GitHub-remote suite (10/10) · answer the Rust/DoltLite question · update SPEC /
+GAP-MATRIX / ASSESSMENT / LESSONS. **Nothing in progress. No WIP.**
 
 ### Operating principles that must carry over
 
-- **Measure, don't assume.** This spike corrected its own claims four times (see LOG).
+- **Measure, don't assume.** This spike corrected its own claims **five** times (see LOG).
+- **Before recommending a lever, measure the alternatives to that lever.** Pass 9 called
+  the embedded driver "the single biggest engineering lever" from a spawn-vs-query ratio.
+  Pass 10 measured the thing neither side had tested — the transaction boundary — and the
+  headline moved to a `BEGIN`/`COMMIT` the CLI already supports.
 - **Report unreproduced anomalies as unreproduced** — don't promote them to findings.
 - **Node universes come from authoritative declaring docs**, never grep-over-everything
   (otherwise every reference resolves trivially and integrity checks prove nothing).
@@ -108,25 +134,54 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 - An unresolved merge conflict **wedges the whole machine** — every later commit fails with
   `cannot merge with uncommitted changes`, which blames staging, not the conflict.
 - Cost is per **invocation**, not per write: 1,959-BC import = 531 s per-statement vs
-  13.4 s batched.
+  13.4 s batched — **and then 0.9 s if that batch is wrapped in one transaction** (pass 10).
 - **Claude Code runs ALL agents in ONE OS process** ⇒ no per-agent uid and no fd-passing,
   so access control must be the CLI permission layer (`permissions.deny` + `PreToolUse`
   hooks + per-agent `allowed-tools`), and a walled agent must NOT have unrestricted Bash.
+
+**What pass 10 added (`research/ACCESS-PATH.md`, `research/REMOTE.md`):**
+- **The real lever was a transaction, not the access path.** `dolt sql -f` autocommits per
+  *statement*; wrapping the same file in `BEGIN`/`COMMIT` is 17–23× (15.7–18.5 s → 0.8–0.9 s).
+  Per-statement autocommit costs the same ~5 ms in BOTH the CLI and the embedded driver.
+- **Embedded driver, honestly:** ~2× on cold start (70 ms vs 136 ms — the engine opens
+  either way), ~4,000× warm on a held handle (0.03 ms vs 132 ms per question), real
+  cross-statement transactions, and **no `dolt` binary needed at all** (branch/merge/gc/
+  `DOLT_PUSH` all work in-process). Costs: Go + **CGO**, `-tags gms_pure_go` mandatory
+  (else the build dies on ICU headers), 155 indirect deps, 147 MB binary, and its own
+  pinned Dolt build separate from the CLI's.
+- **It does NOT remove the mutex.** A second opener of the same directory silently becomes
+  **read-only** and fails later with `cannot update manifest: database is read only` — so
+  `doctor` must check *writability*, and `fa` embedded + `dolt sql` cannot share a directory.
+- **Real remote (github.com):** an acquire is **~10 s**, not 640 ms; an acquire+release
+  pair ~20 s ⇒ push-as-CAS is a phase-gate mechanism only. **Payload size is irrelevant** —
+  a 2-row database and the 33 MB corpus both push in ~10 s, and the corpus clones back in
+  **2.2 s** (onboarding/DR is cheap).
+- **New invariant 12:** all Dolt branches live in ONE git ref, so push contention is
+  **global across instances**; `--ref` per instance decouples it but forfeits remote-side
+  cross-instance merge.
+- **No Rust path to embedded Dolt.** Dolt has no C API and no Rust bindings; only DoltLite
+  (a separate C engine) is embeddable from Rust.
 
 ---
 
 ## Background / environment state at wrap
 
-- **A `dolt sql-server` was left running on port 3308** (pid 10054 at wrap, cwd
-  `poc/db/factory_artifacts`). It will NOT survive a reboot. `test_spike`, `test_graph`,
-  `test_write_api`, `test_render`, `test_factory_ops` need it; the others self-provision.
-- `poc/*/` Dolt data dirs (~207 MB, largest `poc/db` 186 MB) are **gitignored and
-  disposable** — every suite recreates what it needs.
-- **Hygiene fixed at wrap:** `poc/td/` Dolt data had been committed in pass 6 *before* it
-  was gitignored (gitignore does not untrack). Now `git rm --cached`'d; 30 tracked files,
-  all source + docs.
-- No background agents or long-running jobs pending. One Perplexity deep-research call
-  timed out mid-session; its narrow follow-up succeeded and is cited in ACCESS-CONTROL §5.
+- **No `dolt sql-server` is running at this wrap.** The 7 server-dependent suites
+  (`test_spike`, `test_graph`, `test_write_api`, `test_render`, `test_factory_ops`, …) need
+  one started per the kick-start prompt; the other 12 self-provision. `test_embedded.py`
+  starts and stops its own server on port 3399.
+- `poc/*/` Dolt data dirs are **gitignored and disposable** — every suite recreates what it
+  needs. Pass 10 added `poc/eb/` (~150 MB) and `poc/gh/` (~40 MB) plus the 147 MB
+  `poc/bench/bench` binary; **all three are gitignored** (the `.go`/`go.mod`/`go.sum`
+  sources are tracked). Tracked tree stays source + docs only.
+- **Go was installed this session** (`brew install go`, 1.26.5) purely to build the embedded
+  harness. Reversible with `brew uninstall go`. Nothing else depends on it.
+- **A GitHub repo was created:** `drbothen/dolt-artifact-spike-remote` (**private**), seeded
+  with one commit on `main`. It holds `refs/heads/__dolt_remote_info__` (Dolt's own
+  bookkeeping branch) permanently; per-run `refs/dolt/run-*` refs are deleted by the suite
+  itself in a `finally` block. Auth is the `gh` git credential helper — **no token is
+  written to disk or into any URL, and none is in the repo.**
+- No background agents or long-running jobs pending.
 
 ---
 
@@ -143,6 +198,7 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 | 2026-07-30 | `2da29cd` | Pass 7: `research/SPEC.md` + write-API / render / schema / lifecycle; 87/87 |
 | 2026-07-30 | `11f0da3`, `b723569` | Pass 8: `research/GAP-MATRIX.md` vs all 46 registry artifact types; asymmetry + factory-ops + multi-instance; 112/112 |
 | 2026-07-30 | `7f36c27`, `001f166` | Pass 9: scale + zones + identity; `research/ACCESS-CONTROL.md`; 137/137. **Corrected my prediction that macOS hides process envs — it does not** |
+| 2026-07-31 | (this pass) | Pass 10: embedded-driver benchmark (13/13) + **real GitHub remote (10/10)** + the three decisions settled (`research/DECISIONS.md`, `ACCESS-PATH.md`, `REMOTE.md`); 160/160. **CORRECTION #5 — pass 9's "the embedded driver is the single biggest engineering lever" was wrong: the lever is a missing `BEGIN`/`COMMIT`, worth 17–23× and available from the CLI.** Also: invariant 6 restated, new invariant 12 (one git ref per remote ⇒ global push contention), and the embedded path does NOT remove the write mutex |
 
 ---
 
@@ -153,11 +209,14 @@ Resume the dolt-artifact-spike in ~/Dev/scrap/dolt-artifact-spike (local-only gi
 
 READ FIRST, in this order:
   1. HANDOFF.md                    (this file — snapshot + next actions)
-  2. research/SPEC.md              (the spec: architecture, capability surface, 11 invariants, CLI, phasing)
-  3. research/GAP-MATRIX.md        (coverage vs all 46 vsdd-factory artifact types + the 3 findings that changed the design)
-  4. research/ACCESS-CONTROL.md    (zones + agent identity; what is actually enforceable)
-  5. research/ASSESSMENT.md        (the feasibility argument + measured problems; §3g has the scale numbers)
-  6. research/LESSONS.md           (every Dolt gotcha + every harness bug that faked a clean result)
+  2. research/DECISIONS.md         (the 3 blocking calls, SETTLED: conflict policy, zones, phase-1 scope)
+  3. research/SPEC.md              (the spec: architecture, capability surface, 12 invariants, CLI, phasing)
+  4. research/ACCESS-PATH.md       (embedded driver vs CLI vs server, measured — and why the headline changed)
+  5. research/REMOTE.md            (the real github.com remote: ~10 s per acquire, one data ref per remote)
+  6. research/GAP-MATRIX.md        (coverage vs all 46 vsdd-factory artifact types; gaps 1/2/7 now closed)
+  7. research/ACCESS-CONTROL.md    (zones + agent identity; what is actually enforceable)
+  8. research/ASSESSMENT.md        (the feasibility argument + measured problems; §3g has the scale numbers)
+  9. research/LESSONS.md           (every Dolt gotcha + every harness bug that faked a clean result)
 
 RE-SCRAPE THE REFERENCE MATERIAL (beads was in /tmp and is gone):
   gh repo clone gastownhall/beads /tmp/_bd/b -- --depth=1     # pin b1694a5
@@ -180,7 +239,7 @@ RESTART THE TEST SERVER (7 suites need it; the rest self-provision):
   .venv/bin/python poc/fa.py init
   .venv/bin/python poc/fa.py import ~/Dev/vsdd-factory/.factory      # ~13s, 1,959 BCs
   .venv/bin/python poc/graph_import.py ~/Dev/vsdd-factory/.factory   # 1,490 edges + findings
-  # verify all 17 suites (137/137 expected, ~15 min):
+  # verify the 16 original suites (137/137 expected, ~15 min):
   for s in test_spike test_graph test_multimachine test_locking test_serverless_lock \
            test_mutex test_two_devs test_write_api test_render test_schema_evolution \
            test_lifecycle test_asymmetry test_factory_ops test_multi_instance \
@@ -189,14 +248,27 @@ RESTART THE TEST SERVER (7 suites need it; the rest self-provision):
       && echo "$(grep -cE '^PASS' /tmp/$s.log) passed" || echo FAILED; done
   SCALE_RECORDS=20000 SCALE_COMMITS=150 .venv/bin/python -u poc/test_scale.py
 
-OPERATING PRINCIPLE: measure, don't assume. This spike corrected its own claims four
-times. Report unreproduced anomalies as unreproduced. Build node universes only from
-authoritative declaring documents.
+PASS-10 SUITES (embedded driver + the real remote; both self-provision):
+  brew install go                                            # 1.26.5; needs Xcode clang for CGO
+  cd poc/bench && CGO_ENABLED=1 go build -tags gms_pure_go -o bench . && codesign -s - -f bench
+  # -tags gms_pure_go is MANDATORY: without it the cgo build dies on ICU headers
+  cd ../.. && .venv/bin/python -u poc/test_embedded.py       # 13/13, ~4 min, own server on 3399
+  .venv/bin/python -u poc/test_github_remote.py              # 10/10, ~9 min, needs gh auth
+  # the remote is private: github.com/drbothen/dolt-artifact-spike-remote
+  # each run uses per-run refs/dolt/run-* and deletes them in a finally block
+  # G10 needs poc/eb/a/fa_cli, so run test_embedded.py first
 
-STATE: spike complete, verdict GO (phased), 137/137. No product code exists yet.
+OPERATING PRINCIPLE: measure, don't assume. This spike corrected its own claims FIVE
+times — most recently its own headline recommendation. Before recommending a lever,
+measure the alternatives to that lever. Report unreproduced anomalies as unreproduced.
+Build node universes only from authoritative declaring documents.
 
-TASK: settle the three open decisions in HANDOFF "TOP PRIORITY NEXT" (conflict-resolution
-policy · zone granularity per-directory vs per-table · phase-1 scope), then benchmark the
-embedded dolthub/driver/v2 against the CLI path — the 141 ms spawn floor vs ~0–2 ms query
-cost is the single biggest engineering lever and may remove an invariant.
+STATE: spike complete, 3 blocking decisions settled, verdict GO (phased), 160/160.
+No product code exists yet.
+
+TASK: build PHASE 1 per research/DECISIONS.md D3 — `fa import` + `fa validate` (gates as
+SQL), a DATED BASELINE ALLOWLIST of the 82 existing findings so the CI gate can be turned
+on without blocking every PR, a CI job that fails only on NEW violations, and the
+cross-zone integrity check that D2 makes mandatory. Python + `dolt sql -f` wrapped in ONE
+transaction (0.9 s for the whole corpus); no Go, no remote, no daemon in phase 1.
 ```

@@ -708,6 +708,14 @@ Honest accounting. These are real and some are unattractive.
 
 ### 4.4 Unverified
 
+> **Update 2026-07-31.** Three of the items below have since been measured:
+> the **real network remote** ([REMOTE.md](REMOTE.md), 10/10 against github.com —
+> an acquire is ~10 s, not 640 ms, and payload size is irrelevant), the
+> **embedded driver** ([ACCESS-PATH.md](ACCESS-PATH.md), 13/13 — and the real
+> lever turned out to be a missing `BEGIN`/`COMMIT`, worth 17× on the CLI path),
+> and **conflict-resolution policy** ([DECISIONS.md](DECISIONS.md) D1). The
+> remaining items stand.
+
 - **`dolt gc` / long-term growth.** The DB is 29–41 MB for a 36 MB corpus at 1,607 commits
   and grew ~12 MB across a handful of test runs. Growth under years of commits is untested.
 - **Prose-embedded references.** The graph was built from *frontmatter*. BC/VP bodies also
