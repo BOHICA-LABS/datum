@@ -12,9 +12,9 @@ as the only interface to all vsdd-factory artifacts?
 
 **Verdict: GO, phased.** The current design is a hand-maintained relational database
 implemented in markdown files, and it is measurably failing at exactly the guarantees a
-database provides for free. **46/46 POC tests pass** against the live corpus across six
+database provides for free. **55/55 POC tests pass** against the live corpus across seven
 suites (13 store + 8 relationship-graph + 6 multi-machine + 6 locking + 5 server-less +
-8 single-clone mutex), plus a 5-pattern concurrency comparison.
+8 single-clone mutex + 9 two-devs composite), plus a 5-pattern concurrency comparison.
 
 **Recommended topology: ONE clone + a local `flock` write mutex (§3e).** It needs no
 daemon, no single point of failure, and — because serialized writers cannot merge — none
@@ -519,6 +519,90 @@ shells out per row is ~40× slower and will feel broken.
 The single-clone mutex is the only option that needs neither a daemon nor the token
 discipline. Adopt it first; it is also the least code.
 
+## 3f. Two devs, two machines, multiple agents each — the composite
+
+The realistic deployment: **one git repo, two devs on separate machines, each with one
+clone shared by several agent processes, no `sql-server` anywhere.** Three coordination
+layers have to compose:
+
+    L1  flock mutex per machine   -> orders that machine's local agents        (§3e)
+    L2  push / non-fast-forward   -> arbitrates BETWEEN the two machines       (§3d)
+    L3  Dolt 3-way cell merge on pull -> reconciles pre-push divergence
+
+9/9 (`poc/test_two_devs.py`, 4 agents per dev, all real subprocesses).
+
+| # | Test | Result |
+|---|---|---|
+| D1 | 4+4 agents, disjoint records → all converge, both machines identical | PASS (8/8 ok, 0 manifest errors) |
+| D2 | same row, **different columns**, two machines → cell merge keeps both | PASS |
+| D3 | same row **and column** → conflict surfaced, nothing silently dropped | PASS |
+| D4 | **identical** same-cell write from both machines → coalesces, no conflict | PASS |
+| D5 | naive cross-machine `n = n + 1` → not exact without a re-executing retry | PASS (3/3 lossy with no retry) |
+| D5b | append-only rows with unique keys → exact across machines | PASS (8/8) |
+| D6 | factory lease, 8 agents across 2 machines → one holder, both agree | PASS |
+| D7 | staleness: dev B reads the old value until it pulls | PASS |
+| D8 | an unresolved conflict **wedges the whole machine**; the guard prevents it | PASS |
+
+### It composes — the good news
+
+**D1** is the headline: eight agents across two machines writing concurrently, all
+succeeded, zero `cannot update manifest`, and both clones converged to identical state.
+The mutex handles intra-machine ordering while pushes are happening; the remote handles
+inter-machine arbitration. They do not interfere.
+
+**D2** is the property a markdown store cannot have: dev A sets `capability`, dev B sets
+`notes`, **on the same artifact**, and both survive with no conflict. In markdown that is
+a textual conflict in one file's frontmatter.
+
+**D6**: a lease contended by both fleets simultaneously resolves to exactly one holder
+that both machines agree on.
+
+### The four rules this topology imposes
+
+1. **Every agent MUST abort or resolve on conflict (D8).** This is the operational
+   landmine. An unguarded `dolt pull` that conflicts leaves the clone half-merged, and
+   then *every* subsequent commit by *any* agent on that machine fails — with
+   `cannot merge with uncommitted changes`, which **blames staging, not the conflict**.
+   One careless agent takes down its dev's whole fleet with a misleading error. With the
+   guard (abort on conflict), the clone stays clean and the next agent declines with an
+   informative reason; the divergence still has to be resolved before that dev can sync.
+2. **Never use a mutable cell for a counter or an allocator across machines (D4/D5).**
+   Identical same-cell writes coalesce on the pull path too, so two machines computing
+   the same next value silently merge into one. `n = n + 1` was lossy 3/3 with no retry.
+   With a retry that *re-executes* the read-modify-write it came out exact 3/3 — so
+   correctness depends on the retry recomputing rather than re-pushing. **Use
+   append-only rows with unique keys instead (D5b): 8/8 exact, and no merge-semantics
+   reasoning required.** This also happens to be what makes the §1.2 count-drift class
+   impossible, since counts become `COUNT(*)`.
+3. **A rejected push does not mean the work was not published (D5b).** On a shared clone
+   a push publishes *everything* committed locally, including siblings' work. An agent
+   whose own push was rejected may still have its write carried to the remote by the next
+   agent's push. Retries must therefore be **idempotent** — a re-run write that hits a
+   duplicate key means "already applied", and must fall through to push rather than
+   bail. Bailing strands the earlier attempt's commit, which the next reset discards.
+   (This was a real bug in the harness that cost one row.)
+4. **There is no cross-machine read consistency without a pull (D7).** Dev B reads stale
+   values until it syncs (~150 ms). Agents must pull at the start of a unit of work, and
+   anything cached across a unit boundary is a stale read.
+
+### Honest gap
+
+D5's `with-retry` case came out exact 3/3 in the controlled wide-window test, but an
+earlier 8-agent run of the same test produced `[(7,6),(8,8),(7,6)]` — **7 agents
+reporting success while only 6 increments landed**, a silent loss. It has not reproduced
+deterministically and is logged as observed-but-unexplained rather than a confirmed
+property. It is another reason to take rule 2 (append-only) rather than reason about
+merge semantics.
+
+### Verdict for this topology
+
+**It works, and it is the right target.** Two devs with multiple agents each need no
+daemon, no shared server, and no new infrastructure — just the repo they already have.
+The cost is four disciplines that must live in the single write path (`fa`), not in agent
+prose: conflict-abort, append-only counters, idempotent retry, pull-before-work. All four
+are mechanical and testable, which is exactly what makes them suitable for a tool rather
+than a protocol document.
+
 ## 4. Gaps, risks, and things that are worse
 
 Honest accounting. These are real and some are unattractive.
@@ -647,6 +731,7 @@ brew install dolt                                   # 2.2.3 verified
 .venv/bin/python -u poc/test_locking.py             #  6/6   is the lock still needed?
 .venv/bin/python -u poc/test_serverless_lock.py     #  5/5   no-server push-as-CAS
 .venv/bin/python -u poc/test_mutex.py               #  8/8   single clone + flock mutex
+.venv/bin/python -u poc/test_two_devs.py            #  9/9   2 devs x 4 agents, 1 repo
 .venv/bin/python -u poc/test_cas_patterns.py        #  which CAS patterns are safe
 ```
 

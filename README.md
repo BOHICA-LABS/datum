@@ -22,9 +22,39 @@ interface to all vsdd-factory artifacts, replacing the `factory-artifacts` orpha
 | `poc/test_serverless_lock.py` | 5 tests — cross-machine exclusion with **no server** |
 | `poc/clonelock.py` | `flock` write mutex for a single shared clone |
 | `poc/test_mutex.py` | 8 tests — single clone + mutex (cross-process) |
+| `poc/test_two_devs.py` | 9 tests — **2 devs, 2 machines, 4 agents each, 1 repo** |
 | `poc/db/`, `poc/mm/`, `poc/sl/`, `poc/mx/` | Dolt data dirs (gitignored) |
 
-**46/46 passing** against the live corpus.
+**55/55 passing** against the live corpus.
+
+## Two devs, two machines, multiple agents each — it works
+
+The realistic deployment: one git repo, two devs on separate machines, each with **one
+clone shared by several agent processes**, no server anywhere. Three layers compose —
+`flock` orders each machine's agents, push-rejection arbitrates between machines, and
+Dolt's cell merge reconciles divergence. 9/9 (`poc/test_two_devs.py`).
+
+- **8 agents across 2 machines, disjoint records → all 8 succeeded, 0 manifest errors,
+  both clones identical.**
+- **Dev A sets `capability` while dev B sets `notes` on the same artifact → both
+  survive, no conflict.** A markdown store gets a frontmatter conflict here.
+- A lease contended by both fleets resolves to one holder both machines agree on.
+
+**Four rules it imposes** (each one measured, and each belongs in `fa`, not in agent prose):
+
+1. **Every agent must abort/resolve on conflict.** An unguarded conflicting pull leaves
+   the clone half-merged, and then *every* commit by *any* agent on that machine fails —
+   with `cannot merge with uncommitted changes`, which blames staging, not the conflict.
+   One careless agent downs its dev's whole fleet with a misleading error.
+2. **Never use a mutable cell as a cross-machine counter/allocator.** Identical same-cell
+   writes coalesce on the pull path, so two machines computing the same next value merge
+   into one. `n = n + 1` was lossy 3/3 without a re-executing retry. Use **append-only
+   rows with unique keys** (8/8 exact) — which is also what makes count drift impossible.
+3. **A rejected push doesn't mean your work wasn't published.** On a shared clone a push
+   carries siblings' committed work too, so retries must be idempotent — a duplicate-key
+   error on retry means "already applied", and must fall through to push rather than bail.
+4. **No cross-machine read consistency without a pull** (~150 ms). Pull at the start of
+   every unit of work.
 
 ## Recommended topology: ONE clone + a local `flock` mutex
 
