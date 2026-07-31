@@ -6,13 +6,18 @@
 tool (`fa`) that is the **sole interface to all vsdd-factory artifacts**, replacing the
 `factory-artifacts` orphan git branch?
 
-**Status: SPIKE COMPLETE + all three blocking decisions SETTLED. Verdict GO (phased).
-193 of 194 checks, 24 suites**, re-runnable against the LIVE vsdd-factory corpus and — new —
-against a **real GitHub remote**. No product code written yet: this is a spike, a
-specification, and now a decision record. Nothing in vsdd-factory has been changed.
+**Status: SPIKE COMPLETE · 3 blocking decisions SETTLED · SCALED to 200 agents · every
+decentralised contention fix EXHAUSTED · the cross-internet topology VALIDATED against
+GitHub Actions. Verdict GO (phased). 193 of 194 checks, 24 suites**, all re-runnable
+against the LIVE vsdd-factory corpus and a REAL GitHub remote. Still **no product code**:
+this is a spike, a specification, a decision record, and now a measured scaling +
+latency profile. Nothing in vsdd-factory has been changed.
 
-**Repo state:** `~/Dev/scrap/dolt-artifact-spike`, **local-only git (NO remote)**, clean.
-10 spike passes. HEAD before this wrap = `919bfd3`.
+⭐ **THE END STATE IS ONE GO BINARY, `fa`** (user-confirmed 2026-07-31). Everything below
+lands as its subcommands — see TOP PRIORITY NEXT item 0.
+
+**Repo state:** `~/Dev/scrap/dolt-artifact-spike`, **local-only git (NO remote — nothing
+to push)**, clean. **12 spike passes. HEAD at this wrap = `acad904`.**
 
 **Reference repos (both READ-ONLY here; we changed neither):**
 | Repo | Where | Pin |
@@ -22,11 +27,13 @@ specification, and now a decision record. Nothing in vsdd-factory has been chang
 | beads (Dolt reference product) | **`/tmp/_bd/b` — EPHEMERAL, re-clone on resume** | pin `b1694a5`; a `--depth=1` clone now lands on `9fddc56` |
 | Dolt | `brew install dolt` | 2.2.3 |
 | Go — NEW, only for the embedded harness | `brew install go` | 1.26.5 + Xcode clang (CGO) |
-| **test remote — NEW** | `https://github.com/drbothen/dolt-artifact-spike-remote` (private) | seeded `main`; each run uses per-run `refs/dolt/run-*` and deletes them afterwards |
+| **test remote** | `https://github.com/drbothen/dolt-artifact-spike-remote` (PRIVATE, ours) | seeded `main`; suites create per-run `refs/dolt/*` and delete them in a `finally`. **Swept clean at wrap** — only `main` + Dolt's `__dolt_remote_info__` remain |
+| **the CI aggregator workflow** | DEPLOYED at `.github/workflows/fa-aggregate.yml` in that test remote; source of truth copied to `poc/workflows/fa-aggregate.yml` here | **active, dispatch-only — the cron sweep is COMMENTED OUT** so an idle repo doesn't run forever. Re-enable the cron to test that layer. `/tmp/ciwork` was the scratch clone used to edit it — EPHEMERAL, re-clone if needed |
 
-**ONE-LINE RESUME POINTER:** read `research/DECISIONS.md` first (the three settled calls),
-then `research/SPEC.md`, then `research/ACCESS-PATH.md` + `research/REMOTE.md` for what the
-last pass measured. **Phase 1 is signed off — the next work is building it.**
+**ONE-LINE RESUME POINTER:** read `research/DECISIONS.md` (the 3 settled calls) →
+`research/SPEC.md` (14 invariants) → `research/SCALE.md` + `research/CI-AGGREGATOR.md`
+(what scale and the cross-internet topology actually cost). **Nothing is blocking.
+The next work is BUILDING PHASE 1 as `fa` Go subcommands.**
 
 ---
 
@@ -55,11 +62,27 @@ last pass measured. **Phase 1 is signed off — the next work is building it.**
 
 ### Then, in order
 
+0. ⭐ **THE END STATE IS ONE GO BINARY, `fa`.** Everything lands as its subcommands.
+   Settled consequences: the embedded `dolthub/driver/v2` is **THE** access path (so
+   **no `dolt` CLI dependency anywhere, including CI**); `fa aggregate` is the
+   aggregator, which makes the Actions-outage fallback "any dev runs the same binary";
+   and **DECISIONS D3's "phase 1 = Python, no Go" is SUPERSEDED** (phase-1 SCOPE is
+   unchanged — only language + access path). Build costs are fixed and non-negotiable:
+   CGO, **`-tags gms_pure_go` MANDATORY** (else the build dies on ICU headers), 155
+   indirect deps, ~147 MB binary, its own pinned Dolt build separate from the CLI's.
+
 4. **BUILD PHASE 1.** Nothing blocks it now. Deliverables: `fa import`; `fa validate` with
    the gates as SQL (W8); the dated baseline of 38 dangling refs + 44 type violations; a
    CI job that fails on *new* violations only; and D2's cross-zone check.
    **Exit criterion into phase 2:** baseline at zero (or each item explicitly waived)
    **and** the gate has caught ≥1 real regression in a real PR.
+   ⚠ **Two features that measurement made mandatory, do not drop them:**
+   (a) **`fa aggregate` must QUARANTINE a stuck staging ref** — attempt count + backoff,
+   or move it to `refs/dolt/quarantine/*`. A conflicted ref is re-fetched and re-merged
+   on EVERY run today (measured 17 s then 8 s of pure waste with nothing new to do);
+   at 20 stuck refs it dominates the job and the backlog only grows. Retention is
+   right; unbounded RE-ATTEMPT is not. (b) **`fa doctor` must check WRITABILITY, not
+   openability** — a second opener of a Dolt directory silently becomes read-only.
 5. **Extract prose-embedded references.** The graph was built from frontmatter only; BC/VP
    bodies also cite ADRs and BCs in prose, so the **38 dangling refs are a floor**.
 6. **Re-verify the identity findings on Linux.** macOS `ps eww` leaks a sibling's env;
@@ -95,6 +118,19 @@ last pass measured. **Phase 1 is signed off — the next work is building it.**
     measurement can only be made from Go.
 
 ### Session task list (ephemeral tracker — mirrored here)
+
+**No task-tracker entries were used this session; the narrative below IS the record.**
+Passes 10 → 12b were all completed in one session (2026-07-31). Nothing is in progress,
+no WIP, no uncommitted work, and no background jobs were left running.
+
+Pass 12 / 12b (CI aggregator) **✓ complete**: built + deployed the `fa-aggregate`
+workflow to the test remote · proved `GITHUB_TOKEN` can create/update/DELETE
+`refs/dolt/*` · proved `repository_dispatch` reaches it and `on: push` never would ·
+`concurrency:` = the merge slot for free · conflicting writer isolated with its ref
+retained · **strand defence held against a REAL cancelled pending run** · stressed at
+20 writers × 10 agents (publish FLAT in N) · **measured end-to-end latency: median
+30 s** · found the ONE required fix (quarantine stuck refs) · new invariant 14 ·
+`research/CI-AGGREGATOR.md`.
 
 Pass 11 (scale + contention) **✓ complete**: 200-agent fleet on the real remote (5/6, S6
 proves ZERO lost writes) · found contention is per-BRANCH · **exhausted every
@@ -206,7 +242,18 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
   bookkeeping branch) permanently; per-run `refs/dolt/run-*` refs are deleted by the suite
   itself in a `finally` block. Auth is the `gh` git credential helper — **no token is
   written to disk or into any URL, and none is in the repo.**
-- No background agents or long-running jobs pending.
+- **No background agents or long-running jobs pending at this wrap** (verified: no
+  `test_*` processes alive). Several long suites ran in the background during the
+  session; their logs were in `/tmp/*.log` and are EPHEMERAL — every finding has been
+  folded into the research docs, so the logs are not needed.
+- **Disposable, gitignored, must be rebuilt on resume:** `poc/bench/bench` (141 MB Go
+  binary — rebuild per the kick-start), and the Dolt data dirs `poc/eb` 197 MB,
+  `poc/st` 201 MB, `poc/gh` 47 MB, `poc/opt` 16 MB, `poc/gt` 14 MB, `poc/dc` 4 MB,
+  `poc/ci` 1 MB (~480 MB total). Every suite recreates what it needs.
+- **`/tmp` ephemera that will NOT survive:** `/tmp/_bd/b` (the beads clone — re-clone
+  per the kick-start) and `/tmp/ciwork` (the scratch clone of the test remote used to
+  edit the CI workflow; the workflow's source of truth is committed here at
+  `poc/workflows/fa-aggregate.yml` and is already DEPLOYED to the test remote).
 
 ---
 
@@ -223,6 +270,8 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 | 2026-07-30 | `2da29cd` | Pass 7: `research/SPEC.md` + write-API / render / schema / lifecycle; 87/87 |
 | 2026-07-30 | `11f0da3`, `b723569` | Pass 8: `research/GAP-MATRIX.md` vs all 46 registry artifact types; asymmetry + factory-ops + multi-instance; 112/112 |
 | 2026-07-30 | `7f36c27`, `001f166` | Pass 9: scale + zones + identity; `research/ACCESS-CONTROL.md`; 137/137. **Corrected my prediction that macOS hides process envs — it does not** |
+| 2026-07-31 | `700a776`, `7379abf` | Pass 12: **CI AS THE AGGREGATOR = the cross-internet answer, 4/4.** Only staging-refs survives dispersed writers (a relay needs a shared FS; peer-pull needs INBOUND TCP to laptops behind NAT). `GITHUB_TOKEN` can create/update/DELETE `refs/dolt/*`; `repository_dispatch` reaches the workflow and `on: push` never fires for `refs/dolt/*`; **`concurrency:` IS the merge slot for free**, retiring the lock-ref and its TTL/break-glass/unique-sha costs. Conflicting writer ISOLATED with its ref retained; **strand defence held against a REAL `cancelled` pending run**. **NEW INVARIANT 14:** writers must be CLONES of the artifact branch — unrelated lineages fail `no common ancestor` and can NEVER be merged, so per-instance-ref fragmentation is a ONE-WAY DOOR. Six CI gotchas incl. a LIVELOCK I caused by swallowing a failed `git push` rc. `research/CI-AGGREGATOR.md` |
+| 2026-07-31 | `acad904` | Pass 12b: **stressed the aggregator at 20 writers × 10 agents (5/5)** — publish FLAT in N (14 s vs 13 s at N=4), 190/190 rows landed. **Found the one real flaw:** a conflicted staging ref is re-fetched and re-merged on EVERY run (17 s then 8 s wasted with nothing to do) ⇒ `fa aggregate` MUST quarantine. **Measured END-TO-END LATENCY: median 30 s** (27/44/30), ~22 s irreducible because the ~8 s push cost is paid TWICE. **Corrected two of my own estimates** — "~1-2 min, runner-startup-dominated" (really ~30 s, startup negligible) and "the Go binary saves 20-30 s of dolt install" (it saves 2 s) |
 | 2026-07-31 | `cad9144` | Pass 11: SCALE + CONTENTION. 200 agents / 20 clones / real remote: **S6 = 247/247 rows, 0 missing, 0 dupes, 0 dangling FKs** after 200 concurrent writers + 9 merges. **CORRECTIONS #6-8:** contention is per-BRANCH not per-ref (so `--ref`-per-instance is inapplicable to a single-branch store); slow pushes were CONCURRENCY not churn (a push costs the same for 1 commit as 50); and backoff/ticket ordering make contention WORSE (159 → 185 → 193 attempts), not better. **Exhausted the decentralised option space** — aggregation (`file://` relay + flock per host, 17 s; staging refs + aggregator, 64 s; peer remotesapi pull, 25 s) collapses 20 writers to ONE push, so **no central server is needed for contention**. New invariant 13; `research/SCALE.md` |
 | 2026-07-31 | `71ca16a`, `dd5fec0` | Pass 10: embedded-driver benchmark (13/13) + **real GitHub remote: 10/10 mechanics AND 11/11 ported `file://` scenarios** + the three decisions settled (`research/DECISIONS.md`, `ACCESS-PATH.md`, `REMOTE.md`); 171/171. **CORRECTION #5 — pass 9's "the embedded driver is the single biggest engineering lever" was wrong: the lever is a missing `BEGIN`/`COMMIT`, worth 17–23× and available from the CLI.** Also: invariant 6 restated, new invariant 12 (one git ref per remote ⇒ global push contention), and the embedded path does NOT remove the write mutex |
 
@@ -276,6 +325,19 @@ RESTART THE TEST SERVER (7 suites need it; the rest self-provision):
       && echo "$(grep -cE '^PASS' /tmp/$s.log) passed" || echo FAILED; done
   SCALE_RECORDS=20000 SCALE_COMMITS=150 .venv/bin/python -u poc/test_scale.py
 
+PASS-11/12 SUITES (scale, contention, CI aggregator — all self-provisioning, all
+create per-run refs/dolt/* on the test remote and delete them in a finally block):
+  .venv/bin/python -u poc/test_stress_fleet.py     # 5/6, ~45 min, 200 agents / 20 clones
+  .venv/bin/python -u poc/test_stress_opt.py       # 3/3, ~15 min (O1 lock-ref, O2 spawns, O3 push cost)
+  .venv/bin/python -u poc/test_decentral.py        # 5/5, ~45 min (D1 retry shapes .. D5 peer pull)
+  gh workflow enable fa-aggregate -R drbothen/dolt-artifact-spike-remote   # cron is OFF
+  .venv/bin/python -u poc/test_ci_aggregator.py    # 4/4, ~6 min
+  FA_CI_WRITERS=20 FA_CI_BATCH=10 FA_CI_STRESS=1 .venv/bin/python -u poc/test_ci_aggregator.py
+  FA_CI_ONLY=c5 FA_CI_LAT_N=3 .venv/bin/python -u poc/test_ci_aggregator.py   # latency
+  # knobs: FA_ST_MACHINES/AGENTS/S3_AGENTS · FA_OPT_ONLY=o1 · FA_DC_ONLY=d5 · FA_GT_ONLY=h3,h6
+  # the CI workflow lives at poc/workflows/fa-aggregate.yml and is deployed to the
+  # test remote's .github/workflows/ — edit BOTH, and lint the YAML locally first
+
 PASS-10 SUITES (embedded driver + the real remote; both self-provision):
   brew install go                                            # 1.26.5; needs Xcode clang for CGO
   cd poc/bench && CGO_ENABLED=1 go build -tags gms_pure_go -o bench . && codesign -s - -f bench
@@ -288,17 +350,33 @@ PASS-10 SUITES (embedded driver + the real remote; both self-provision):
   # G10 needs poc/eb/a/fa_cli, so run test_embedded.py first
   # FA_GT_ONLY=h3,h6 re-runs single topology tests while iterating (partial != a result)
 
-OPERATING PRINCIPLE: measure, don't assume. This spike corrected its own claims FIVE
-times — most recently its own headline recommendation. Before recommending a lever,
-measure the alternatives to that lever. Report unreproduced anomalies as unreproduced.
-Build node universes only from authoritative declaring documents.
+OPERATING PRINCIPLES (these earned their place — the spike corrected its own claims
+EIGHT times):
+  - Measure, don't assume.
+  - NEVER infer a consequence from a structural fact. Five of this session's errors were
+    exactly that shape: "one git ref => global contention" (it is per-BRANCH), "slow
+    pushes => commit churn" (push cost is FLAT in payload), "ticket ordering ~ a queue"
+    (it was the WORST arm), "runner startup dominates latency" (it is ~0), "the Go binary
+    saves 20-30 s of install" (2 s). Measure the consequence too.
+  - Before recommending a lever, measure the ALTERNATIVES to that lever.
+  - Never write a verdict into report text that the same test could contradict; derive
+    it from the numbers at print time.
+  - Never swallow a command's exit code. One `| tail -1` hid a total failure and caused
+    an infinite CI re-dispatch livelock (five SUCCESSFUL runs in a row).
+  - Report unreproduced anomalies as unreproduced; build node universes only from
+    authoritative declaring documents.
 
-STATE: spike complete, 3 blocking decisions settled, verdict GO (phased), 193/194.
-No product code exists yet.
+STATE: spike complete; 3 blocking decisions settled; scaled to 200 agents; every
+decentralised contention fix exhausted; cross-internet topology validated on GitHub
+Actions (~30 s median latency). Verdict GO (phased), 193/194 checks, 24 suites.
+NO PRODUCT CODE EXISTS YET. The end state is ONE GO BINARY, `fa`.
 
-TASK: build PHASE 1 per research/DECISIONS.md D3 — `fa import` + `fa validate` (gates as
-SQL), a DATED BASELINE ALLOWLIST of the 82 existing findings so the CI gate can be turned
-on without blocking every PR, a CI job that fails only on NEW violations, and the
-cross-zone integrity check that D2 makes mandatory. Python + `dolt sql -f` wrapped in ONE
-transaction (0.9 s for the whole corpus); no Go, no remote, no daemon in phase 1.
+TASK: build PHASE 1 as `fa` Go subcommands — `fa import` + `fa validate` (gates as SQL),
+a DATED BASELINE ALLOWLIST of the 82 existing findings so the CI gate can be switched on
+without blocking every PR, a CI job that fails only on NEW violations, and the cross-zone
+integrity check D2 makes mandatory. Phase-1 SCOPE is unchanged from DECISIONS D3, but its
+"Python, no Go" implementation note is SUPERSEDED: `fa` is Go with the embedded driver
+(CGO + `-tags gms_pure_go`). Carry two measured requirements in from the start:
+`fa aggregate` must QUARANTINE stuck staging refs, and `fa doctor` must check
+WRITABILITY (not openability).
 ```
