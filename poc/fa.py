@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import secrets
 import subprocess
 import sys
 import time
@@ -292,16 +293,28 @@ def cmd_validate(a):
 
 
 def cmd_lock(a):
-    """Atomic CAS lock. One UPDATE, guarded WHERE, ROW_COUNT() is the verdict.
-    Guard-read and write are in the SAME statement, so there is no TOCTOU window."""
+    """Atomic CAS lock.
+
+    CRITICAL: the write MUST include a value that is UNIQUE PER ATTEMPT. Dolt has
+    no row locking and merges concurrent commits cell-by-cell, so contenders that
+    write IDENTICAL cell values are coalesced as "same change" and ALL report
+    affected_rows=1 — i.e. every one of them thinks it won the lock.
+
+    In particular `fence = fence + 1` is NOT a valid conflict token: concurrent
+    snapshots compute the same next value. An earlier revision of this POC used it
+    and poc/test_cas_patterns.py P2 shows it failing 30/30 trials with ALL SIX
+    writers winning. The random `fence` token below is what makes this correct.
+    Refs: dolthub.com/blog/2021-05-19-dolt-transactions,
+          dolthub.com/blog/2023-12-14-concurrent-transaction-example
+    """
     conn = Conn(port=a.port).connect(autocommit=True)
     ttl = a.ttl
     if a.action == "acquire":
         n = q(conn, """UPDATE factory_lock
                        SET holder=%s, locked_at=NOW(), expires_at=DATE_ADD(NOW(), INTERVAL %s SECOND),
-                           fence=fence+1
+                           fence=%s
                        WHERE id=1 AND (holder IS NULL OR holder=%s OR expires_at < NOW())""",
-              (a.holder, ttl, a.holder), fetch=False)
+              (a.holder, ttl, secrets.randbits(62) | 1, a.holder), fetch=False)
         if n == 1:
             r = q(conn, "SELECT holder, expires_at, fence FROM factory_lock WHERE id=1")[0]
             print(f"ACQUIRED by {r['holder']} fence={r['fence']} expires={r['expires_at']}")

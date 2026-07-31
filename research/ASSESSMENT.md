@@ -12,10 +12,12 @@ as the only interface to all vsdd-factory artifacts?
 
 **Verdict: GO, phased.** The current design is a hand-maintained relational database
 implemented in markdown files, and it is measurably failing at exactly the guarantees a
-database provides for free. **27/27 POC tests pass** against the live corpus across three
-suites (13 store + 8 relationship-graph + 6 multi-machine). Two hard constraints apply:
+database provides for free. **33/33 POC tests pass** against the live corpus across four
+suites (13 store + 8 relationship-graph + 6 multi-machine + 6 locking), plus a 5-pattern
+concurrency comparison. Three hard constraints apply:
 **one shared server is mandatory** — the lock is provably incorrect across independent
-clones — and markdown must become a generated export.
+clones — markdown must become a generated export, and **every guarded write must carry a
+per-attempt unique token** or Dolt silently merges concurrent updates (§3c).
 
 Modelling the full spec graph surfaced **38 dangling references and 44 type violations**
 that no existing gate catches, and quantified coverage nobody had measured: **90.2% of
@@ -298,6 +300,92 @@ Operational finding: a fresh `dolt clone` inherits **no author identity**, and
 clone. This silently broke 3 of these tests on the first run, and one of them
 *passed for the wrong reason* (a "conflict detected" that was really an identity
 error). Clone provisioning must set identity.
+
+## 3c. Do we still need the lock? (and a correction)
+
+Short answer: **the lock's data-integrity job disappears; its coordination-lease job
+does not — and it must be rebuilt, because the obvious CAS is unsafe on Dolt.**
+
+### CORRECTION to §3 / §1.4
+
+The pass-1 headline "T4 CAS lock: 16 concurrent acquirers, exactly one wins" was
+**right by accident**. That UPDATE set `fence = fence + 1`, which DoltHub explicitly
+documents as an invalid conflict token:
+
+> "Do not use `row_lock = row_lock + 1` as the conflict token: concurrent snapshots
+> can calculate the same next value, which Dolt regards as the same change and merges
+> successfully." — [dolthub.com/blog/2021-05-19-dolt-transactions](https://www.dolthub.com/blog/2021-05-19-dolt-transactions/)
+
+`poc/test_cas_patterns.py` P2 isolates that pattern: **30/30 trials, all 6 writers
+won.** T4 only passed because it *also* wrote a per-agent-unique `holder` value; the
+fence contributed nothing. `poc/fa.py` has been fixed to write a random token.
+
+### Why the obvious CAS is unsafe
+
+Dolt has **no row locking** and merges concurrent commits **cell by cell**:
+
+- Docs: *"Row-level locks are not supported."* `LOCK TABLES` parses but is a no-op
+  ([supported-statements](https://docs.dolthub.com/sql-reference/sql-support/supported-statements)).
+  Confirmed empirically — L2 shows `SELECT … FOR UPDATE` does not block.
+- Same row, **different** columns → both commits succeed, both changes land.
+- Same column, **same value** → both succeed, *both* get `affected_rows=1`.
+- Same column, different values → one commits, the other gets **1213** and must retry.
+- Issue [#7681](https://github.com/dolthub/dolt/issues/7681) calls conflict detection
+  *"too lenient"* and proposes a strict "No row merge" mode — **not implemented**.
+- beads names this the **"zombie-merge bug"** and fixes it with a random `row_lock`
+  cell plus a retry wrapper (`internal/storage/issueops/lease.go`).
+
+So `affected_rows == 1` proves only that the row matched **in this transaction's
+snapshot** — not that this connection was the unique global winner.
+
+### Measured (`poc/test_cas_patterns.py`, 30 trials × 6 writers)
+
+| Pattern | Verdict | Winners/trial |
+|---|---|---|
+| Guarded UPDATE, contenders write **identical** values | **UNSAFE** | 6 of 6, every trial |
+| Guarded UPDATE + `fence = fence + 1` (pass-1 design) | **UNSAFE** | 6 of 6, every trial |
+| Guarded UPDATE writing a **per-attempt unique** value | SAFE | exactly 1, 30/30 |
+| `row_lock` token guard + fresh random token (DoltHub/beads) | SAFE | exactly 1, 30/30 |
+| `GET_LOCK()` advisory mutex on a pinned connection | SAFE | exactly 1, 30/30 |
+
+And the same trap bites uniqueness (`poc/test_locking.py` L4): a PRIMARY KEY does
+**not** stop two concurrent writers inserting **byte-identical** rows. Naive ID
+allocation gave `[1,1,1,1,1,1]` — six writers each believing they had allocated
+seq 1, with one row stored. Adding a per-attempt `owner` token gave `[1,2,3,4,5,6]`.
+This qualifies the pass-1 T3 claim: PK/UNIQUE rejects duplicates **sequentially**,
+not for concurrent identical inserts.
+
+### What Dolt replaces, and what survives
+
+| The lock's job today | Under Dolt |
+|---|---|
+| Serialize multi-file state writes (STATE + handoff + wave-state) | **Gone.** A transaction is atomic by definition — L1 shows a mid-burst failure rolling back all three tables. This retires the Single-Commit Burst Protocol and its 8 cite locations. |
+| Prevent lost updates on a record | **Gone**, *if* every guarded write carries a per-attempt unique token (L3). Not free — it is a discipline the schema must enforce. |
+| Serialize ID allocation | **Gone**, via unique-token insert + bounded retry (L4). No global lock needed. |
+| Stop a second orchestrator acting during a 45-min wave gate | **Survives.** No transaction or session lock can span it: L5 shows `GET_LOCK` dies the moment the holder disconnects. L6 shows the lease must be an ordinary **row** with an expiry. |
+
+### Recommendation
+
+**Keep a lock, but a much smaller and weaker one.** It stops being the mechanism that
+makes writes safe and becomes an *advisory coordination lease*: "orchestrator A is
+driving wave 3 until 14:05". Concretely:
+
+1. **Delete** the `--force-with-lease` CAS-on-push machinery, the STATE.md YAML lock
+   block, and `verify-sha-currency.sh`'s cross-record checks. Transactions do that job.
+2. **Keep** a `factory_lock`-style row lease with `holder` + `expires_at`, acquired by
+   a token-carrying CAS. It can now be **scoped** — per wave, per cycle, per story —
+   rather than locking the entire artifact store, because rows no longer share a file.
+3. **Add** a mandatory `row_lock BIGINT` (fresh random per write) to every table with
+   contended coordination columns, plus a retry-on-1213/1205 wrapper. This is not
+   optional polish; without it the store silently loses updates.
+4. Use `GET_LOCK()` only for short critical sections on one pinned connection — never
+   as the session lease.
+
+The uncomfortable part: **item 3 is a permanent correctness tax on every writer.**
+Get it wrong in one code path and you reintroduce silent lost updates with no error
+anywhere — which is precisely the class of bug the current markdown design at least
+makes *visible* as a merge conflict. Any adoption must encode the token discipline in
+the single write path (`fa`) so no agent can bypass it.
 
 ## 4. Gaps, risks, and things that are worse
 

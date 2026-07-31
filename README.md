@@ -17,9 +17,35 @@ interface to all vsdd-factory artifacts, replacing the `factory-artifacts` orpha
 | `poc/test_spike.py` | 13 tests — store-level failure modes |
 | `poc/test_graph.py` | 8 tests — traversal + referential integrity |
 | `poc/test_multimachine.py` | 6 tests — two clones, one remote (self-provisioning) |
+| `poc/test_locking.py` | 6 tests — is the factory lock still needed? |
+| `poc/test_cas_patterns.py` | 5-pattern concurrency comparison (which CAS actually holds) |
 | `poc/db/`, `poc/mm/` | Dolt data dirs (gitignored) |
 
-**27/27 passing** against the live corpus.
+**33/33 passing** against the live corpus.
+
+## The concurrency trap (read before writing any code against Dolt)
+
+Dolt has **no row locking** and merges concurrent commits **cell by cell**. So
+`UPDATE … WHERE guard` + `affected_rows == 1` is **not** a safe compare-and-swap:
+if contenders write the *same* value, Dolt treats it as "same change", merges, and
+**every one of them gets `affected_rows = 1`**.
+
+Measured, 30 trials × 6 writers (`poc/test_cas_patterns.py`):
+
+| Pattern | Verdict |
+|---|---|
+| Contenders write identical values | **UNSAFE** — 6 of 6 win, every trial |
+| `fence = fence + 1` as the token | **UNSAFE** — 6 of 6 win, every trial |
+| Per-attempt **unique** value | SAFE — exactly 1, 30/30 |
+| `row_lock` token + fresh random (DoltHub/beads) | SAFE — exactly 1, 30/30 |
+| `GET_LOCK()` on a pinned connection | SAFE — exactly 1, 30/30 |
+
+A `PRIMARY KEY` does not save you either: two concurrent writers inserting
+**byte-identical** rows merge silently. Naive ID allocation produced `[1,1,1,1,1,1]`.
+
+beads calls this the "zombie-merge bug"; Dolt issue
+[#7681](https://github.com/dolthub/dolt/issues/7681) calls the conflict detection
+"too lenient" and the strict mode is unimplemented.
 
 ## Headline findings
 
