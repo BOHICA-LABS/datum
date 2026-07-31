@@ -75,13 +75,26 @@ record-matching version chain (V8) — replacing the prose changelog inside
 
 ### 2.7 Prose / narrative — ⊘ deliberate non-goal (12 types)
 
+> ⚠ **THE RATIONALE BELOW IS OVERTURNED ON EVIDENCE (2026-07-31) for at least
+> `cycle-document`, `cycle-decision-log`, `adversarial-review` and
+> `per-story-adversary-pass` — see [PROBE-CYCLES.md](PROBE-CYCLES.md).** Measured in
+> `cycles/`: **481 of 611 files carry frontmatter**, with keys (`pass`, `cycle`,
+> `document_type`), links (`previous_review` in 244, `traces_to` in 267) and **counts**
+> (`finding_count` in 123). 94% are write-once immutable documents; the churn is nine
+> append-only ledgers (`burst-log`/`decision-log`/`lessons`, 600+ commits of appends) that
+> a ROW model strictly improves, plus an `INDEX.md` that is derived and should never have
+> been stored. Ingesting the class ADDS gates that do not exist today — one concept under
+> six `document_type` spellings, `verdict` mixing severities with pass states, and a
+> genuinely dangling pass-chain link. The conclusion may still hold for classes with truly
+> no keys, but it can no longer rest on "no keys, no counts, nothing to derive."
+
 `cycle-document`, `cycle-decision-log`, `adversarial-review`,
 `per-story-adversary-pass`, `research-doc`, `plan-doc`, `proposal`,
 `legacy-design-doc`, `measurement`, `sidecar-learning`, `semport-artifact`,
 `phase-delta-analysis`.
 
-⊘ Stay as files. No keys, no counts, nothing to derive. Relationalizing them buys
-nothing and costs diff legibility.
+⊘ *(original rationale, retained for the record)* Stay as files. No keys, no counts,
+nothing to derive. Relationalizing them buys nothing and costs diff legibility.
 
 ### 2.8 Config (◐ 4 types)
 
