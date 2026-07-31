@@ -1,7 +1,7 @@
 ---
 title: fa — specification for the sole interface to factory artifacts
 date: 2026-07-31
-status: spec derived from a verified spike (160/160 tests, 19 suites, against the live corpus and a real GitHub remote)
+status: spec derived from a verified spike (171/171 tests, 20 suites, against the live corpus and a real GitHub remote)
 evidence: vsdd-factory @82163b7f (.factory on factory-artifacts) · beads @b1694a5 · Dolt 2.2.3 · dolthub/driver/v2 v2.2.0 · github.com/drbothen/dolt-artifact-spike-remote
 see_also: DECISIONS.md (the 3 settled calls) · ACCESS-PATH.md (which access path) · REMOTE.md (the real remote)
 ---
@@ -12,7 +12,7 @@ Every capability below is backed by a passing test against the **live** vsdd-fac
 corpus (1,959 BCs, 3,145 files, 1,607 commits). Nothing here is aspirational; where
 something is untested or deliberately excluded it says so.
 
-**160/160 tests, nineteen suites.** See [ASSESSMENT.md](ASSESSMENT.md) for the
+**171/171 tests, twenty suites.** See [ASSESSMENT.md](ASSESSMENT.md) for the
 feasibility argument and the measured problems in the current design, and
 [DECISIONS.md](DECISIONS.md) for the three design calls that were open until
 2026-07-31 and are now settled.
@@ -215,7 +215,9 @@ corruption, and each was found empirically.
    commit, which the next reset discards. *(D5b; re-confirmed against github.com in
    G6, so it is not an artefact of the `file://` remote)*
 5. **Pull at the start of every unit of work.**
-   There is no cross-machine read consistency without it (~150 ms). *(D7)*
+   There is no cross-machine read consistency without it. **~150 ms on a `file://`
+   remote, ~2.3 s median against github.com** — which is exactly why this is
+   per-unit-of-work and not per-write. *(D7; H7)*
 6. **One TRANSACTION per unit of work.**
    *(Restated 2026-07-31 — the original wording named the wrong cause. See
    [ACCESS-PATH.md](ACCESS-PATH.md).)* There are two taxes, not one. Process
@@ -338,10 +340,14 @@ Honest list of what is **not** proven. **Gaps 1, 4 and 6 were closed on 2026-07-
 and are struck through below rather than deleted, so the record of what was once
 unproven survives.
 
-1. ~~**Real network remote.**~~ **CLOSED** — 10/10 against github.com
-   ([REMOTE.md](REMOTE.md)). An acquire costs **~10 s**, not 640 ms; payload size is
-   irrelevant (33 MB and 2 rows both push in ~10 s); a full-corpus clone back is 2.2 s;
-   and one new finding became invariant 12.
+1. ~~**Real network remote.**~~ **CLOSED — 21/21** against github.com
+   ([REMOTE.md](REMOTE.md)): 10 mechanics tests plus **every `file://` scenario
+   re-run on the real remote**. An acquire costs **~10 s**, not 640 ms, and a pull
+   **~2.3 s**; payload size is irrelevant (33 MB and 2 rows both push in ~10 s); a
+   full-corpus clone back is 2.2 s. Nothing that held on `file://` broke: cell-level
+   merge, same-cell conflict surfacing, the 2×4-agent topology, the cross-fleet
+   lease, append-only counters, instance graduate/abandon and schema merge all hold.
+   One new finding became invariant 12.
 2. **Prose-embedded references.** The graph was built from frontmatter. BC/VP bodies
    also cite ADRs and other BCs in prose; those edges are unextracted, so the 38
    dangling references are a **floor**, not a total.

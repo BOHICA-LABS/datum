@@ -7,7 +7,7 @@ tool (`fa`) that is the **sole interface to all vsdd-factory artifacts**, replac
 `factory-artifacts` orphan git branch?
 
 **Status: SPIKE COMPLETE + all three blocking decisions SETTLED. Verdict GO (phased).
-160/160 tests, 19 suites**, re-runnable against the LIVE vsdd-factory corpus and — new —
+171/171 tests, 20 suites**, re-runnable against the LIVE vsdd-factory corpus and — new —
 against a **real GitHub remote**. No product code written yet: this is a spike, a
 specification, and now a decision record. Nothing in vsdd-factory has been changed.
 
@@ -88,8 +88,11 @@ last pass measured. **Phase 1 is signed off — the next work is building it.**
 
 Pass 10 tasks all **✓ complete**: benchmark the embedded driver (13/13) · add the missing
 `BEGIN`/`COMMIT` control that overturned the pass-9 headline · settle the three decisions ·
-real-GitHub-remote suite (10/10) · answer the Rust/DoltLite question · update SPEC /
-GAP-MATRIX / ASSESSMENT / LESSONS. **Nothing in progress. No WIP.**
+real-GitHub-remote MECHANICS suite (10/10) · **port every `file://` scenario onto the real
+remote (11/11) — merge semantics, the wedge, the 2×4-agent topology, the 8-agent lease,
+counters, staleness, instance graduate/abandon, schema merge, 8-clone contention** ·
+answer the Rust/DoltLite question · update SPEC / GAP-MATRIX / ASSESSMENT / LESSONS.
+**Nothing in progress. No WIP.**
 
 ### Operating principles that must carry over
 
@@ -198,7 +201,7 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 | 2026-07-30 | `2da29cd` | Pass 7: `research/SPEC.md` + write-API / render / schema / lifecycle; 87/87 |
 | 2026-07-30 | `11f0da3`, `b723569` | Pass 8: `research/GAP-MATRIX.md` vs all 46 registry artifact types; asymmetry + factory-ops + multi-instance; 112/112 |
 | 2026-07-30 | `7f36c27`, `001f166` | Pass 9: scale + zones + identity; `research/ACCESS-CONTROL.md`; 137/137. **Corrected my prediction that macOS hides process envs — it does not** |
-| 2026-07-31 | `71ca16a` | Pass 10: embedded-driver benchmark (13/13) + **real GitHub remote (10/10)** + the three decisions settled (`research/DECISIONS.md`, `ACCESS-PATH.md`, `REMOTE.md`); 160/160. **CORRECTION #5 — pass 9's "the embedded driver is the single biggest engineering lever" was wrong: the lever is a missing `BEGIN`/`COMMIT`, worth 17–23× and available from the CLI.** Also: invariant 6 restated, new invariant 12 (one git ref per remote ⇒ global push contention), and the embedded path does NOT remove the write mutex |
+| 2026-07-31 | `71ca16a`, +this | Pass 10: embedded-driver benchmark (13/13) + **real GitHub remote: 10/10 mechanics AND 11/11 ported `file://` scenarios** + the three decisions settled (`research/DECISIONS.md`, `ACCESS-PATH.md`, `REMOTE.md`); 171/171. **CORRECTION #5 — pass 9's "the embedded driver is the single biggest engineering lever" was wrong: the lever is a missing `BEGIN`/`COMMIT`, worth 17–23× and available from the CLI.** Also: invariant 6 restated, new invariant 12 (one git ref per remote ⇒ global push contention), and the embedded path does NOT remove the write mutex |
 
 ---
 
@@ -253,17 +256,19 @@ PASS-10 SUITES (embedded driver + the real remote; both self-provision):
   cd poc/bench && CGO_ENABLED=1 go build -tags gms_pure_go -o bench . && codesign -s - -f bench
   # -tags gms_pure_go is MANDATORY: without it the cgo build dies on ICU headers
   cd ../.. && .venv/bin/python -u poc/test_embedded.py       # 13/13, ~4 min, own server on 3399
-  .venv/bin/python -u poc/test_github_remote.py              # 10/10, ~9 min, needs gh auth
-  # the remote is private: github.com/drbothen/dolt-artifact-spike-remote
-  # each run uses per-run refs/dolt/run-* and deletes them in a finally block
+  .venv/bin/python -u poc/test_github_remote.py              # 10/10, ~9 min  (remote mechanics)
+  .venv/bin/python -u poc/test_github_topology.py            # 11/11, ~12 min (every file:// scenario, re-run on GitHub)
+  # the remote is private: github.com/drbothen/dolt-artifact-spike-remote; needs gh auth
+  # each run uses per-run refs/dolt/<run>/* and deletes them in a finally block
   # G10 needs poc/eb/a/fa_cli, so run test_embedded.py first
+  # FA_GT_ONLY=h3,h6 re-runs single topology tests while iterating (partial != a result)
 
 OPERATING PRINCIPLE: measure, don't assume. This spike corrected its own claims FIVE
 times — most recently its own headline recommendation. Before recommending a lever,
 measure the alternatives to that lever. Report unreproduced anomalies as unreproduced.
 Build node universes only from authoritative declaring documents.
 
-STATE: spike complete, 3 blocking decisions settled, verdict GO (phased), 160/160.
+STATE: spike complete, 3 blocking decisions settled, verdict GO (phased), 171/171.
 No product code exists yet.
 
 TASK: build PHASE 1 per research/DECISIONS.md D3 — `fa import` + `fa validate` (gates as

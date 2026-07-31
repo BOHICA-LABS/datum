@@ -21,3 +21,4 @@ rendered/
 .venv/
 __pycache__/
 *.pyc
+poc/gt/

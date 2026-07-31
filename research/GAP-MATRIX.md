@@ -205,7 +205,7 @@ cleanly.
 
 | # | Gap | Severity |
 |---|---|---|
-| 1 | ~~**Real network remote.**~~ **CLOSED 2026-07-31** — 10/10 against github.com ([REMOTE.md](REMOTE.md)). The 640 ms acquire is really **~10 s**; payload size is irrelevant; and a new finding (one data ref per remote ⇒ global push contention) became invariant 12. | closed |
+| 1 | ~~**Real network remote.**~~ **CLOSED 2026-07-31 — and closed COMPLETELY: 21/21** ([REMOTE.md](REMOTE.md)). 10 remote-mechanics tests **plus every `file://` scenario re-run on github.com** (cell merge, same-cell conflict, the wedge, the 2×4-agent topology, the 8-agent lease, counters, staleness, instance graduate/abandon, schema merge, 8-clone contention). The 640 ms acquire is really **~10 s** and a pull **~2.3 s**; payload size is irrelevant; nothing that held on `file://` broke; two findings sharpened (D8's misleading error is on the *pull* path; SC5's O(N) holds in magnitude as a permutation) and one new one became invariant 12. | closed |
 | 2 | ~~**Conflict-resolution policy.**~~ **CLOSED** — designed in [DECISIONS.md D1](DECISIONS.md): abort mechanically, record, the push-race loser re-applies intent as a validated write, cross-actor collisions escalate to the orchestrator, and a conflict inside a leased scope is reported as a lease-scoping defect. | closed |
 | 3 | **Prose-embedded references.** Graph built from frontmatter only; BC/VP bodies cite ADRs and BCs in prose. The 38 dangling refs are a **floor**. | Medium |
 | 4 | `state-runtime-regression`, `po-obligations`, and the 4 config types are ◐ by analogy, not tested. | Low |

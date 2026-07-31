@@ -1,8 +1,8 @@
 ---
 title: The real remote — measured against github.com
 date: 2026-07-31
-status: 10/10 (poc/test_github_remote.py) against https://github.com/drbothen/dolt-artifact-spike-remote
-verdict: push-as-CAS works over the network; it costs ~10 s per acquire, and one data ref serialises every instance
+status: 21/21 — 10 remote mechanics (poc/test_github_remote.py) + 11 ported topology scenarios (poc/test_github_topology.py), against https://github.com/drbothen/dolt-artifact-spike-remote
+verdict: push-as-CAS works over the network; it costs ~10 s per acquire, a pull ~2.3 s, and one data ref serialises every instance
 ---
 
 # Dolt on a real GitHub remote
@@ -135,6 +135,9 @@ exception.
 
 ## 4. What this means for the recommendation
 
+*(§4 covers the mechanics suite; §5 adds the ported topology scenarios, which did not
+change any of the conclusions below.)*
+
 Server-less push-as-CAS **survives** the real-network test, with its price now
 known rather than assumed:
 
@@ -154,13 +157,94 @@ not the ~1,000× that the `file://` floor suggested.
 
 ---
 
-## 5. Reproducing
+## 5. Part 2 — every file:// scenario, re-run on GitHub
+
+The suite above tested remote *mechanics*. It did **not** re-run the merge-semantics
+and topology scenarios that the earlier passes proved only against a `file://`
+stand-in. `poc/test_github_topology.py` ports all of them (11/11):
+
+| # | Ported from | Result over github.com |
+|---|---|---|
+| H1 | M3, D2 | **Cell-level merge holds.** A set `capability`, B set `notes` on the *same row*; B merged with zero conflicts and both values survived. The property markdown cannot have, now proven off `file://`. |
+| H2 | M4, D3, D4 | **Different values on one cell → conflict** (`dolt_conflicts=1`, "Automatic merge failed"); **identical values → coalesce silently**, no conflict. Nothing is lost without being reported. |
+| H3 | D8 | **The wedge reproduces, and is now localised** — see §5.1. |
+| H4 | D1 | **The target topology works over the network:** 2 machines × 4 agent processes, 8/8 agents succeeded, **zero** `cannot update manifest`, both clones converged, 62 s wall clock. Most agents needed 2 push attempts. |
+| H5 | D6 | A lease contended by **8 agents across 2 fleets** → one holder, both machines agree. Four agents "acquired" locally (each machine's mutex only orders its own); the remote collapsed them to one. |
+| H6 | D5, D5b | **The retry shape is the whole bug** — see §5.2. |
+| H7 | D7, inv 5 | Stale until pulled, as expected. **A pull costs ~2.3 s median** over the network vs ~150 ms on `file://`. |
+| H8 | I4, I5, I8 | Instance branches, graduate and abandon all work through a git remote — with the asymmetry invariant 12 predicts. See §5.3. |
+| H9 | I6 | Two instances refining the **same record** → conflict at graduation, `dolt_conflicts=1`, main keeps the first graduate's value and the loser still holds its branch. Exactly the case [D1](DECISIONS.md) governs. |
+| H10 | E5, E6 | **Dolt merges SCHEMA across a real remote:** two machines adding *different* columns merged cleanly and both columns survived; the *same* column with different types (INT vs VARCHAR) surfaced a conflict rather than silently picking one. |
+| H11 | SC5 | Push contention at 8 clones — see §5.4. |
+
+### 5.1 D8's misleading error is on the PULL path, not the commit path
+
+The wedge itself reproduces exactly: after one agent leaves an unresolved conflict,
+another agent on that clone can neither commit nor pull. But the two failures do
+*not* read the same:
+
+- **commit** → `tables [rec] have unresolved conflicts from the merge. resolve the
+  conflicts before committing` — accurate and actionable.
+- **pull** → `cannot merge with uncommitted changes` — **this is D8's misleading
+  message**, and it blames staging rather than the conflict.
+
+So D8 stands, sharpened: the diagnosability problem is specific to the *pull* path
+on dolt 2.2.3. `fa doctor` should therefore check for a half-merge explicitly rather
+than relying on the error text an agent happens to hit first.
+
+### 5.2 The counter bug is one line of retry logic, and it reports success
+
+Three retry shapes on the same increment, variable isolated:
+
+| Retry shape | Agents reporting success | Counter landed at |
+|---|---|---|
+| merge-and-repush **without** recomputing | **2 of 2** | **1** — silent loss |
+| recompute the read-modify-write each attempt | 2 of 2 | 2 — exact |
+| append-only rows with unique keys | 6 of 6 | 6 — exact |
+
+The unsafe shape tells **both** agents they succeeded while losing an increment, with
+no error anywhere — the precise class this whole project exists to eliminate. The
+third shape cannot express the bug, which is why invariant 3 says counters are rows.
+
+### 5.3 Instance branches over one data ref
+
+Pushing an instance branch made it visible to another clone after `dolt fetch`
+(as `remotes/origin/<branch>`), graduation by merge-to-main propagated the spike's row
+to the other machine, and both local and remote branch deletion returned cleanly. The
+asymmetry invariant 12 predicts is real: branch state travels **inside** the single
+data ref, so there is no per-branch git ref, and "delete the remote branch" is not a
+git ref operation.
+
+### 5.4 Push contention: O(N) confirmed in magnitude, as a permutation
+
+`file://` gave exactly `[1,2,3,4,5,6,7,8]` for 8 pushers — the tidy staircase. Over
+the network, two runs of the same test:
+
+| Run | Attempts per clone | Total | Converged in |
+|---|---|---|---|
+| 1 | `[5,4,2,6,7,2,1,4]` | 31 | 136 s |
+| 2 | `[1,4,3,2,5,6,8,7]` | **36** — exactly the linear sum | 165 s |
+
+**SC5's O(N) claim survives in magnitude** (36 = 1+2+…+8): the Nth contender still
+needs about N attempts, and run 2 produced a straight *permutation* of 1..8. What the
+network removes is the ordering — jitter decides who wins each round, not arrival
+order. The number that matters for planning is the wall clock: **~2.3–2.8 minutes for
+8 instances to converge**, growing with N. That is the real ceiling on how many
+factory instances can comfortably share one remote data ref, and it is the strongest
+practical argument for `--ref`-per-instance (invariant 12).
+
+---
+
+## 6. Reproducing
 
 ```bash
-.venv/bin/python -u poc/test_github_remote.py     # 10/10, ~9 min, cleans up its refs
+.venv/bin/python -u poc/test_github_remote.py       # 10/10, ~9 min  (mechanics)
+.venv/bin/python -u poc/test_github_topology.py     # 11/11, ~12 min (ported scenarios)
 # env: FA_GH_REMOTE (default drbothen/dolt-artifact-spike-remote)
 #      FA_GH_CLONES=3  FA_GH_ROUNDS=5  FA_GH_TIMEOUT=300  FA_GH_KEEP=1
+#      FA_GT_CLONES=8 (H11)  FA_GT_ONLY=h3,h6 (partial re-run while iterating)
 ```
 
-G10 needs the imported corpus at `poc/eb/a/fa_cli`, i.e. run
+Both suites create per-run `refs/dolt/<run>/*` refs and delete them in a `finally`
+block. G10 needs the imported corpus at `poc/eb/a/fa_cli`, i.e. run
 `poc/test_embedded.py` first.
