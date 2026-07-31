@@ -1,5 +1,66 @@
 # HANDOFF — dolt-artifact-spike
 
+## ⭐⭐ PHASE 1 IS BUILT (2026-07-31, commit `e4db2ad`) — read this first
+
+**`fa` exists.** It is a Go binary at `fa/`, built on the embedded
+`dolthub/driver/v2`, and it is the first product code in this repo. Everything in
+the "CURRENT SNAPSHOT" below describes the SPIKE that preceded it and is still
+accurate as the evidence base — but the state of the work is now: phase 1 shipped,
+phase 2 next.
+
+**Read `fa/README.md`** for the implementation, the measured numbers, and the two
+corrections it forced. In one screen:
+
+| | |
+|---|---|
+| Build | `cd fa && CGO_ENABLED=1 go build -tags gms_pure_go -o fa .` (both flags mandatory; 39.5 s cold, 148 MB) |
+| `fa import` | live corpus in **1.1–1.4 s**, one transaction, idempotent |
+| `fa validate` | **0.15 s**, every gate a query |
+| Findings today | **153** (type 44 · direction 58 · dangling 39 · count 7 · integrity 5) |
+| Baseline | `fa/baseline.json` — 153 itemised, dated 2026-07-31, corpus `82163b7f` |
+| Gate behaviour | live corpus → exit 0 · planted dangling ref → exit 1 naming exactly it · `--strict` → exit 1 |
+| Tests | 24, ~3.3 s, no network, no `dolt` binary |
+| CI | `fa/workflows/fa-validate.yml` (deploy to vsdd-factory `.github/workflows/`) |
+
+**Parity was proven, not assumed:** identical records and universes to the Python
+prototype, the 82 import-path findings match **rule for rule**, and the edge sets
+were diffed row by row.
+
+**Two corrections this build forced** (both now in `research/LESSONS.md`):
+1. **The corpus graph has 1,509 edges, not 1,490.** The prototype's frontmatter
+   parser treated a prose value with an unbalanced `[` as an unterminated inline
+   list, swallowing every key after `BC-INDEX.md`'s `last_amended` — which hid
+   `total_bcs: 1955` from the count gate and 19 real edges across six S-15.x
+   stories. `SPEC.md`, `ASSESSMENT.md` and `GAP-MATRIX.md` are updated.
+2. **"1962 distinct BC ids in BC-INDEX rows" needs its extraction rule stated.**
+   Restricted to the enumeration table's first column it is 1,959, agreeing with
+   disk; 1962 counts BC ids anywhere in the file, changelog prose included.
+
+### ▶ NEXT, in order
+
+1. **Deploy the gate.** Copy `fa/` to `tools/fa/` and
+   `fa/workflows/fa-validate.yml` to `.github/workflows/` in vsdd-factory, open a
+   PR, and let it run. Nothing in this repo can complete **D3's exit criterion into
+   phase 2**, which needs (a) the baseline at zero or every item waived with a
+   reason, and (b) the gate catching a real regression in a real PR. Until a gate
+   has caught something it has not earned authority over anything.
+2. **Ratchet the baseline down.** The 7 `count` findings are the cheapest and most
+   valuable: three of them locate the four-way BC-total drift in **SS-03 (states 53,
+   actual 56), SS-05 (656 vs 655) and SS-08 (214 vs 218)**. The 58 `direction`
+   findings are all one class of redundancy (`blocks` vs `depends_on` maintained by
+   hand) and should be fixed by choosing ONE stored direction, not by editing 58
+   entries.
+3. **Extract prose-embedded references** (old item 5, still open and now sharper).
+   The 41 legacy stories under `stories/v1.0-legacy/` have **no frontmatter at all** —
+   their references are prose (`**Blocks:** S-2.8`). They get rows and contribute
+   zero edges, which is why the dangling count is a floor.
+4. Then phase 2 per SPEC §7: move the lease to `fa lease` and delete the
+   `STATE.md` YAML lock. That is where `fa aggregate`'s network plumbing lands, on
+   top of the quarantine policy already implemented and tested in
+   `fa/quarantine.go`.
+
+---
+
 ## ⭐ CURRENT SNAPSHOT (2026-07-31)
 
 **Active workstream:** research spike — can [Dolt](https://github.com/dolthub/dolt) back a
@@ -9,15 +70,15 @@ tool (`fa`) that is the **sole interface to all vsdd-factory artifacts**, replac
 **Status: SPIKE COMPLETE · 3 blocking decisions SETTLED · SCALED to 200 agents · every
 decentralised contention fix EXHAUSTED · the cross-internet topology VALIDATED against
 GitHub Actions. Verdict GO (phased). 193 of 194 checks, 24 suites**, all re-runnable
-against the LIVE vsdd-factory corpus and a REAL GitHub remote. Still **no product code**:
-this is a spike, a specification, a decision record, and now a measured scaling +
-latency profile. Nothing in vsdd-factory has been changed.
+against the LIVE vsdd-factory corpus and a REAL GitHub remote. (**Superseded on the
+"no product code" point** — phase 1 shipped on 2026-07-31; see the block at the top.) Nothing in vsdd-factory has been changed.
 
 ⭐ **THE END STATE IS ONE GO BINARY, `fa`** (user-confirmed 2026-07-31). Everything below
 lands as its subcommands — see TOP PRIORITY NEXT item 0.
 
 **Repo state:** `~/Dev/scrap/dolt-artifact-spike`, **local-only git (NO remote — nothing
-to push)**, clean. **12 spike passes. HEAD at this wrap = `d0567a4`.**
+to push)**, clean. **12 spike passes + the phase-1 build. HEAD = `e4db2ad`**
+(`fa/fa`, the 148 MB binary, is gitignored — rebuild it, see the top block).
 
 **Reference repos (both READ-ONLY here; we changed neither):**
 | Repo | Where | Pin |
@@ -30,10 +91,11 @@ to push)**, clean. **12 spike passes. HEAD at this wrap = `d0567a4`.**
 | **test remote** | `https://github.com/drbothen/dolt-artifact-spike-remote` (PRIVATE, ours) | seeded `main`; suites create per-run `refs/dolt/*` and delete them in a `finally`. **Swept clean at wrap** — only `main` + Dolt's `__dolt_remote_info__` remain |
 | **the CI aggregator workflow** | DEPLOYED at `.github/workflows/fa-aggregate.yml` in that test remote; source of truth copied to `poc/workflows/fa-aggregate.yml` here | **active, dispatch-only — the cron sweep is COMMENTED OUT** so an idle repo doesn't run forever. Re-enable the cron to test that layer. `/tmp/ciwork` was the scratch clone used to edit it — EPHEMERAL, re-clone if needed |
 
-**ONE-LINE RESUME POINTER:** read `research/DECISIONS.md` (the 3 settled calls) →
-`research/SPEC.md` (14 invariants) → `research/SCALE.md` + `research/CI-AGGREGATOR.md`
-(what scale and the cross-internet topology actually cost). **Nothing is blocking.
-The next work is BUILDING PHASE 1 as `fa` Go subcommands.**
+**ONE-LINE RESUME POINTER:** phase 1 is BUILT — read `fa/README.md` first, then
+`research/DECISIONS.md` (the 3 settled calls) → `research/SPEC.md` (14 invariants) →
+`research/SCALE.md` + `research/CI-AGGREGATOR.md` (what scale and the cross-internet
+topology actually cost). **Nothing is blocking. The next work is DEPLOYING the phase-1
+gate into vsdd-factory and ratcheting its baseline down.**
 
 ---
 
@@ -261,6 +323,7 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-07-31 | `e4db2ad` | **PHASE 1 BUILT — first product code.** `fa` as a Go binary (`fa/`, embedded `dolthub/driver/v2`, CGO + `-tags gms_pure_go`, 148 MB, 39.5 s cold build): `import` (live corpus in **1.1-1.4 s**, ONE transaction, idempotent, FK rejections recorded as findings) · `validate` (**0.15 s**, every gate a query: W8's gates + a count-assertion gate + index enumeration + prefix agreement + scalar refs + dependency direction + **D2's mandatory cross-zone pass**, ids and counts only) · a **dated 153-finding baseline** that ratchets · `doctor` probing **WRITABILITY not openability** (verified against a real read-only second opener: `cannot update manifest: database is read only`, while the schema check passed on the same store) · the **`fa aggregate` quarantine policy** as pure tested code (bounded attempts, run-counted backoff, move to `refs/dolt/quarantine/*`, and an unmergeable lineage quarantined on the FIRST failure per invariant 14) · a CI workflow that fails on NEW findings only · 24 tests in 3.3 s with no network and no `dolt` binary. **PARITY PROVEN** against the Python prototype: identical records + universes, the 82 import-path findings match RULE FOR RULE, edge sets diffed row by row. **Gate proven to FAIL**: a dangling ref planted in a COPY of the corpus → exactly 1 new finding, exit 1; live corpus → exit 0. **CORRECTIONS #9-10:** the corpus graph has **1,509 edges, not 1,490** (the prototype's parser treated a prose value with an unbalanced `[` as an unterminated inline list, swallowing every key after `BC-INDEX`'s `last_amended` — hiding `total_bcs: 1955` from the count gate and 19 real edges across six S-15.x stories; THIRD instance of the parser-loses-input class, now pinned by a regression test), and **"1962 distinct BC ids" depends on its extraction rule** (first column of the enumeration table = 1,959, which agrees with disk). `fa/README.md` |
 | 2026-07-30 | `e2620e0` | Pass 1: assessment + POC store; 13/13. Found the 4-way count drift, 3 dangling refs, the lock TOCTOU |
 | 2026-07-30 | `f6762d1` | Pass 2: full relationship graph (1,490 edges) + multi-machine; 27/27. **Fixed 2 of my own bugs that faked clean results** (frontmatter parser dropped all list edges; `INSERT IGNORE` suppressed FK violations) |
 | 2026-07-30 | `5002d16` | Pass 3: locking + **CORRECTION** — pass-1's "16 acquirers, one wins" was right by accident (`fence+1` is the documented anti-pattern) |
@@ -366,17 +429,23 @@ EIGHT times):
   - Report unreproduced anomalies as unreproduced; build node universes only from
     authoritative declaring documents.
 
-STATE: spike complete; 3 blocking decisions settled; scaled to 200 agents; every
-decentralised contention fix exhausted; cross-internet topology validated on GitHub
-Actions (~30 s median latency). Verdict GO (phased), 193/194 checks, 24 suites.
-NO PRODUCT CODE EXISTS YET. The end state is ONE GO BINARY, `fa`.
+STATE: spike complete AND **PHASE 1 IS BUILT** (commit e4db2ad). `fa` is a Go binary
+at fa/ on the embedded dolthub/driver/v2: import + validate + a dated 153-finding
+baseline + a CI gate + 24 tests, parity-verified against the Python prototype
+rule for rule. The spike evidence below is unchanged. Verdict GO (phased).
 
-TASK: build PHASE 1 as `fa` Go subcommands — `fa import` + `fa validate` (gates as SQL),
-a DATED BASELINE ALLOWLIST of the 82 existing findings so the CI gate can be switched on
-without blocking every PR, a CI job that fails only on NEW violations, and the cross-zone
-integrity check D2 makes mandatory. Phase-1 SCOPE is unchanged from DECISIONS D3, but its
-"Python, no Go" implementation note is SUPERSEDED: `fa` is Go with the embedded driver
-(CGO + `-tags gms_pure_go`). Carry two measured requirements in from the start:
-`fa aggregate` must QUARANTINE stuck staging refs, and `fa doctor` must check
-WRITABILITY (not openability).
+READ fa/README.md — phase 1 is DONE. Build it with:
+  cd fa && CGO_ENABLED=1 go build -tags gms_pure_go -o fa .   # both flags mandatory
+  CGO_ENABLED=1 go test -tags gms_pure_go ./...               # 24 tests, ~3.3s
+  ./fa init --db /tmp/fadb && ./fa import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
+  ./fa validate --db /tmp/fadb --baseline baseline.json       # exit 0 today
+
+TASK: deploy the gate into vsdd-factory (fa/ -> tools/fa/, fa/workflows/fa-validate.yml
+-> .github/workflows/) and start ratcheting the 153-finding baseline down. D3's exit
+criterion into phase 2 CANNOT be completed inside this repo: it needs the baseline at
+zero (or each item waived with a reason) AND the gate catching a real regression in a
+real PR. Cheapest ratchet first: the 7 `count` findings, three of which locate the
+four-way BC-total drift in SS-03 (53 vs 56), SS-05 (656 vs 655) and SS-08 (214 vs 218).
+The 58 `direction` findings are ONE class — fix by storing a single dependency
+direction, not by editing 58 entries.
 ```
