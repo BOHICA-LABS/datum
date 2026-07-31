@@ -9,7 +9,8 @@ interface to all vsdd-factory artifacts, replacing the `factory-artifacts` orpha
 
 | Path | What |
 |---|---|
-| **`research/SPEC.md`** | **The specification — capability surface, invariants, CLI, phasing, non-goals** |
+| **`research/SPEC.md`** | **The specification — capability surface, 11 invariants, CLI, phasing, non-goals** |
+| **`research/GAP-MATRIX.md`** | **Gap assessment vs all 46 registry artifact types + the 3 findings that changed the design** |
 | `research/ASSESSMENT.md` | The feasibility assessment — findings, gaps, phased recommendation |
 | `poc/schema.sql` | Core schema (BCs, VPs, stories, subsystems, lock) |
 | `poc/graph.sql` | Full relationship graph — 10 node types, 9 edge tables |
@@ -28,9 +29,12 @@ interface to all vsdd-factory artifacts, replacing the `factory-artifacts` orpha
 | `poc/test_render.py` | 7 tests — markdown as a deterministic, round-trippable export |
 | `poc/test_schema_evolution.py` | 8 tests — migrations + cross-machine schema merge |
 | `poc/test_lifecycle.py` | 8 tests — onboarding, recovery, wave branches, growth |
-| `poc/db/`, `mm/`, `sl/`, `mx/`, `td/`, `se/`, `lc/` | Dolt data dirs (gitignored) |
+| `poc/test_asymmetry.py` | 6 tests — **information-asymmetry walls vs one store** |
+| `poc/test_factory_ops.py` | 10 tests — waves, state, context, tasks, templates, versioning |
+| `poc/test_multi_instance.py` | 9 tests — **N devs x M instances x K agents** |
+| `poc/db/`, `mm/`, `sl/`, `mx/`, `td/`, `se/`, `lc/`, `asym/`, `fo/`, `mi/` | Dolt data dirs (gitignored) |
 
-**87/87 passing** against the live corpus, eleven suites.
+**112/112 passing** against the live corpus, fourteen suites.
 
 **Read [`research/SPEC.md`](research/SPEC.md) first** — it is the deliverable: the full
 capability surface with every capability traced to the test that proves it, the eight

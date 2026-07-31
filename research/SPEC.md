@@ -1,7 +1,7 @@
 ---
 title: fa — specification for the sole interface to factory artifacts
 date: 2026-07-30
-status: spec derived from a verified spike (87/87 tests against the live corpus)
+status: spec derived from a verified spike (112/112 tests against the live corpus)
 evidence: vsdd-factory @82163b7f (.factory on factory-artifacts) · beads @b1694a5 · Dolt 2.2.3
 ---
 
@@ -11,7 +11,7 @@ Every capability below is backed by a passing test against the **live** vsdd-fac
 corpus (1,959 BCs, 3,145 files, 1,607 commits). Nothing here is aspirational; where
 something is untested or deliberately excluded it says so.
 
-**87/87 tests, eleven suites.** See [ASSESSMENT.md](ASSESSMENT.md) for the
+**112/112 tests, fourteen suites.** See [ASSESSMENT.md](ASSESSMENT.md) for the
 feasibility argument and the measured problems in the current design.
 
 ---
@@ -199,6 +199,18 @@ corruption, and each was found empirically.
 8. **Markdown is written only by `fa render`, and `render --check` runs in CI.**
    Otherwise there are two truths and strictly more drift than today. *(R6)*
 
+9. **Trust zones are separate database DIRECTORIES (or a server with GRANTs).**
+   VSDD requires that some agents structurally cannot see some artifacts. A single
+   server-less database makes that impossible — `dolt sql` needs only filesystem
+   access. Zones under one `--data-dir` leak via cross-database query. Only separate
+   directories, or a shared server with table-level GRANTs, hold. *(A1–A5;
+   [GAP-MATRIX.md §4.1](GAP-MATRIX.md))*
+10. **One clone per factory INSTANCE.** Checkout is per-clone: cross-branch reads work,
+   cross-branch writes are refused. Concurrent instances therefore need a clone each.
+   *(I9)*
+11. **Leases are per-scope, never singular.** One global lock serializes the whole
+   project and makes parallel instances pointless. *(I3)*
+
 Invariants 1–7 exist because Dolt's conflict detection is documented as "too lenient"
 ([#7681](https://github.com/dolthub/dolt/issues/7681), strict mode unimplemented). They
 must live in `fa`'s single write path, not in agent instructions.
@@ -227,8 +239,14 @@ fa amend <id> [fields]       validated amend + version bump
 fa retire <id>               lifecycle transition
 fa rm <id> [--cascade]       refused while inbound refs exist
 
-fa lease acquire|release|status [--scope wave-N]
-fa wave start|merge|abandon <N>
+fa lease acquire|release|status --scope <wave-N|phase-N|cycle-X>
+fa wave register <N> <story...> | merge | abandon
+fa wave gate <N> --pass|--defer <reason>|--fail
+fa instance new <name> --mode <m> | list | graduate <name> | abandon <name>
+fa context <wave-N>          derive the exact spec set for a wave
+fa task next <story> | done <task>
+fa template instantiate <type> [fields]
+fa changelog <artifact>      the amendment ledger
 fa sync                      pull, then push (conflict-guarded)
 fa gc                        reclaim space
 fa doctor                    clone health: identity set, no half-merge, schema current
@@ -253,6 +271,9 @@ Stated explicitly so scope does not drift:
 - **`fa` does not resolve merge conflicts automatically.** It aborts cleanly and
   reports. Resolution policy is a separate decision, undesigned.
 - **`fa` does not replace git for source code.** Only artifacts.
+- **Multi-repo mode** (`.factory-project/` + `factory-project-artifacts`) is not
+  modelled; single-project only.
+- **Conflict-resolution policy** is out of scope. `fa` surfaces and aborts cleanly.
 
 ---
 
