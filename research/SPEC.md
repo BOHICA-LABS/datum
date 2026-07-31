@@ -18,33 +18,47 @@ feasibility argument and the measured problems in the current design.
 
 ## 1. Architecture
 
+**One clone per factory INSTANCE**, not per machine — forced by a measured constraint
+(invariant 10 / I9): checkout is per-clone, so a clone can write only one branch at a
+time. Clones cost ~0.2 s and share the remote.
+
 ```
-  machine A (dev 1)                          machine B (dev 2)
-  ┌───────────────────────────┐              ┌───────────────────────────┐
-  │ ONE Dolt clone            │              │ ONE Dolt clone            │
-  │  ├── flock write mutex    │              │  ├── flock write mutex    │
-  │  └── agents a0..aN (procs)│              │  └── agents b0..bM (procs)│
-  └───────────────┬───────────┘              └───────────┬───────────────┘
+  dev 1 machine                                dev 2 machine
+  ├── clone → branch factory/primary           ├── clone → factory/dev2-main
+  │     ├── flock mutex (per clone)            └── clone → factory/maint
+  │     └── agents a0..aN (processes)
+  ├── clone → branch factory/spike-a
+  └── clone → branch factory/spike-b
+        └─ mutexes are per-INSTANCE ⇒ instances never contend locally (I2)
                   │        dolt push / pull              │
                   └──────────────┬───────────────────────┘
                                  ▼
                   shared git remote (the project's OWN repo)
-                        refs/dolt/data          ← the database
-                        refs/heads/main         ← source code
-                        rendered markdown       ← generated export, committed
+                    refs/dolt/data       ← the database
+                    refs/heads/main      ← canonical specs + source code
+                    factory/*            ← instance branches
+                    rendered markdown    ← generated export, committed
+
+  trust zones = separate database DIRECTORIES (invariant 9 / A1–A5):
+      zones/open    ← specs, stories, waves, state        (most agents)
+      zones/walled  ← holdout scenarios, adversary passes (restricted agents)
 ```
 
 **No `sql-server`. No daemon. No new hosting.** Dolt data lives under `refs/dolt/data`
 in the repo you already have (T12), so the `factory-artifacts` orphan branch is retired
 without provisioning anything.
 
-Three coordination layers, verified to compose (§3f of the assessment, 9/9):
+Four coordination layers, verified to compose (assessment §3f 9/9; I-suite 9/9):
 
 | Layer | Mechanism | Scope |
 |---|---|---|
-| L1 | `flock` on a lockfile in the clone | orders one machine's agent processes |
-| L2 | `dolt push` non-fast-forward rejection | arbitrates between machines |
-| L3 | Dolt 3-way **cell-level** merge on pull | reconciles pre-push divergence |
+| L1 | `flock` on a lockfile in the clone | orders one instance's agent processes |
+| L2 | per-scope lease rows (wave / phase / cycle) | orders instances against each other |
+| L3 | `dolt push` non-fast-forward rejection | arbitrates between clones and machines |
+| L4 | Dolt 3-way **cell-level** merge on pull/merge | reconciles pre-push divergence |
+
+Instance lifecycle: branch from `main` → work isolated → **graduate** by merging to
+`main` (I4), or **abandon** by deleting the branch and flipping registry status (I5).
 
 ---
 
@@ -53,11 +67,13 @@ Three coordination layers, verified to compose (§3f of the assessment, 9/9):
 Records with real keys, replacing hand-maintained markdown indexes:
 
 **Nodes** — `subsystem`, `bc`, `vp`, `story`, `epic`, `capability`, `domain_invariant`,
-`nfr`, `fr`, `adr`, plus `pipeline_state`, `phase`, `factory_lock`, `schema_migrations`.
+`nfr`, `fr`, `adr`, `task`, `template`, plus `pipeline_state`, `phase`, `wave`,
+`factory_instance`, `instance_state`, `lease`, `spec_change`, `id_alloc`,
+`schema_migrations`.
 
 **Edges** (all with FKs on both ends) — `vp_bc`, `vp_di`, `vp_nfr`, `vp_subsystem`,
 `story_bc`, `story_vp`, `story_fr`, `story_subsystem`, `story_dep` (the dependency DAG),
-`bc_trace`.
+`bc_trace`, `bc_adr`, `wave_story`, `template_field`.
 
 1,490 edges loaded from real frontmatter. Node universes come from **authoritative
 declaring documents only** (`capabilities.md`, `invariants.md`,
@@ -73,6 +89,12 @@ building them from grep-over-everything would make every reference resolve trivi
 3. **Cross-machine counters are APPEND-ONLY rows, never mutable cells** (D4/D5/D5b).
 4. **Prose stays as files.** Burst logs, adversarial review passes, and lessons are
    narrative; relationalizing them buys nothing.
+5. **Nothing that can be derived is stored.** Wave membership derives the wave's spec
+   set (V4); merge tracking derives the gate transition (V3); task status derives story
+   progress (V6). Each of those is a hand-maintained list in the corpus today.
+
+See [GAP-MATRIX.md](GAP-MATRIX.md) for how all **46** registry artifact types map onto
+this model, including the 12 declared prose non-goals.
 
 ---
 
