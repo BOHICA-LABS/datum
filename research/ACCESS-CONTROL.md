@@ -215,6 +215,36 @@ those existing profiles to the zone directories, not to invent a new mechanism.
 This is genuine parity with today, achieved by the same enforcement point, and it needs
 **no daemon and no OS changes**.
 
+### 4.2 SELECTED: tier 1 — and what that forces about granularity
+
+**Selected tier: 1.** Not by preference — by availability. §4.1 measured that Claude Code
+runs every agent inside ONE OS process, so there is no per-agent uid (tier 2) and no
+per-agent process to inherit an fd (tier 3's only safe credential channel).
+
+**This also constrains §4's "per-table vs per-directory" choice more than first stated.**
+Per-table walls come from DB `GRANT`s, which require the acting agent to hold a
+credential. In a one-process fleet there is no sibling-process boundary at all: any
+credential reachable by one agent's `Bash` is reachable by every agent's `Bash`. So
+**GRANT-based per-table walls are not enforceable here either** — they would be the
+security theatre ID5b demonstrated.
+
+There IS still a route to per-table, but the enforcement point has to move OUT of the
+database and INTO the harness:
+
+1. Deny `Bash` for the walled agent entirely (no `dolt`, no `mysql`, no `cat`).
+2. Allow only `fa` as a tool.
+3. Have a **`PreToolUse` hook inject the true role** into the `fa` invocation, so the role
+   is *not* an argument the agent controls.
+
+Then `fa` is the sole gate, holds the credential itself, and the agent cannot forge its
+identity or go around it. That is testable and worth building **only if per-table
+granularity is genuinely required** — it is strictly more machinery than the
+zone-directory design.
+
+**Default recommendation stands: tier 1 + zone DIRECTORIES.** Per-directory granularity,
+no daemon, enforcement by `permissions.deny` + `PreToolUse` + per-agent `allowed-tools`,
+and the hard requirement that a walled agent has no unrestricted `Bash`.
+
 ### What to write down before implementing
 
 1. Which agents need which zones — the `visible_to` lists.
