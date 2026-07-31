@@ -17,7 +17,7 @@ latency profile. Nothing in vsdd-factory has been changed.
 lands as its subcommands — see TOP PRIORITY NEXT item 0.
 
 **Repo state:** `~/Dev/scrap/dolt-artifact-spike`, **local-only git (NO remote — nothing
-to push)**, clean. **12 spike passes. HEAD at this wrap = `acad904`.**
+to push)**, clean. **12 spike passes. HEAD at this wrap = `d0567a4`.**
 
 **Reference repos (both READ-ONLY here; we changed neither):**
 | Repo | Where | Pin |
