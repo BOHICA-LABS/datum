@@ -1,9 +1,9 @@
 ---
 title: fa — specification for the sole interface to factory artifacts
 date: 2026-07-31
-status: spec derived from a verified spike (171/171 tests, 20 suites, against the live corpus and a real GitHub remote)
+status: spec derived from a verified spike (184/185 checks, 23 suites, incl. a 200-agent fleet against a real GitHub remote; the one failure is the deliberately pathological per-write push arm)
 evidence: vsdd-factory @82163b7f (.factory on factory-artifacts) · beads @b1694a5 · Dolt 2.2.3 · dolthub/driver/v2 v2.2.0 · github.com/drbothen/dolt-artifact-spike-remote
-see_also: DECISIONS.md (the 3 settled calls) · ACCESS-PATH.md (which access path) · REMOTE.md (the real remote)
+see_also: DECISIONS.md (the 3 settled calls) · ACCESS-PATH.md (which access path) · REMOTE.md (the real remote) · SCALE.md (200 agents + every decentralised contention fix)
 ---
 
 # `fa` — the sole interface to factory artifacts
@@ -12,7 +12,9 @@ Every capability below is backed by a passing test against the **live** vsdd-fac
 corpus (1,959 BCs, 3,145 files, 1,607 commits). Nothing here is aspirational; where
 something is untested or deliberately excluded it says so.
 
-**171/171 tests, twenty suites.** See [ASSESSMENT.md](ASSESSMENT.md) for the
+**184 of 185 checks pass across twenty-three suites** — the single failure is S3, the
+deliberately pathological "push per write" arm, which is *supposed* to be bad and is
+kept red rather than tuned green. See [ASSESSMENT.md](ASSESSMENT.md) for the
 feasibility argument and the measured problems in the current design, and
 [DECISIONS.md](DECISIONS.md) for the three design calls that were open until
 2026-07-31 and are now settled.
@@ -226,7 +228,10 @@ corruption, and each was found empirically.
    autocommit costs another ~5–7 ms in every path** — identical in the batched
    CLI (6.77 ms) and the embedded driver (5.53 ms). Wrapping the same batch in
    one explicit transaction takes it to **0.9 s**, a further **17×**, and that is
-   also exactly the boundary atomicity requires. *(X8; B5, B6, B13)*
+   also exactly the boundary atomicity requires. The same shape holds one layer
+   up: a *push* costs the same for 1 commit as for 50, so batching is **48× per
+   commit** (O3), and collapsing three `dolt` invocations per unit into one is
+   **2.9×** on the local path (O2). *(X8; B5, B6, B13; O2, O3)*
 7. **A `PRIMARY KEY` is not a concurrency control.**
    Two concurrent writers inserting byte-identical rows merge silently; naive ID
    allocation produced `[1,1,1,1,1,1]`. Allocators need a per-attempt token. *(L4 locking)*
@@ -244,14 +249,28 @@ corruption, and each was found empirically.
    *(I9)*
 11. **Leases are per-scope, never singular.** One global lock serializes the whole
    project and makes parallel instances pointless. *(I3)*
-12. **A remote data ref is ONE lineage — instance branches are not independent on
-   the wire.** All Dolt branches live inside a single git ref (`refs/dolt/data`);
-   pushing a new Dolt branch creates no new git ref, it rewrites that one. So
-   push contention is **global across instances**, not per-instance, and a fresh
-   unrelated database pushing to an existing data ref is a non-fast-forward.
-   `dolt remote add --ref` gives each instance its own data ref and decouples
-   pushes — at the cost of forfeiting cross-instance merge on the remote, since
-   each ref is a separate lineage. *(G7; measured against github.com)*
+12. **Push contention is per-BRANCH.** *(Corrected 2026-07-31 — the original
+   wording named the wrong mechanism. See [SCALE.md §2](SCALE.md).)* A push is a
+   compare-and-swap on a branch pointer: you are rejected whenever it moved since
+   your last fetch, whether or not your data overlaps anyone's. Measured at
+   scale: 10 clones pushing the SAME branch cost 54 attempts (O(N)=55), while 10
+   clones pushing DISTINCT branches into the *same* git data ref cost exactly 1
+   each. **Because the factory's artifact store is a single branch, this is
+   nevertheless global for artifacts** — so the original conclusion stands on a
+   different footing. The `--ref`-per-instance mitigation is **inapplicable**: it
+   fragments the artifact store into separate lineages. All Dolt branches do share
+   one git ref (`refs/dolt/data`), so a fresh unrelated database pushing to an
+   existing data ref is still a non-fast-forward. *(G7, S2, S5; github.com)*
+13. **Pushes to the artifact branch must be AGGREGATED, not coordinated.**
+   The push cost is ~8 s fixed — independent of payload (O3), of transport (D4:
+   ssh is slower) and of process spawn (embedded `DOLT_PUSH` is the same). So the
+   only lever is pushing fewer times, and optimistic retry **cannot be tuned**:
+   immediate retry cost 159 attempts, exponential+jitter 185, ticket order 193 —
+   backoff makes it *worse*, because sleeping lets more pointers move while you
+   wait. Collapse N writers to ONE push: a local `file://` relay serialised by
+   `flock` within a host (17 s, no daemon), and staging refs plus an aggregator
+   across hosts (64 s, no daemon). 20 writers -> 1 push. *(D1-D5, O1-O3;
+   [SCALE.md §4](SCALE.md))*
 
 Invariants 1–7 exist because Dolt's conflict detection is documented as "too lenient"
 ([#7681](https://github.com/dolthub/dolt/issues/7681), strict mode unimplemented). They

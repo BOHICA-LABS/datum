@@ -7,7 +7,7 @@ tool (`fa`) that is the **sole interface to all vsdd-factory artifacts**, replac
 `factory-artifacts` orphan git branch?
 
 **Status: SPIKE COMPLETE + all three blocking decisions SETTLED. Verdict GO (phased).
-171/171 tests, 20 suites**, re-runnable against the LIVE vsdd-factory corpus and — new —
+184 of 185 checks, 23 suites**, re-runnable against the LIVE vsdd-factory corpus and — new —
 against a **real GitHub remote**. No product code written yet: this is a spike, a
 specification, and now a decision record. Nothing in vsdd-factory has been changed.
 
@@ -66,10 +66,15 @@ last pass measured. **Phase 1 is signed off — the next work is building it.**
    Linux gates `/proc/<pid>/environ` behind `PTRACE_MODE_READ_FSCREDS` (safer). Depends on
    deployment `ptrace_scope`/`hidepid`/dumpable, so it must be run, not reasoned about.
    Low priority — tier 1 does not depend on the answer.
-7. **Instance-count ceiling above 12** — and note it is *worse* than modelled: all Dolt
-   branches share ONE git ref, so push contention is **global** across instances at ~10 s
-   per retry (new invariant 12 / G7). `--ref` per instance decouples pushes but forfeits
-   cross-instance merge on the remote.
+7. ~~**Instance-count ceiling above 12**~~ — **MEASURED at 200 agents / 20 clones
+   (`research/SCALE.md`).** Correctness holds absolutely (S6: 247/247 rows, 0 missing,
+   0 dupes, 0 dangling FKs after 200 concurrent writers + 9 merges). Contention is
+   per-BRANCH, and because the artifact store is ONE branch it is global for artifacts —
+   but it is **solved decentrally by AGGREGATION** (new invariant 13): a local `file://`
+   relay + `flock` collapses a host's instances to 1 push (17 s); staging refs +
+   an aggregator collapse hosts to 1 (64 s); peer `--remotesapi-port` pull does it in
+   25 s at the cost of a listener per writer. Backoff tuning makes contention WORSE
+   (159 -> 185 -> 193 attempts). **No central server is needed for contention.**
 8. **Decide the access path at phase 3, not now** (`research/ACCESS-PATH.md`): embedded is
    ~2× on cold start, ~4,000× warm, and removes the `dolt` binary from the toolchain — but
    it is Go+CGO, 155 indirect deps, a 147 MB binary, and phase 1 does not need it.
@@ -86,6 +91,14 @@ last pass measured. **Phase 1 is signed off — the next work is building it.**
 
 ### Session task list (ephemeral tracker — mirrored here)
 
+Pass 11 (scale + contention) **✓ complete**: 200-agent fleet on the real remote (5/6, S6
+proves ZERO lost writes) · found contention is per-BRANCH · **exhausted every
+decentralised contention fix** (D1-D5, O1-O3) · aggregation collapses 20 writers to 1
+push · backoff measured HARMFUL · `research/SCALE.md` + invariant 13.
+**Still open: nothing blocking. A central-instance comparison is the next optional step,
+and it is now an argument about READ latency and intra-host concurrency ONLY — contention
+no longer motivates it.**
+
 Pass 10 tasks all **✓ complete**: benchmark the embedded driver (13/13) · add the missing
 `BEGIN`/`COMMIT` control that overturned the pass-9 headline · settle the three decisions ·
 real-GitHub-remote MECHANICS suite (10/10) · **port every `file://` scenario onto the real
@@ -96,7 +109,11 @@ answer the Rust/DoltLite question · update SPEC / GAP-MATRIX / ASSESSMENT / LES
 
 ### Operating principles that must carry over
 
-- **Measure, don't assume.** This spike corrected its own claims **five** times (see LOG).
+- **Measure, don't assume.** This spike corrected its own claims **eight** times (see LOG).
+- **Never infer a consequence from a structural fact.** Three of this session's errors
+  were exactly that: 'one git ref ⇒ global contention' (wrong, it is per-branch),
+  'slow pushes ⇒ commit churn' (wrong, push cost is flat in payload), and 'ticket
+  ordering ≈ a queue' (wrong, it was the WORST arm). Measure the consequence too.
 - **Before recommending a lever, measure the alternatives to that lever.** Pass 9 called
   the embedded driver "the single biggest engineering lever" from a spawn-vs-query ratio.
   Pass 10 measured the thing neither side had tested — the transaction boundary — and the
@@ -201,7 +218,8 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 | 2026-07-30 | `2da29cd` | Pass 7: `research/SPEC.md` + write-API / render / schema / lifecycle; 87/87 |
 | 2026-07-30 | `11f0da3`, `b723569` | Pass 8: `research/GAP-MATRIX.md` vs all 46 registry artifact types; asymmetry + factory-ops + multi-instance; 112/112 |
 | 2026-07-30 | `7f36c27`, `001f166` | Pass 9: scale + zones + identity; `research/ACCESS-CONTROL.md`; 137/137. **Corrected my prediction that macOS hides process envs — it does not** |
-| 2026-07-31 | `71ca16a`, +this | Pass 10: embedded-driver benchmark (13/13) + **real GitHub remote: 10/10 mechanics AND 11/11 ported `file://` scenarios** + the three decisions settled (`research/DECISIONS.md`, `ACCESS-PATH.md`, `REMOTE.md`); 171/171. **CORRECTION #5 — pass 9's "the embedded driver is the single biggest engineering lever" was wrong: the lever is a missing `BEGIN`/`COMMIT`, worth 17–23× and available from the CLI.** Also: invariant 6 restated, new invariant 12 (one git ref per remote ⇒ global push contention), and the embedded path does NOT remove the write mutex |
+| 2026-07-31 | (this pass) | Pass 11: SCALE + CONTENTION. 200 agents / 20 clones / real remote: **S6 = 247/247 rows, 0 missing, 0 dupes, 0 dangling FKs** after 200 concurrent writers + 9 merges. **CORRECTIONS #6-8:** contention is per-BRANCH not per-ref (so `--ref`-per-instance is inapplicable to a single-branch store); slow pushes were CONCURRENCY not churn (a push costs the same for 1 commit as 50); and backoff/ticket ordering make contention WORSE (159 → 185 → 193 attempts), not better. **Exhausted the decentralised option space** — aggregation (`file://` relay + flock per host, 17 s; staging refs + aggregator, 64 s; peer remotesapi pull, 25 s) collapses 20 writers to ONE push, so **no central server is needed for contention**. New invariant 13; `research/SCALE.md` |
+| 2026-07-31 | `71ca16a`, `dd5fec0` | Pass 10: embedded-driver benchmark (13/13) + **real GitHub remote: 10/10 mechanics AND 11/11 ported `file://` scenarios** + the three decisions settled (`research/DECISIONS.md`, `ACCESS-PATH.md`, `REMOTE.md`); 171/171. **CORRECTION #5 — pass 9's "the embedded driver is the single biggest engineering lever" was wrong: the lever is a missing `BEGIN`/`COMMIT`, worth 17–23× and available from the CLI.** Also: invariant 6 restated, new invariant 12 (one git ref per remote ⇒ global push contention), and the embedded path does NOT remove the write mutex |
 
 ---
 
@@ -216,6 +234,7 @@ READ FIRST, in this order:
   3. research/SPEC.md              (the spec: architecture, capability surface, 12 invariants, CLI, phasing)
   4. research/ACCESS-PATH.md       (embedded driver vs CLI vs server, measured — and why the headline changed)
   5. research/REMOTE.md            (the real github.com remote: ~10 s per acquire, one data ref per remote)
+  5b. research/SCALE.md            (200 agents; EVERY decentralised contention fix, ranked)
   6. research/GAP-MATRIX.md        (coverage vs all 46 vsdd-factory artifact types; gaps 1/2/7 now closed)
   7. research/ACCESS-CONTROL.md    (zones + agent identity; what is actually enforceable)
   8. research/ASSESSMENT.md        (the feasibility argument + measured problems; §3g has the scale numbers)
@@ -268,7 +287,7 @@ times — most recently its own headline recommendation. Before recommending a l
 measure the alternatives to that lever. Report unreproduced anomalies as unreproduced.
 Build node universes only from authoritative declaring documents.
 
-STATE: spike complete, 3 blocking decisions settled, verdict GO (phased), 171/171.
+STATE: spike complete, 3 blocking decisions settled, verdict GO (phased), 184/185.
 No product code exists yet.
 
 TASK: build PHASE 1 per research/DECISIONS.md D3 — `fa import` + `fa validate` (gates as

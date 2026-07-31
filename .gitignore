@@ -22,3 +22,6 @@ rendered/
 __pycache__/
 *.pyc
 poc/gt/
+poc/st/
+poc/opt/
+poc/dc/
