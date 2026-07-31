@@ -2,6 +2,7 @@ poc/db/
 poc/mm/
 poc/sl/
 poc/mx/
+poc/td/
 rendered/
 .venv/
 __pycache__/

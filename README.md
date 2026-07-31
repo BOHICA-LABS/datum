@@ -23,7 +23,7 @@ interface to all vsdd-factory artifacts, replacing the `factory-artifacts` orpha
 | `poc/clonelock.py` | `flock` write mutex for a single shared clone |
 | `poc/test_mutex.py` | 8 tests — single clone + mutex (cross-process) |
 | `poc/test_two_devs.py` | 9 tests — **2 devs, 2 machines, 4 agents each, 1 repo** |
-| `poc/db/`, `poc/mm/`, `poc/sl/`, `poc/mx/` | Dolt data dirs (gitignored) |
+| `poc/db/`, `poc/mm/`, `poc/sl/`, `poc/mx/`, `poc/td/` | Dolt data dirs (gitignored) |
 
 **55/55 passing** against the live corpus.
 
