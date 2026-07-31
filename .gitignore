@@ -1,0 +1,5 @@
+poc/db/
+rendered/
+.venv/
+__pycache__/
+*.pyc
