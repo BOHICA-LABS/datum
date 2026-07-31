@@ -3,7 +3,25 @@
 Research spike: can [Dolt](https://github.com/dolthub/dolt) back a tool that is the **only**
 interface to all vsdd-factory artifacts, replacing the `factory-artifacts` orphan git branch?
 
-**Verdict: GO, phased.** See [research/ASSESSMENT.md](research/ASSESSMENT.md).
+**Verdict: GO, phased.** 137/137 tests, 17 suites, all measured against the LIVE
+vsdd-factory corpus. No product code yet — this is a spike plus a specification.
+
+**Start here:** [`HANDOFF.md`](HANDOFF.md) (resume pointer + open decisions) →
+[`research/SPEC.md`](research/SPEC.md) (the spec) →
+[`research/GAP-MATRIX.md`](research/GAP-MATRIX.md) (coverage vs all 46 artifact types) →
+[`research/ACCESS-CONTROL.md`](research/ACCESS-CONTROL.md) →
+[`research/ASSESSMENT.md`](research/ASSESSMENT.md) (feasibility + scale) →
+[`research/LESSONS.md`](research/LESSONS.md) (gotchas + false-pass traps).
+
+**Access control: TIER 1 selected** — the CLI permission layer (`permissions.deny` +
+`PreToolUse` hooks + per-agent `allowed-tools`). Tiers 2 (OS user per agent) and 3
+(per-role DB credentials with fd passing) are **structurally unavailable**: Claude Code
+runs every agent inside ONE OS process, so there is no per-agent uid and no per-agent
+process to inherit a credential. Hard requirement: a walled agent must NOT have
+unrestricted `Bash`, or `cat` walks through the wall.
+
+**3 decisions gate the build** (see HANDOFF): conflict-resolution policy · zone
+granularity per-directory vs per-table · phase-1 scope.
 
 ## What's here
 
@@ -172,6 +190,39 @@ beads calls this the "zombie-merge bug"; Dolt issue
 - Ad-hoc per-clone locking is provably broken: two machines each acquired the same lock and
   each believed it won. You need *an* arbiter — but that can be a local mutex (one clone) or
   the remote (many clones), **not necessarily a daemon**.
+
+## Setup (required — nothing runs without this)
+
+`.venv/` and every `poc/*/` data dir are **gitignored and disposable**. Recreate them:
+
+```bash
+cd ~/Dev/scrap/dolt-artifact-spike
+
+# 1. Dolt (2.2.3 verified). NOTE: 2.2.x REMOVED --user/--password from sql-server.
+brew install dolt && dolt version
+
+# 2. Python venv — the ONLY dependency is pymysql
+python3 -m venv .venv && .venv/bin/pip -q install pymysql
+.venv/bin/python -c "import pymysql; print('pymysql', pymysql.__version__)"
+
+# 3. The 5 suites that need a shared server: init + load the live corpus
+mkdir -p poc/db && (cd poc/db && dolt init --name spike --email spike@local)
+(cd poc/db && dolt sql-server --host 127.0.0.1 --port 3308 &) && sleep 7
+.venv/bin/python poc/fa.py init
+.venv/bin/python poc/fa.py import ~/Dev/vsdd-factory/.factory
+.venv/bin/python poc/graph_import.py ~/Dev/vsdd-factory/.factory
+```
+
+**Which suites need the server on 3308** (the rest self-provision their own clones):
+
+| Needs server 3308 | Self-provisioning |
+|---|---|
+| `test_spike`, `test_graph`, `test_write_api`, `test_render`, `test_factory_ops`, `test_locking`, `test_cas_patterns` | `test_multimachine`, `test_serverless_lock`, `test_mutex`, `test_two_devs`, `test_schema_evolution`, `test_lifecycle`, `test_multi_instance`, `test_scale`, `test_zones` |
+
+`test_asymmetry` and `test_identity` start their own servers on 3499 / 3502.
+
+**Requires** `~/Dev/vsdd-factory` to exist (branch `develop`, pinned `82163b7f`) with its
+`.factory` worktree — that is the live corpus every assertion is measured against.
 
 ## Quick start
 

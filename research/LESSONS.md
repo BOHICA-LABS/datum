@@ -1,0 +1,121 @@
+---
+title: LESSONS — Dolt gotchas and harness bugs that faked clean results
+date: 2026-07-30
+purpose: everything that cost time in this spike, so it costs nobody time again
+---
+
+# Lessons
+
+Two kinds of thing, and the second kind matters more:
+
+1. **Dolt behaviours** that are surprising and load-bearing.
+2. **Bugs in my own test harness that produced FALSE PASSES.** These are the dangerous
+   ones — a test that passes for the wrong reason is worse than no test.
+
+---
+
+## 1. Dolt behaviours (verified, with the test that pins each one)
+
+### Concurrency — the big one
+
+| Behaviour | Consequence | Test |
+|---|---|---|
+| **No row locking.** `SELECT … FOR UPDATE` parses but does not block. Docs: *"Row-level locks are not supported."* `LOCK TABLES` is also a no-op. | Pessimistic locking is unavailable. Use a unique-token CAS or `GET_LOCK`. | `test_locking` L2 |
+| **Merges cell-by-cell.** Same row + different columns → both survive silently. | Great for parallel agents (D2). Fatal for counters. | `test_two_devs` D2 |
+| **Identical cell writes COALESCE.** All contenders get `affected_rows = 1` and all "win". | `UPDATE … WHERE guard` is **not** a safe CAS. | `test_cas_patterns` P1 |
+| **`fence = fence + 1` is the documented ANTI-pattern.** Concurrent snapshots compute the same next value → merges. | 30/30 trials, all 6 writers won. Use a fresh **random** token. | `test_cas_patterns` P2 |
+| **A `PRIMARY KEY` is not concurrency control.** Two writers inserting byte-identical rows merge. | Naive ID allocation gave `[1,1,1,1,1,1]`. Allocators need a per-attempt token. | `test_locking` L4 |
+| **1213 / 1205 is the loser's signal**, not a lock deadlock. Clients MUST retry from a fresh transaction. | Treat 1213 as "lost the race", not as an error. | diagnostic |
+| **`GET_LOCK` is real** (go-mysql-server LockSubsystem) but **session-scoped — dies on disconnect**. | Fine for a short critical section; unusable as a 45-min lease. | `test_locking` L5 |
+| **An unresolved merge conflict WEDGES the clone.** Every later commit by any agent fails with `cannot merge with uncommitted changes` — which blames staging, not the conflict. | Every agent MUST `merge --abort` on conflict. One careless agent downs its dev's fleet. | `test_two_devs` D8 |
+
+Dolt's own framing: issue [#7681](https://github.com/dolthub/dolt/issues/7681) calls the
+conflict detection *"too lenient"*; the strict "No row merge" mode is unimplemented.
+beads names the bug the **"zombie-merge bug"** and fixes it with a random `row_lock` cell
+plus a retry wrapper (`internal/storage/issueops/lease.go`).
+
+### CLI and operational
+
+| Behaviour | Consequence |
+|---|---|
+| **Dolt 2.2.x REMOVED `--user`/`--password` from `sql-server`.** Create users via `CREATE USER`/`GRANT`. | Cost a failed startup; will bite CI. |
+| **`dolt commit -am` does NOT stage here.** Use `dolt add -A` then `dolt commit -m`. | Silent `no changes added to commit`; broke 3 tests in `test_two_devs`. |
+| **Parse with `-r csv`.** The default box format's header row gets read as data. | Produced `holder='holder'` and a false failure. |
+| **`dolt push` HANGS FOREVER against a recreated remote** (stale remote-tracking state), at 0% CPU. | Wrap every push in a timeout. Silent-hang is the worst CI failure mode. |
+| **A fresh `dolt clone` has NO author identity.** `dolt pull` makes a merge commit, so every pull fails `Author identity unknown`. | Clone provisioning MUST set `user.name`/`user.email`. This made one test *pass for the wrong reason*. |
+| **Merge conflicts need `autocommit` OFF** to resolve via `dolt_conflicts`. | Error 1105 otherwise. |
+| **Checkout state is PER-CLONE.** Cross-branch reads work (`SELECT … AS OF 'branch'`); cross-branch writes are refused (`table doesn't support UPDATE`). | Forces **one clone per factory instance**. |
+| **Cost is per INVOCATION, not per query.** `SELECT 1` = 141 ms; 50 `COUNT(*)` over 20k rows in one invocation ≈ 0 ms each. Spawn is ~14,000×. | Batch a unit of work into ONE session, or use the embedded driver. |
+| **A shared `--data-dir` exposes sibling databases** and permits `SELECT … FROM other.tbl`. | Trust zones must be separate DIRECTORIES, and dolt must run with `cwd` = one zone. |
+| **`1/0` returns NULL**, it does not raise. | Don't use it to simulate a failure in a transaction test. |
+| **`CAST(2.0 AS CHAR)` → `'2'`**, dropping the `.0`. | Version bumps need explicit MAJOR.MINOR parsing, not arithmetic on the string. |
+| **macOS has no `timeout`** (that's `gtimeout` from coreutils). | Use in-language timeouts. |
+
+### Platform (researched + cited, not assumed)
+
+- **macOS: `ps eww` / `ps -E` DO expose a same-uid sibling's full environment.** So env is
+  not a safe credential channel. (I predicted the opposite — see §2.)
+- **Linux is safer:** `/proc/<pid>/environ` is gated by `PTRACE_MODE_READ_FSCREDS` via
+  `ptrace_may_access()`, **not uid equality**
+  ([man proc_pid_environ(5)](https://man7.org/linux/man-pages/man5/proc_pid_environ.5.html)).
+  With Ubuntu's default `ptrace_scope=1` only ancestors qualify. `hidepid` layers on top.
+- **`/proc/<pid>/fd` sockets are inspect-only** (`readlink` → `socket:[inode]`), so fd
+  inheritance remains a boundary on Linux
+  ([man proc_pid_fd(5)](https://manpages.ubuntu.com/manpages/questing/ru/man5/proc_pid_fd.5.html)).
+- Both still need an empirical Linux re-run: the outcome depends on `ptrace_scope`,
+  `hidepid`, and the dumpable flag — deployment settings, not language semantics.
+- **Claude Code runs ALL agents in ONE OS process** (`ps` shows one `claude` pid parenting
+  every Bash call) ⇒ no per-agent uid, no fd to inherit.
+
+---
+
+## 2. My own harness bugs that produced FALSE PASSES
+
+Recorded because each one made a test lie, and the same traps are waiting for the real
+implementation.
+
+| Bug | What it faked | How it was caught |
+|---|---|---|
+| **Frontmatter parser skipped lines starting with whitespace or `-`** | Dropped **every list-valued edge** in the corpus. `bc_trace` came back empty and I reported the graph as "unmigrated" rather than "unparsed". | Reading a real VP file and seeing `bcs: [...]` |
+| **`INSERT IGNORE` downgrades FK violations to warnings** | Reported **zero dangling references**. The exception handler never fired. | The DI universe count (16) disagreeing with references (18) while showing 0 rejections |
+| **`fence = fence + 1` in the lock** | Pass-1's headline "16 acquirers, exactly one wins" was **right by accident** — a unique `holder` value saved it, not the fence. | Isolating the pattern in `test_cas_patterns` P2 |
+| **Read-back on the same connection inside an open transaction** | Saw its own uncommitted writes and "proved" atomicity that hadn't happened. | Asserting `committed=False` and getting `True` |
+| **Multi-line inline lists truncated** (`blocks: ["S-8.11",` wrapped) | Hid 19 of 27 dangling story references. | A `too large for column` error on the fragment |
+| **Bold-ID regex anchored to `$`** | Silently lost `DI-017`/`DI-019`, whose lines carry an `_(v1.2 — amended …)_` suffix after the closing `**`. | Universe count 16 vs 18 declared |
+| **Tests not idempotent** | Second run failed with `nothing to commit` because the value was already set. | Re-running a green suite |
+| **`chmod 000` left in place after a test** | Broke the two following tests with `PermissionError`. | Cascading failures |
+| **Non-idempotent retry** (re-running an `INSERT` that already applied, then bailing) | Stranded the earlier attempt's commit, which the next reset discarded — **lost a row**. | 7 of 8 rows landing |
+| **`pass_fds` preserves the fd NUMBER**, it does not renumber to 3 | The child read the wrong descriptor and the fd test failed. | Child produced no output |
+| **`git rm --cached` aborts entirely if ANY path is untracked** | Silently untracked nothing while reporting success. | `git ls-files` still listing the data |
+| **`.gitignore` does not untrack already-committed files** | `poc/td/` Dolt data stayed in the repo for 3 passes after being ignored. | Wrap-time audit |
+| **Test ordering: cloning before pushing** | Cloned an empty remote; `rc=1` went unasserted. | Reading the detail line |
+| **`graph_import.py` TRUNCATES edge tables** | A later test's edge, created by an earlier test, had vanished. | `inbound refs=0` |
+
+### The transferable rules
+
+1. **Never use `INSERT IGNORE` (or any suppression) in a test that asserts a constraint.**
+2. **Read back on a DIFFERENT connection** than the one that wrote.
+3. **Assert the return code of every setup step**, not just the thing under test.
+4. **Make fixtures run-unique** (timestamps/random) or tests are single-shot.
+5. **Restore mutated global state in `finally`** (permissions, branches, merge state).
+6. **When a result is convenient, isolate the variable.** The `fence+1` pass, the "exact"
+   counter, and the "no dangling refs" clean were all convenient and all wrong.
+7. **Report unreproduced anomalies as unreproduced.** One 8-agent run showed 7 agents OK
+   with 6 increments landing; it never reproduced, and it is logged as unexplained rather
+   than promoted to a finding.
+
+---
+
+## 3. Method notes worth keeping
+
+- **Build node universes from authoritative declaring documents only** — `capabilities.md`,
+  `invariants.md`, `phase-0-ingestion/pass-4-nfr-catalog.md`, `prd.md`, ADR headings,
+  `stories/epics/`. Grep-over-everything makes every reference resolve trivially and the
+  integrity check proves nothing.
+- **Enumerate from the target's own source of truth.** The 46 artifact types came from
+  `plugins/vsdd-factory/config/artifact-path-registry.yaml` (ADR-016), not from memory.
+- **Check before claiming a defect.** The NFR registry looked absent from `specs/`; it
+  exists in `phase-0-ingestion/pass-4-nfr-catalog.md` and all 50 references resolve. I
+  nearly reported a hole that wasn't there.
+- **Verify a "missing" record is missing everywhere** before calling it dangling —
+  `S-8.11`–`S-8.29` and `S-9.01`–`S-9.04` were checked against the whole tree.

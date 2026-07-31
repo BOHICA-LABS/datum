@@ -157,6 +157,7 @@ READ FIRST, in this order:
   3. research/GAP-MATRIX.md        (coverage vs all 46 vsdd-factory artifact types + the 3 findings that changed the design)
   4. research/ACCESS-CONTROL.md    (zones + agent identity; what is actually enforceable)
   5. research/ASSESSMENT.md        (the feasibility argument + measured problems; §3g has the scale numbers)
+  6. research/LESSONS.md           (every Dolt gotcha + every harness bug that faked a clean result)
 
 RE-SCRAPE THE REFERENCE MATERIAL (beads was in /tmp and is gone):
   gh repo clone gastownhall/beads /tmp/_bd/b -- --depth=1     # pin b1694a5
@@ -169,8 +170,16 @@ RE-SCRAPE THE REFERENCE MATERIAL (beads was in /tmp and is gone):
   ls ~/Dev/vsdd-factory/.factory                              # the live corpus we tested against
   cat ~/Dev/vsdd-factory/plugins/vsdd-factory/config/artifact-path-registry.yaml   # the 46 artifact types
 
-RESTART THE TEST SERVER (5 suites need it; the rest self-provision):
-  (cd poc/db && dolt sql-server --host 127.0.0.1 --port 3308 &)   # NOTE: no --user flag in Dolt 2.2.x
+BOOTSTRAP THE ENVIRONMENT (.venv and poc/*/ are gitignored and disposable):
+  brew install dolt && dolt version                          # 2.2.3; NO --user flag in 2.2.x
+  python3 -m venv .venv && .venv/bin/pip -q install pymysql  # pymysql is the ONLY dep
+  mkdir -p poc/db && (cd poc/db && dolt init --name spike --email spike@local)
+
+RESTART THE TEST SERVER (7 suites need it; the rest self-provision):
+  (cd poc/db && dolt sql-server --host 127.0.0.1 --port 3308 &) && sleep 7
+  .venv/bin/python poc/fa.py init
+  .venv/bin/python poc/fa.py import ~/Dev/vsdd-factory/.factory      # ~13s, 1,959 BCs
+  .venv/bin/python poc/graph_import.py ~/Dev/vsdd-factory/.factory   # 1,490 edges + findings
   # verify all 17 suites (137/137 expected, ~15 min):
   for s in test_spike test_graph test_multimachine test_locking test_serverless_lock \
            test_mutex test_two_devs test_write_api test_render test_schema_evolution \
