@@ -11,6 +11,7 @@ interface to all vsdd-factory artifacts, replacing the `factory-artifacts` orpha
 |---|---|
 | **`research/SPEC.md`** | **The specification — capability surface, 11 invariants, CLI, phasing, non-goals** |
 | **`research/GAP-MATRIX.md`** | **Gap assessment vs all 46 registry artifact types + the 3 findings that changed the design** |
+| **`research/ACCESS-CONTROL.md`** | **Zones + agent identity: what is actually enforceable, and what it needs from the harness** |
 | `research/ASSESSMENT.md` | The feasibility assessment — findings, gaps, phased recommendation |
 | `poc/schema.sql` | Core schema (BCs, VPs, stories, subsystems, lock) |
 | `poc/graph.sql` | Full relationship graph — 10 node types, 9 edge tables |
@@ -32,9 +33,13 @@ interface to all vsdd-factory artifacts, replacing the `factory-artifacts` orpha
 | `poc/test_asymmetry.py` | 6 tests — **information-asymmetry walls vs one store** |
 | `poc/test_factory_ops.py` | 10 tests — waves, state, context, tasks, templates, versioning |
 | `poc/test_multi_instance.py` | 9 tests — **N devs x M instances x K agents** |
-| `poc/db/`, `mm/`, `sl/`, `mx/`, `td/`, `se/`, `lc/`, `asym/`, `fo/`, `mi/` | Dolt data dirs (gitignored) |
+| `poc/test_scale.py` | 7 tests — scale ceilings (tunable via SCALE_* env) |
+| `poc/fa_zones.py` | zone resolution: id -> type -> zone, roles, one config file |
+| `poc/test_zones.py` | 9 tests — zone boundary is real, and invisible to the user |
+| `poc/test_identity.py` | 9 tests — **agent identity: what makes the wall enforceable** |
+| `poc/db/`, `mm/`, `sl/`, `mx/`, `td/`, `se/`, `lc/`, `asym/`, `fo/`, `mi/`, `sc/`, `zn/`, `id/` | Dolt data dirs (gitignored) |
 
-**112/112 passing** against the live corpus, fourteen suites.
+**137/137 passing** against the live corpus, seventeen suites.
 
 **Read [`research/SPEC.md`](research/SPEC.md) first** — it is the deliverable: the full
 capability surface with every capability traced to the test that proves it, the eight

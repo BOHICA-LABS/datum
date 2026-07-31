@@ -603,6 +603,57 @@ prose: conflict-abort, append-only counters, idempotent retry, pull-before-work.
 are mechanical and testable, which is exactly what makes them suitable for a tool rather
 than a protocol document.
 
+## 3g. Scale ceilings (measured)
+
+Every earlier timing was taken at the live corpus size (1,959 BCs / 1,490 edges /
+1,607 commits). `poc/test_scale.py` (7/7) pushes each dimension to find the real limits.
+
+### The headline: the bottleneck is process spawn, not data
+
+| Measurement | Result |
+|---|---|
+| One `dolt sql` invocation doing `SELECT 1` | **141 ms** — this is the floor |
+| 50 × `COUNT(*)` over 20,000 rows, one invocation | 133 ms total → **~0.0 ms/query** |
+| 50 × 3-table JOIN, one invocation | 248 ms total → **2.1 ms/query** |
+
+Spawn is roughly **14,000×** the cost of a `COUNT(*)`. Every 130–200 ms figure in SC1 was
+~95% process startup. **Invariant 6 restated as a measurement:** batch a unit of work
+into one session, or use the embedded driver.
+
+### Corpus at 10× (20,000 records / 9,000 edges)
+
+Bulk load 0.6 s (0.03 ms/record); on-disk 2 MB (0.1 KB/record). All query timings sat at
+the ~130–200 ms spawn floor, so **data scale was not observable at 10×**.
+
+### History depth (+200 commits)
+
+~381 ms/commit (again spawn-dominated), ~6 KB/commit, `dolt gc` reclaimed 2 of 3 MB.
+**Query latency did not degrade with depth** — PK 149 ms, `COUNT(*)` 129 ms, both still
+at the floor. Clone of the pushed remote: 0.2 s.
+
+### Agent fan-out (32 agents, one mutex)
+
+32/32 succeeded, counter exactly 32. Wall clock 4.7 s → 147 ms/agent serialized. Lock
+wait: median 2.3 s, p95 4.3 s, **max 4.6 s**, and a max/median ratio of **2.0×** — so no
+starvation. But this is the shape to understand: **the mutex serializes writes, so a
+bigger fleet does not go faster.** More agents need batching per hold, not more agents.
+
+### Instance count (12 clones, one machine)
+
+All 12 created (median 0.2 s each) and **all 12 wrote concurrently in 0.5 s** — separate
+clones mean separate mutexes, so this is genuine parallelism. The cost is **disk**: a
+full corpus copy per instance (~1 MB each here; at real corpus size budget ~30–40 MB per
+instance).
+
+### Push contention — the real ceiling
+
+8 clones pushing at once: all 8 landed, but attempts per clone were
+**`[1, 2, 3, 4, 5, 6, 7, 8]`** — perfectly linear. The Nth contender needs N attempts,
+and convergence took 10 s. **This is O(N) retries for N concurrent pushers**, and it is
+the number that decides how many instances can comfortably share one remote. At 20
+instances the last one would need ~20 attempts. Mitigation: stagger pushes, or push at
+phase-gate granularity rather than per write.
+
 ## 4. Gaps, risks, and things that are worse
 
 Honest accounting. These are real and some are unattractive.
