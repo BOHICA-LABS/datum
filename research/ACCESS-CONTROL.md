@@ -2,7 +2,7 @@
 title: Access control — zones, agent identity, and what is actually enforceable
 date: 2026-07-30
 status: 25 tests (asymmetry 6 · zones 9 · identity 9, +1 corrected prediction)
-verdict: zones give a real boundary; ENFORCEMENT needs something fa cannot ship alone
+verdict: zones give a real boundary; tier 1 (CLI permission layer) is the only option in Claude Code — and it suffices
 ---
 
 # Access control: zones and agent identity
@@ -176,12 +176,53 @@ role check earns its place by preventing accidents and producing actionable erro
 **Do not** ship tier 3 with credentials in env vars or files. ID5b shows that is
 security theatre: it looks like authentication and provides none.
 
+### 4.1 RESOLVED: what this harness can actually provide
+
+The open question was whether the harness could give each agent a distinct uid or pass it
+an authenticated fd. **Measured in Claude Code — the answer is neither.**
+
+```
+$ ps -o pid,ppid,uid,comm    # from inside a Bash tool call
+  42638  69327   501  /bin/zsh      <- this shell
+  69327  57325   501  claude        <- ONE process, parent of EVERY tool call
+```
+
+**Subagents are contexts inside a single `claude` process, not separate OS processes.**
+Consequences:
+
+- **Tier 2 is structurally unavailable.** There is no per-agent uid to chmod against —
+  every agent's Bash call is a child of the same process with the same uid (501).
+- **Tier 3's fd-passing is structurally unavailable.** There is no per-agent process to
+  inherit an fd. ID8's mechanism is sound but has nothing to attach to here.
+- **Per-agent env is not a secret either.** Any env the harness sets for a tool call is
+  readable by the agent making that call, and ID3 showed siblings can read each other's.
+
+**So tier 1 is not a compromise — it is the only option in this harness.** And it is
+better than "advisory" implies: enforcement comes from the CLI's own permission layer,
+which **mediates every tool call and the agent cannot bypass it**:
+
+- `permissions.deny` rules in `settings.json` (e.g. `Read(./.factory-db/walled/**)`)
+- `PreToolUse` hooks that can block a call outright
+- per-agent `allowed-tools` in the agent definition — which is exactly how `adversary`
+  is made read-only today
+
+**The one thing that must hold:** a walled agent must not have unrestricted `Bash`.
+Denying `Read` on the zone while leaving `Bash` open is not a wall — `cat` walks straight
+through it. The factory already respects this (the adversary has read-only tools; the
+holdout-evaluator's bash is scoped to running the app), so the requirement is to extend
+those existing profiles to the zone directories, not to invent a new mechanism.
+
+This is genuine parity with today, achieved by the same enforcement point, and it needs
+**no daemon and no OS changes**.
+
 ### What to write down before implementing
 
 1. Which agents need which zones — the `visible_to` lists.
 2. Whether per-directory granularity is sufficient, or per-table is required.
-3. Whether the harness can provide distinct uids or fd inheritance. **This single
-   answer decides the tier**, and it is a question about the harness, not about Dolt.
+3. ~~Whether the harness can provide distinct uids or fd inheritance.~~ **RESOLVED
+   (§4.1): Claude Code runs all agents in ONE process, so neither is available. Tier 1
+   it is** — enforced via `permissions.deny` + `PreToolUse` hooks + per-agent
+   `allowed-tools`, with the hard requirement that walled agents get no unrestricted Bash.
 
 ---
 
