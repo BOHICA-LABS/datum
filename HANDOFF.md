@@ -198,7 +198,7 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 | 2026-07-30 | `2da29cd` | Pass 7: `research/SPEC.md` + write-API / render / schema / lifecycle; 87/87 |
 | 2026-07-30 | `11f0da3`, `b723569` | Pass 8: `research/GAP-MATRIX.md` vs all 46 registry artifact types; asymmetry + factory-ops + multi-instance; 112/112 |
 | 2026-07-30 | `7f36c27`, `001f166` | Pass 9: scale + zones + identity; `research/ACCESS-CONTROL.md`; 137/137. **Corrected my prediction that macOS hides process envs — it does not** |
-| 2026-07-31 | (this pass) | Pass 10: embedded-driver benchmark (13/13) + **real GitHub remote (10/10)** + the three decisions settled (`research/DECISIONS.md`, `ACCESS-PATH.md`, `REMOTE.md`); 160/160. **CORRECTION #5 — pass 9's "the embedded driver is the single biggest engineering lever" was wrong: the lever is a missing `BEGIN`/`COMMIT`, worth 17–23× and available from the CLI.** Also: invariant 6 restated, new invariant 12 (one git ref per remote ⇒ global push contention), and the embedded path does NOT remove the write mutex |
+| 2026-07-31 | `71ca16a` | Pass 10: embedded-driver benchmark (13/13) + **real GitHub remote (10/10)** + the three decisions settled (`research/DECISIONS.md`, `ACCESS-PATH.md`, `REMOTE.md`); 160/160. **CORRECTION #5 — pass 9's "the embedded driver is the single biggest engineering lever" was wrong: the lever is a missing `BEGIN`/`COMMIT`, worth 17–23× and available from the CLI.** Also: invariant 6 restated, new invariant 12 (one git ref per remote ⇒ global push contention), and the embedded path does NOT remove the write mutex |
 
 ---
 
