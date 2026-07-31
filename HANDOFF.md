@@ -7,7 +7,7 @@ tool (`fa`) that is the **sole interface to all vsdd-factory artifacts**, replac
 `factory-artifacts` orphan git branch?
 
 **Status: SPIKE COMPLETE + all three blocking decisions SETTLED. Verdict GO (phased).
-184 of 185 checks, 23 suites**, re-runnable against the LIVE vsdd-factory corpus and — new —
+188 of 189 checks, 24 suites**, re-runnable against the LIVE vsdd-factory corpus and — new —
 against a **real GitHub remote**. No product code written yet: this is a spike, a
 specification, and now a decision record. Nothing in vsdd-factory has been changed.
 
@@ -75,9 +75,14 @@ last pass measured. **Phase 1 is signed off — the next work is building it.**
    an aggregator collapse hosts to 1 (64 s); peer `--remotesapi-port` pull does it in
    25 s at the cost of a listener per writer. Backoff tuning makes contention WORSE
    (159 -> 185 -> 193 attempts). **No central server is needed for contention.**
-8. **Decide the access path at phase 3, not now** (`research/ACCESS-PATH.md`): embedded is
-   ~2× on cold start, ~4,000× warm, and removes the `dolt` binary from the toolchain — but
-   it is Go+CGO, 155 indirect deps, a 147 MB binary, and phase 1 does not need it.
+8. ⭐ **THE END STATE IS A SINGLE GO BINARY, `fa`** (user-confirmed 2026-07-31). Everything
+   above lands as ITS subcommands. Consequences: the embedded `dolthub/driver/v2` path is
+   now the access path (not a phase-3 option), so there is **no `dolt` CLI dependency
+   anywhere — including CI**; `fa aggregate` is the aggregator, which makes the
+   Actions-outage fallback "any dev runs the same binary" rather than a parallel script;
+   and **DECISIONS D3's "phase 1 = Python + dolt sql -f, no Go" is SUPERSEDED** and needs
+   rewriting. Build costs are fixed: CGO, `-tags gms_pure_go` mandatory, 155 indirect
+   deps, ~147 MB, its own pinned Dolt build.
 9. Multi-repo mode (`.factory-project/`) is declared out of scope — revisit if needed.
 10. **Offered and NOT chosen:** a DoltLite-from-Rust spike. DoltLite is a shipped C library
     (SQLite fork, prolly tree, `dolt_*` functions and `dolt_log`/`dolt_diff_*` virtual
@@ -235,6 +240,7 @@ READ FIRST, in this order:
   4. research/ACCESS-PATH.md       (embedded driver vs CLI vs server, measured — and why the headline changed)
   5. research/REMOTE.md            (the real github.com remote: ~10 s per acquire, one data ref per remote)
   5b. research/SCALE.md            (200 agents; EVERY decentralised contention fix, ranked)
+  5c. research/CI-AGGREGATOR.md    (the CROSS-INTERNET answer: CI as aggregator, 4/4)
   6. research/GAP-MATRIX.md        (coverage vs all 46 vsdd-factory artifact types; gaps 1/2/7 now closed)
   7. research/ACCESS-CONTROL.md    (zones + agent identity; what is actually enforceable)
   8. research/ASSESSMENT.md        (the feasibility argument + measured problems; §3g has the scale numbers)
@@ -287,7 +293,7 @@ times — most recently its own headline recommendation. Before recommending a l
 measure the alternatives to that lever. Report unreproduced anomalies as unreproduced.
 Build node universes only from authoritative declaring documents.
 
-STATE: spike complete, 3 blocking decisions settled, verdict GO (phased), 184/185.
+STATE: spike complete, 3 blocking decisions settled, verdict GO (phased), 188/189.
 No product code exists yet.
 
 TASK: build PHASE 1 per research/DECISIONS.md D3 — `fa import` + `fa validate` (gates as

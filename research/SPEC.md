@@ -1,9 +1,9 @@
 ---
 title: fa — specification for the sole interface to factory artifacts
 date: 2026-07-31
-status: spec derived from a verified spike (184/185 checks, 23 suites, incl. a 200-agent fleet against a real GitHub remote; the one failure is the deliberately pathological per-write push arm)
+status: spec derived from a verified spike (188/189 checks, 24 suites, incl. a 200-agent fleet against a real GitHub remote; the one failure is the deliberately pathological per-write push arm)
 evidence: vsdd-factory @82163b7f (.factory on factory-artifacts) · beads @b1694a5 · Dolt 2.2.3 · dolthub/driver/v2 v2.2.0 · github.com/drbothen/dolt-artifact-spike-remote
-see_also: DECISIONS.md (the 3 settled calls) · ACCESS-PATH.md (which access path) · REMOTE.md (the real remote) · SCALE.md (200 agents + every decentralised contention fix)
+see_also: DECISIONS.md (the 3 settled calls) · ACCESS-PATH.md (which access path) · REMOTE.md (the real remote) · SCALE.md (200 agents + every decentralised contention fix) · CI-AGGREGATOR.md (the cross-internet answer)
 ---
 
 # `fa` — the sole interface to factory artifacts
@@ -12,7 +12,7 @@ Every capability below is backed by a passing test against the **live** vsdd-fac
 corpus (1,959 BCs, 3,145 files, 1,607 commits). Nothing here is aspirational; where
 something is untested or deliberately excluded it says so.
 
-**184 of 185 checks pass across twenty-three suites** — the single failure is S3, the
+**188 of 189 checks pass across twenty-four suites** — the single failure is S3, the
 deliberately pathological "push per write" arm, which is *supposed* to be bad and is
 kept red rather than tuned green. See [ASSESSMENT.md](ASSESSMENT.md) for the
 feasibility argument and the measured problems in the current design, and
@@ -269,8 +269,16 @@ corruption, and each was found empirically.
    backoff makes it *worse*, because sleeping lets more pointers move while you
    wait. Collapse N writers to ONE push: a local `file://` relay serialised by
    `flock` within a host (17 s, no daemon), and staging refs plus an aggregator
-   across hosts (64 s, no daemon). 20 writers -> 1 push. *(D1-D5, O1-O3;
+   across hosts (64 s, no daemon). 20 writers -> 1 push. **Across the internet only
+   the staging-ref form works** (a relay needs a shared filesystem; peer-pull needs
+   inbound reachability), and the aggregator role is filled by **CI**, where a
+   `concurrency:` group is the merge slot for free — measured 4/4 in
+   [CI-AGGREGATOR.md](CI-AGGREGATOR.md). *(D1-D5, O1-O3, C1-C3;
    [SCALE.md §4](SCALE.md))*
+14. **Every writer must be a CLONE of the artifact branch.** Unrelated lineages fail
+   to merge with `no common ancestor` — they cannot be aggregated at all, only
+   replayed. This is why fragmenting the store into per-instance refs is a one-way
+   door rather than a tradeoff. *(CI-AGGREGATOR §4)*
 
 Invariants 1–7 exist because Dolt's conflict detection is documented as "too lenient"
 ([#7681](https://github.com/dolthub/dolt/issues/7681), strict mode unimplemented). They
@@ -343,9 +351,9 @@ Stated explicitly so scope does not drift:
 
 | Phase | Scope | Risk | Value |
 |---|---|---|---|
-| **1** | Read-only shadow: `import` + `validate` in CI **plus a dated baseline allowlist of the 82 existing findings**. Markdown stays truth. Python + `dolt sql -f` in one transaction (0.9 s import); no Go, no remote, no daemon. | Very low — zero agent changes, additive, read-only | Catches all 82 findings, including the four-way count drift. **The baseline is not optional:** a gate that blocks every PR on day one gets switched off. |
+| **1** | Read-only shadow: `import` + `validate` in CI **plus a dated baseline allowlist of the 82 existing findings**. Markdown stays truth. one transaction per unit of work (0.9 s import); no remote, no daemon. Implemented as `fa` subcommands — **the end state is one Go binary** (see DECISIONS D3). | Very low — zero agent changes, additive, read-only | Catches all 82 findings, including the four-way count drift. **The baseline is not optional:** a gate that blocks every PR on day one gets switched off. |
 | **2** | Move the lease to `fa lease` (push-as-CAS). Delete the STATE.md YAML lock, the `--force-with-lease` machinery, and `verify-sha-currency.sh`. | Low | Closes a documented CWE-367 |
-| **3** | Invert authority for **record-shaped** artifacts only (BC/VP/story/subsystem/phase). Markdown becomes `fa render` output. **Decide the access path here** — this is where a long-lived process is worth ~4,000× on reads and where the embedded driver removes the `dolt` binary from the toolchain ([ACCESS-PATH.md](ACCESS-PATH.md)). | Medium — touches `state-manager` and every `create-*` skill | Drift becomes unrepresentable; 90.2%-style coverage gaps become visible |
+| **3** | Invert authority for **record-shaped** artifacts only (BC/VP/story/subsystem/phase). Markdown becomes `fa render` output. ~~Decide the access path here~~ — **settled: embedded, since `fa` is a Go binary** — this is where a long-lived process is worth ~4,000× on reads and where the embedded driver removes the `dolt` binary from the toolchain ([ACCESS-PATH.md](ACCESS-PATH.md)). | Medium — touches `state-manager` and every `create-*` skill | Drift becomes unrepresentable; 90.2%-style coverage gaps become visible |
 | **4** | Parallel wave branches. | Medium | Concurrency the single-orphan-branch design forbids today |
 
 Phase 1 delivers most of the correctness benefit at almost none of the cost, which is

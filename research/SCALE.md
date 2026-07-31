@@ -1,7 +1,7 @@
 ---
 title: Scale + contention — 200 agents, and every decentralised option measured
 date: 2026-07-31
-status: stress 5/6 (poc/test_stress_fleet.py) · optimisation 3/3 (poc/test_stress_opt.py) · decentralised options 5/5 (poc/test_decentral.py)
+status: stress 5/6 (poc/test_stress_fleet.py) · optimisation 3/3 (poc/test_stress_opt.py) · decentralised options 5/5 (poc/test_decentral.py) · CI aggregator 4/4 (poc/test_ci_aggregator.py)
 verdict: the fleet is correct at scale (zero lost writes); contention is solved decentrally by AGGREGATION, and no central server is required for it
 ---
 
@@ -168,6 +168,12 @@ Compose the two daemon-free options into the hierarchy beads calls a *tree of hu
 
 For the 10x2 fleet that is **20 writers -> 10 -> 1**, about **80 s** against 746 s
 naive, and it is O(1) in fleet size rather than O(N^2).
+
+**Across the internet only D3 survives** — D2 needs a shared filesystem, D5 needs
+inbound reachability to every writer. The aggregator role is then filled by **CI**,
+measured working 4/4 in [CI-AGGREGATOR.md](CI-AGGREGATOR.md), where GitHub's
+`concurrency:` group supplies the merge slot for free and retires the lock-ref
+mechanism entirely.
 
 **Why a central server is not the answer to contention.** Its advantage was ~1 ms
 up-front exclusion instead of a ~10 s network CAS. Under aggregation only *one*

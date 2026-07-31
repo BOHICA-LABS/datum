@@ -1,0 +1,198 @@
+# PROTOTYPE — throwaway. This shells out to the `dolt` CLI purely to learn the
+# GitHub mechanics quickly. The real implementation is `fa aggregate`, a subcommand
+# of the Go binary that embeds Dolt (dolthub/driver/v2), which needs no dolt install
+# here at all: the whole job becomes "download fa, run fa aggregate".
+#
+# What this exists to prove:
+#   1. can GITHUB_TOKEN push refs/dolt/* ?
+#   2. does repository_dispatch actually reach a workflow on the default branch?
+#   3. does `concurrency` serialise runs so exactly ONE process pushes the artifact
+#      branch (the merge slot, for free)?
+#   4. does the self-redispatch defence stop work being STRANDED when GitHub cancels
+#      a pending run? (docs: at most one run may be pending; extras are cancelled)
+#   5. does a conflicting writer get isolated without blocking the others?
+name: fa-aggregate
+
+on:
+  repository_dispatch:
+    types: [fa-aggregate]
+  workflow_dispatch:
+  # PRODUCTION SHOULD ENABLE THIS — it is the third layer of the strand defence and
+  # the only thing that retries a conflicted ref after a writer resolves it. It is
+  # commented out in this TEST repo purely so an idle repo does not run a job every
+  # five minutes forever.
+  # schedule:
+  #   - cron: '*/5 * * * *'
+
+# THE MERGE SLOT, provided by the platform. Only one run at a time, so exactly one
+# process ever advances the artifact branch pointer -> zero contention, and none of
+# the lock-ref costs (no TTL, no break-glass, no unique-sha discipline).
+concurrency:
+  group: fa-aggregate
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Install dolt (PROTOTYPE ONLY — `fa` embeds it)
+        run: |
+          curl -sL https://github.com/dolthub/dolt/releases/latest/download/install.sh | sudo bash
+          dolt version
+
+      - name: Aggregate staging refs into the artifact branch
+        id: agg
+        # GitHub's default is `bash -e`, which aborts the step on ANY non-zero
+        # command — including `VAR=$(cmd)` — so my own error handling never ran and
+        # the step died silently. This script manages its own control flow, so take
+        # -e off and turn tracing ON so a failure explains itself.
+        shell: bash -uxo pipefail {0}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ARTIFACT_REF: refs/dolt/artifacts/data
+        run: |
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          export DOLT_ROOT_PATH="$RUNNER_TEMP/doltroot"; mkdir -p "$DOLT_ROOT_PATH"
+          git config --global user.email "fa-aggregate@ci"
+          git config --global user.name  "fa-aggregate"
+
+          # ---- 1. enumerate the staging refs. This is the whole input set.
+          mapfile -t STAGE < <(git ls-remote "$REMOTE" 'refs/dolt/stage/*' \
+                                 | awk '{print $2}' | sort)
+          echo "staging refs found: ${#STAGE[@]}"
+          printf '  %s\n' "${STAGE[@]:-(none)}"
+          if [ "${#STAGE[@]}" -eq 0 ]; then
+            echo "consumed=0" >> "$GITHUB_OUTPUT"; echo "nothing to do"; exit 0
+          fi
+
+          # ---- 2. the artifact branch. If it does not exist yet, the first writer's
+          #         staging ref becomes the base (bootstrap).
+          mkdir -p work && cd work
+          BOOTSTRAP=0
+          if git ls-remote --exit-code "$REMOTE" "$ARTIFACT_REF" >/dev/null 2>&1; then
+            dolt clone --ref "$ARTIFACT_REF" "$REMOTE" a
+          else
+            echo "artifact ref absent -> bootstrapping from ${STAGE[0]}"
+            dolt clone --ref "${STAGE[0]}" "$REMOTE" a
+            BOOTSTRAP=1
+          fi
+          cd a
+          dolt config --local --add user.email "fa-aggregate@ci"
+          dolt config --local --add user.name  "fa-aggregate"
+          dolt remote add artifact --ref "$ARTIFACT_REF" "$REMOTE"
+          # the push target must EXIST. A bootstrap clone carries whatever branch the
+          # first writer published, which need not be `main`.
+          if ! dolt checkout main 2>/dev/null; then
+            echo "no main in this clone -> creating it from $(dolt sql -q 'SELECT active_branch()' -r csv | tail -1)"
+            dolt checkout -b main
+          fi
+          echo "branches here: $(dolt sql -q 'SELECT name FROM dolt_branches' -r csv | tail -n +2 | tr '\n' ' ')"
+          [ "$BOOTSTRAP" = "1" ] && CONSUMED_BOOTSTRAP="${STAGE[0]}" || CONSUMED_BOOTSTRAP=""
+
+          # ---- 3. merge each staging ref. A conflict isolates THAT writer only:
+          #         abort, leave its ref in place, keep going (DECISIONS D1).
+          CONSUMED=(); CONFLICTED=(); UNRELATED=()
+          for i in "${!STAGE[@]}"; do
+            ref="${STAGE[$i]}"; name="s$i"
+            dolt remote add "$name" --ref "$ref" "$REMOTE"
+            if ! dolt fetch "$name" 2>&1 | tail -2; then
+              echo "  FETCH FAILED $ref"; continue
+            fi
+            # writers publish their `main` to their own staging ref, so the source is
+            # uniform: no branch discovery, no guessing.
+            src="remotes/$name/main"
+            MOUT=$(dolt merge "$src" --no-edit 2>&1); MRC=$?
+            NCONF=$(dolt sql -q 'SELECT COUNT(*) FROM dolt_conflicts' -r csv | tail -1)
+            if [ "$MRC" = "0" ] && [ "$NCONF" = "0" ]; then
+              CONSUMED+=("$ref")
+            elif [ "$NCONF" != "0" ]; then
+              dolt merge --abort
+              CONFLICTED+=("$ref")
+              echo "  CONFLICT ($NCONF) -> isolated, ref retained: $ref"
+            elif echo "$MOUT" | grep -qi 'no common ancestor'; then
+              # A WRITER problem, not an aggregator problem: this staging ref is not
+              # descended from the artifact branch, so it can never be merged — only
+              # replayed. Isolate it loudly and keep draining everyone else. (This is
+              # also the proof that fragmenting into separate lineages is a one-way
+              # door, not a tradeoff.)
+              UNRELATED+=("$ref")
+              echo "  UNRELATED LINEAGE -> isolated, ref retained: $ref"
+              echo "::warning::$ref has no common ancestor with the artifact branch - the writer must publish from a CLONE of it"
+            else
+              # NOT a conflict and NOT a bad publish. An error here means the
+              # AGGREGATOR is broken, and calling it a conflict would hide that.
+              echo "  MERGE ERROR (rc=$MRC, conflicts=0) on $ref: $(echo "$MOUT" | tail -1)"
+              echo "::error::merge failed for $ref without conflicts: $(echo "$MOUT" | tail -1)"
+              exit 1
+            fi
+          done
+          dolt add -A && dolt commit -m "aggregate ${#CONSUMED[@]} writers" || true
+
+          # ---- 4. ADMISSION CONTROL: validate before the artifact branch ever sees
+          #         it. In `fa` this is `fa validate` (gates as SQL).
+          ROWS=$(dolt sql -q "SELECT COUNT(*) FROM work" -r csv | tail -1)
+          DUPES=$(dolt sql -q "SELECT COUNT(*) FROM (SELECT k FROM work GROUP BY k HAVING COUNT(*)>1) x" -r csv | tail -1)
+          echo "validate: rows=$ROWS duplicate-keys=$DUPES"
+          if [ "$DUPES" != "0" ]; then echo "REFUSING TO PUSH: duplicate keys"; exit 1; fi
+
+          # ---- 5. ONE push. The only writer to the artifact branch, ever.
+          dolt push artifact main 2>&1 | tail -2
+
+          # ---- 6. delete consumed refs ONLY AFTER the push landed. A crash before
+          #         here leaves everything re-consumable; re-merging is a no-op.
+          [ -n "$CONSUMED_BOOTSTRAP" ] && CONSUMED+=("$CONSUMED_BOOTSTRAP")
+          # de-dupe in case the bootstrap ref was also merged
+          mapfile -t CONSUMED < <(printf '%s\n' "${CONSUMED[@]:-}" | sort -u | grep -v '^$')
+          echo "consuming ${#CONSUMED[@]} refs: ${CONSUMED[*]:-(none)}"
+          # DELETE VIA THE API, NOT `git push`. The cwd here is a DOLT repo (.dolt/),
+          # and there is no actions/checkout, so there is no git repository at all —
+          # `git push <url> :ref` failed in 0.7 ms with no network. Swallowing that
+          # rc with `| tail -1` turned a silent no-op into an infinite re-dispatch
+          # livelock. So: use the refs API, and ASSERT the result.
+          DELFAIL=0
+          for ref in "${CONSUMED[@]:-}"; do
+            [ -z "$ref" ] && continue
+            if gh api -X DELETE "repos/${REPO}/git/${ref}" --silent 2>/tmp/delerr; then
+              echo "  deleted $ref"
+            else
+              DELFAIL=$((DELFAIL+1))
+              echo "  DELETE FAILED $ref: $(tail -1 /tmp/delerr)"
+              echo "::error::could not delete consumed staging ref $ref"
+            fi
+          done
+          echo "delete_failures=$DELFAIL" >> "$GITHUB_OUTPUT"
+          echo "consumed=${#CONSUMED[@]}" >> "$GITHUB_OUTPUT"
+          echo "conflicted=${#CONFLICTED[@]}" >> "$GITHUB_OUTPUT"
+          echo "unrelated=${#UNRELATED[@]}" >> "$GITHUB_OUTPUT"
+          echo "RESULT consumed=${#CONSUMED[@]} conflicted=${#CONFLICTED[@]} unrelated=${#UNRELATED[@]}"
+
+      - name: Self-redispatch if new staging refs arrived during this run
+        # THE STRAND DEFENCE. GitHub keeps at most ONE run pending and cancels the
+        # rest, so a writer that published while this run was executing can lose its
+        # trigger. Re-checking at the end makes liveness self-healing rather than
+        # dependent on queue semantics.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          LEFT=$(git ls-remote "$REMOTE" 'refs/dolt/stage/*' | wc -l | tr -d ' ')
+          STUCK=$(( ${{ steps.agg.outputs.conflicted || 0 }} + ${{ steps.agg.outputs.unrelated || 0 }} ))
+          DELFAIL=${{ steps.agg.outputs.delete_failures || 0 }}
+          CONSUMED_N=${{ steps.agg.outputs.consumed || 0 }}
+          echo "refs remaining=$LEFT known-stuck=$STUCK consumed=$CONSUMED_N delete-failures=$DELFAIL"
+          # Re-dispatch ONLY on measurable progress. Conflicted/unrelated refs need a
+          # human or the writer, and a failed deletion means re-running would consume
+          # the same refs forever — that livelock is exactly what happened once.
+          if [ "$DELFAIL" -gt 0 ]; then
+            echo "::warning::not re-dispatching: $DELFAIL deletions failed, a re-run would loop"
+          elif [ "$LEFT" -gt "$STUCK" ]; then
+            echo "re-dispatching to drain them"
+            gh api "repos/${REPO}/dispatches" -f event_type=fa-aggregate --silent \
+              || echo "redispatch failed (conflicted refs will be swept by cron)"
+          fi

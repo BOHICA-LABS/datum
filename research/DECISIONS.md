@@ -159,9 +159,30 @@ by measurement, and one addition without which the gate cannot be turned on.**
 
 Markdown stays the single source of truth. Zero agent changes. Nothing pushes.
 
+### ⚠ SUPERSEDED 2026-07-31: the end state is a single Go binary
+
+The user has settled the implementation: **`fa` is one Go binary and everything lands
+as its subcommands.** That retires the "no Go in phase 1" advice below, which was
+correct only while the language was an open question. What changes:
+
+- The embedded `dolthub/driver/v2` path becomes **the** access path, not a phase-3
+  option — so there is **no `dolt` CLI dependency anywhere, including CI**. Its costs
+  are now simply the binary's costs (CGO, `-tags gms_pure_go` mandatory, 155 indirect
+  deps, ~147 MB, its own pinned Dolt build); its wins come along too (~2x cold start,
+  ~4,000x warm, real cross-statement transactions, `DOLT_PUSH` in-process).
+- The aggregator is **`fa aggregate`**, a subcommand — so the CI-outage fallback is
+  "any dev runs the same binary", not a parallel script implementation
+  ([CI-AGGREGATOR.md](CI-AGGREGATOR.md)).
+- Phase 1's *scope* is unchanged (read-only shadow, import + validate, the dated
+  baseline allowlist). Only the implementation language and access path change.
+
+The measured facts below still hold and still bound the design; read them as
+requirements on the binary rather than as an argument for Python.
+
 ### What measurement pinned
 
-- **Python + `dolt sql -f` with ONE transaction.** The corpus import lands at
+- ~~**Python + `dolt sql -f` with ONE transaction.**~~ **The transaction boundary is
+  what mattered, not the language:** The corpus import lands at
   **0.9 s** (ACCESS-PATH §1), so import+validate is cheap enough to run on every
   commit and every PR. Phase 1 needs **no Go, no embedded driver, no CGO, no
   147 MB binary** — that decision is deferred to phase 3, where a long-lived
