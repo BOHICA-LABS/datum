@@ -2,7 +2,7 @@
 title: The three open decisions, settled
 date: 2026-07-31
 status: settled against measured evidence; each records what would reopen it
-inputs: SPEC.md · GAP-MATRIX.md · ACCESS-CONTROL.md · ASSESSMENT.md · ACCESS-PATH.md · REMOTE.md
+inputs: SPEC.md · GAP-MATRIX.md · ACCESS-CONTROL.md · ASSESSMENT.md · ACCESS-PATH.md · REMOTE.md · SCALE.md · CI-AGGREGATOR.md
 ---
 
 # Decisions
@@ -66,8 +66,9 @@ textual conflict. What is left is two agents writing the **same cell**.
    rich merge UI for them.
 7. **Time-box it.** A conflict row older than the lease TTL escalates automatically.
    Nothing sits unresolved silently, because unresolved divergence blocks every
-   other pusher's fast-forward — and G7 shows all instances share one git ref, so
-   that blocking is global.
+   other pusher's fast-forward. (G7 was read as "one git ref ⇒ global blocking"; the
+   mechanism is actually per-BRANCH — see invariant 12 — but since the artifact store
+   is a single branch, the blocking is global for artifacts either way.)
 
 ### Cost accepted
 
