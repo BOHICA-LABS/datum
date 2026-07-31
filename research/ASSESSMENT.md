@@ -185,7 +185,7 @@ The corpus declares a real graph in frontmatter: BCs carry `subsystem`,
 `verification_properties[]`, `functional_requirements[]`, `subsystems[]`, and a
 `depends_on[]`/`blocks[]` dependency DAG.
 
-Modelled as 10 node types and 9 edge tables; **1,490 edges loaded** from the live
+Modelled as 10 node types and 9 edge tables; **1,509 edges loaded** from the live
 corpus. Node universes were built from authoritative declaring documents only
 (`capabilities.md`, `invariants.md`, `pass-4-nfr-catalog.md`, `prd.md`,
 architecture ADR headings, `stories/epics/`) — not from grep-over-everything,
@@ -605,7 +605,7 @@ than a protocol document.
 
 ## 3g. Scale ceilings (measured)
 
-Every earlier timing was taken at the live corpus size (1,959 BCs / 1,490 edges /
+Every earlier timing was taken at the live corpus size (1,959 BCs / 1,490 edges as then measured; 1,509 after the 2026-07-31 parser correction /
 1,607 commits). `poc/test_scale.py` (7/7) pushes each dimension to find the real limits.
 
 ### The headline: the bottleneck is process spawn, not data

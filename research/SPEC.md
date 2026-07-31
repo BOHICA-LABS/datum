@@ -80,7 +80,11 @@ Records with real keys, replacing hand-maintained markdown indexes:
 `story_bc`, `story_vp`, `story_fr`, `story_subsystem`, `story_dep` (the dependency DAG),
 `bc_trace`, `bc_adr`, `wave_story`, `template_field`.
 
-1,490 edges loaded from real frontmatter. Node universes come from **authoritative
+**1,509** edges loaded from real frontmatter. *(Corrected 2026-07-31 during the phase-1
+build: the figure was 1,490 while the prototype's frontmatter parser treated a prose value
+containing an unbalanced `[` as an unterminated inline list, swallowing every key after it.
+That lost 19 edges across six S-15.x stories — and `BC-INDEX.md`'s own `total_bcs` claim.
+See [LESSONS §2](LESSONS.md) and `fa/README.md`.)* Node universes come from **authoritative
 declaring documents only** (`capabilities.md`, `invariants.md`,
 `phase-0-ingestion/pass-4-nfr-catalog.md`, `prd.md`, ADR headings, `stories/epics/`) —
 building them from grep-over-everything would make every reference resolve trivially.

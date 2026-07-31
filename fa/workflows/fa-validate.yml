@@ -1,0 +1,141 @@
+# Phase-1 artifact gate: shadow the markdown corpus into Dolt and fail on NEW
+# integrity violations only.
+#
+# DEPLOYMENT: this file belongs at .github/workflows/fa-validate.yml in the
+# vsdd-factory repo. It is kept here as the source of truth for the spike.
+#
+# The design decisions this file encodes, each of them measured:
+#
+#   * NO `dolt` BINARY ANYWHERE. `fa` embeds dolthub/driver/v2, so CI installs Go
+#     and nothing else. Requires CGO and `-tags gms_pure_go` — without that tag the
+#     cgo build dies on ICU headers.
+#   * FAIL ON NEW ONLY. The corpus has 153 findings today. A gate with no baseline
+#     blocks every PR on day one and gets switched off within a day (DECISIONS D3),
+#     so `--baseline` tolerates the dated allowlist and nothing else.
+#   * NO REMOTE, NO PUSH, NO DAEMON. Phase 1 builds a throwaway store from files
+#     and discards it. Blast radius: if `fa` is wrong, this job is wrong.
+#   * NEVER SWALLOW AN EXIT CODE. Every `fa` invocation's status is the step's
+#     status. In this spike one `| tail -1` hid a total failure and caused an
+#     infinite CI re-dispatch livelock with five green runs in a row.
+
+name: fa-validate
+
+on:
+  pull_request:
+    paths:
+      - '.factory/**'
+      - 'tools/fa/**'
+      - '.github/workflows/fa-validate.yml'
+  push:
+    branches: [develop, main]
+    paths:
+      - '.factory/**'
+      - 'tools/fa/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fa-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The artifact corpus lives on its own branch. Fetch it explicitly rather
+          # than assuming the PR checkout carries it.
+          fetch-depth: 0
+
+      - name: Materialise the artifact corpus
+        run: |
+          set -euo pipefail
+          if [ -d .factory ]; then
+            echo "corpus present in the working tree"
+          else
+            git fetch --no-tags origin factory-artifacts
+            git worktree add .factory origin/factory-artifacts
+          fi
+          echo "corpus commit: $(git -C .factory rev-parse HEAD 2>/dev/null || git rev-parse origin/factory-artifacts)"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache-dependency-path: tools/fa/go.sum
+
+      - name: Build fa
+        working-directory: tools/fa
+        run: |
+          set -euo pipefail
+          # -tags gms_pure_go is MANDATORY: the cgo build fails on ICU headers
+          # without it. CGO_ENABLED=1 is required by the embedded driver.
+          CGO_ENABLED=1 go build -tags gms_pure_go -o fa .
+          ./fa version
+
+      - name: Unit and integration tests
+        working-directory: tools/fa
+        run: CGO_ENABLED=1 go test -tags gms_pure_go -timeout 20m ./...
+
+      - name: Build the shadow store
+        run: |
+          set -euo pipefail
+          tools/fa/fa init   --db "$RUNNER_TEMP/fa-db"
+          tools/fa/fa import --db "$RUNNER_TEMP/fa-db" .factory
+
+      - name: Store health
+        run: tools/fa/fa doctor --db "$RUNNER_TEMP/fa-db"
+
+      # THE GATE. Exit 1 means new findings; exit 2 means fa itself broke. Both
+      # fail the job, and the distinction is visible in the log rather than
+      # collapsed into "something went wrong".
+      - name: Validate against the dated baseline
+        id: gate
+        run: |
+          set -euo pipefail
+          tools/fa/fa validate \
+            --db "$RUNNER_TEMP/fa-db" \
+            --baseline tools/fa/baseline.json \
+            --json "$RUNNER_TEMP/findings.json"
+
+      # Runs even when the gate fails: the findings report is most useful exactly
+      # then. `if: always()` is deliberate and does not mask the gate's status.
+      - name: Upload the findings report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fa-findings
+          path: ${{ runner.temp }}/findings.json
+          if-no-files-found: warn
+
+      - name: Summary
+        if: always()
+        run: |
+          set -euo pipefail
+          f="$RUNNER_TEMP/findings.json"
+          [ -f "$f" ] || { echo "no findings report produced" >> "$GITHUB_STEP_SUMMARY"; exit 0; }
+          python3 - "$f" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json, sys
+          d = json.load(open(sys.argv[1]))
+          c = d["counts"]
+          print("## fa-validate\n")
+          print(f"| new | baselined | fixed | total |")
+          print(f"|---|---|---|---|")
+          print(f"| **{c['new']}** | {c['kept']} | {c['fixed']} | {c['total']} |\n")
+          m = d["metrics"]
+          print(f"records: bc={m.get('bc')} vp={m.get('vp')} story={m.get('story')} "
+                f"edges={m.get('edges')}\n")
+          print(f"cross-zone pass ran: {d['cross_zone_checked']}\n")
+          if d["new"]:
+              print("### New findings — these fail the gate\n")
+              for x in d["new"]:
+                  print(f"- `{x['class']}` **{x['rule']}** — {x['subject']}")
+          if d["fixed"]:
+              print(f"\n### Fixed since the baseline ({len(d['fixed'])})\n")
+              print("Run `fa baseline write` to ratchet the allowlist down.\n")
+              for x in d["fixed"][:20]:
+                  print(f"- `{x['class']}` {x['rule']} — {x['subject']}")
+          PY

@@ -111,7 +111,7 @@ path in the DB (stated non-goal, L8).
 | Pipeline / phase / wave state | ✅ | V1–V3, V5, V10 |
 | **Context load + rehydration** | ✅ | **V4 — the wave's spec set is DERIVED from wave membership** |
 | Wave registration + gate lifecycle | ✅ | V1–V3 |
-| Requirements graph + traceability | ✅ | 1,490 edges; G1–G8 |
+| Requirements graph + traceability | ✅ | 1,509 edges (was 1,490 — parser correction 2026-07-31); G1–G8 |
 | Schema evolution | ✅ | E1–E8 |
 | Onboarding / recovery / growth | ✅ | L1–L3, L7 |
 | Concurrency (agents / devs / instances) | ✅ | X, S, D, I suites |

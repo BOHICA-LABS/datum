@@ -138,6 +138,7 @@ implementation.
 | **A retry budget of 1 turned a data-loss test into a race test** | H6 was meant to reproduce D5's silent lost increment. With `tries=1` the losing agent simply *bailed* on push rejection, so only one write ever landed and the counter was trivially "correct" — the test FAILED while Dolt was behaving exactly as documented. The bug needs the unsafe retry shape (merge and re-push WITHOUT recomputing) to be modelled explicitly. | The failing assertion said `LOSSY=False` with only 1 of 2 agents reporting success — the agent output, not the assertion, gave it away |
 | **Swallowing a command's exit code caused a LIVELOCK** | `git push … \| tail -1` hid a total failure, so consumed refs were never deleted, so "refs remain" stayed true, so the CI aggregator re-dispatched itself — five *successful* runs in a row, forever. The fix is two-part: assert the result AND gate the retry on measurable PROGRESS, never on "work remains". | Watching the run list grow while the ref count never moved |
 | **Asserting a claim the same test measures and contradicts** | H3's verdict text said the wedge fails "with an error that points at the wrong thing" while the line above it printed `blames staging: False`. Both were in the same output. Re-probing found the misleading message really does exist — on the *pull* path, not the commit path — so the claim was right about the world and wrong about what had been measured. | Printing the boolean next to the prose claim |
+| **Continuation rule keyed on bracket BALANCE instead of on a list actually opening** (found 2026-07-31 while porting to Go — the SAME class as the two frontmatter bugs above, third instance) | The rule "the previous line has more `[` than `]`" treats prose as an unterminated list. `BC-INDEX.md`'s own `last_amended` holds `… [Prior: 2026-05-30 (v2.64) — …` (4 `[`, 3 `]`), so **every key after it was joined into that value and disappeared**. It hid `total_bcs: 1955` — the index's headline count claim — from the gate whose whole job is checking stated counts, and hid **19 real edges** across `S-15.10/12/13/14/15/17`, whose `depends_on`/`blocks`/`behavioral_contracts`/`subsystems` all sit after a bracket-bearing `last_amended`. **The published edge total of 1,490 was therefore an undercount; it is 1,509.** | The new count-assertion gate reported 6 disagreements where hand-measurement of the same file found 7. Chasing the missing one — rather than accepting a number that looked plausible — found the parser bug. Pinned by `fa/frontmatter_test.go::TestFrontmatterProseBracketDoesNotSwallowKeys` |
 
 ### The transferable rules
 
@@ -155,6 +156,16 @@ implementation.
    into the report string while writing the test — it will survive the test failing.
 9. **Before recommending a lever, measure the alternatives to that lever.** A ratio
    between two things you measured says nothing about a third thing you did not.
+10. **When a derived number is off by a little, chase it.** The count gate reporting 6
+    drifts where the file plainly had 7 is what exposed the bracket bug above. "Close
+    enough" is how a parser that loses input survives — three of the false passes in
+    this table are the same parser losing input in three different ways.
+11. **State the extraction rule with any count taken from prose.** "Distinct BC ids in
+    `BC-INDEX.md` rows = 1962" is only true for "any BC id anywhere in the file,
+    including changelog prose citing BCs that were never written". Restricted to the
+    enumeration table's first column — the index's actual claim about which BCs exist —
+    it is 1,959, which agrees with disk. Same file, same question, two rules, two
+    answers; the rule is part of the measurement.
 
 ---
 
