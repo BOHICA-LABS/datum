@@ -3,6 +3,11 @@ poc/mm/
 poc/sl/
 poc/mx/
 poc/td/
+poc/se/
+poc/lc/
+poc/rendered_test/
+poc/_r5_base/
+poc/_r6_fresh/
 rendered/
 .venv/
 __pycache__/

@@ -9,6 +9,7 @@ interface to all vsdd-factory artifacts, replacing the `factory-artifacts` orpha
 
 | Path | What |
 |---|---|
+| **`research/SPEC.md`** | **The specification — capability surface, invariants, CLI, phasing, non-goals** |
 | `research/ASSESSMENT.md` | The feasibility assessment — findings, gaps, phased recommendation |
 | `poc/schema.sql` | Core schema (BCs, VPs, stories, subsystems, lock) |
 | `poc/graph.sql` | Full relationship graph — 10 node types, 9 edge tables |
@@ -23,9 +24,18 @@ interface to all vsdd-factory artifacts, replacing the `factory-artifacts` orpha
 | `poc/clonelock.py` | `flock` write mutex for a single shared clone |
 | `poc/test_mutex.py` | 8 tests — single clone + mutex (cross-process) |
 | `poc/test_two_devs.py` | 9 tests — **2 devs, 2 machines, 4 agents each, 1 repo** |
-| `poc/db/`, `poc/mm/`, `poc/sl/`, `poc/mx/`, `poc/td/` | Dolt data dirs (gitignored) |
+| `poc/test_write_api.py` | 9 tests — the mutation surface (create/amend/retire/atomic/gates) |
+| `poc/test_render.py` | 7 tests — markdown as a deterministic, round-trippable export |
+| `poc/test_schema_evolution.py` | 8 tests — migrations + cross-machine schema merge |
+| `poc/test_lifecycle.py` | 8 tests — onboarding, recovery, wave branches, growth |
+| `poc/db/`, `mm/`, `sl/`, `mx/`, `td/`, `se/`, `lc/` | Dolt data dirs (gitignored) |
 
-**55/55 passing** against the live corpus.
+**87/87 passing** against the live corpus, eleven suites.
+
+**Read [`research/SPEC.md`](research/SPEC.md) first** — it is the deliverable: the full
+capability surface with every capability traced to the test that proves it, the eight
+invariants `fa` must enforce (each one a silent-data-loss risk if violated), the CLI
+surface, phasing, non-goals, and the honest list of what is still unproven.
 
 ## Two devs, two machines, multiple agents each — it works
 
