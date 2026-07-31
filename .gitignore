@@ -1,5 +1,6 @@
 poc/db/
 poc/mm/
+poc/sl/
 rendered/
 .venv/
 __pycache__/

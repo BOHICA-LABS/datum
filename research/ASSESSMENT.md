@@ -2,7 +2,7 @@
 title: Dolt as the sole interface to factory artifacts — feasibility assessment
 date: 2026-07-30
 status: research spike complete, POC verified
-verdict: GO (phased), with two hard constraints
+verdict: GO (phased) — no daemon required; see §3c token discipline and §3d server-less option
 ---
 
 # Dolt as the sole interface to factory artifacts
@@ -12,12 +12,13 @@ as the only interface to all vsdd-factory artifacts?
 
 **Verdict: GO, phased.** The current design is a hand-maintained relational database
 implemented in markdown files, and it is measurably failing at exactly the guarantees a
-database provides for free. **33/33 POC tests pass** against the live corpus across four
-suites (13 store + 8 relationship-graph + 6 multi-machine + 6 locking), plus a 5-pattern
-concurrency comparison. Three hard constraints apply:
-**one shared server is mandatory** — the lock is provably incorrect across independent
-clones — markdown must become a generated export, and **every guarded write must carry a
-per-attempt unique token** or Dolt silently merges concurrent updates (§3c).
+database provides for free. **38/38 POC tests pass** against the live corpus across five
+suites (13 store + 8 relationship-graph + 6 multi-machine + 6 locking + 5 server-less),
+plus a 5-pattern concurrency comparison. Three hard constraints apply: markdown must
+become a generated export; **every guarded write must carry a per-attempt unique token**
+or Dolt silently merges concurrent updates (§3c); and cross-machine exclusion needs an
+arbiter — but that can be the **remote** rather than a server (§3d), so no daemon is
+required to adopt this.
 
 Modelling the full spec graph surfaced **38 dangling references and 44 type violations**
 that no existing gate catches, and quantified coverage nobody had measured: **90.2% of
@@ -387,20 +388,83 @@ anywhere — which is precisely the class of bug the current markdown design at 
 makes *visible* as a merge conflict. Any adoption must encode the token discipline in
 the single write path (`fa`) so no agent can bypass it.
 
+## 3d. Do we need a central server? (refines constraint 4.1.1)
+
+**No — a shared server is one option, not a requirement.** §3b concluded "one shared
+server is mandatory". That was too strong. Exclusion needs a synchronous *arbiter*, and
+the **remote can be the arbiter** because `dolt push` is an atomic
+compare-and-swap: non-fast-forward is rejected.
+
+Note first that the §3c token fix does **not** help across machines. Two clones are two
+databases; their lock rows never interact until push/pull, by which point both agents
+already "hold" the lock. The token fixes same-server merge, not cross-machine exclusion.
+
+### Push-as-CAS, verified (5/5, `poc/test_serverless_lock.py`)
+
+Three clones, **no `sql-server` anywhere** — just `dolt sql -q` on local clones and a
+shared remote. Acquire = `fetch` → `reset --hard origin/main` → guarded local `UPDATE`
+→ `dolt commit` → `push`. **The push is the CAS.**
+
+| # | Test | Result |
+|---|---|---|
+| S1 | 3 clones push simultaneously → exactly one wins | PASS (`mB=pushed`, `mA`/`mC`=`push-rejected`) |
+| S2 | loser is refused and can read the true holder | PASS |
+| S3 | 6 contended rounds × 3 clones, no anomalies | PASS |
+| S4 | cost of one acquire round trip | 640 ms (local `file://` remote) |
+| S5 | rejection arrives only AFTER the loser did its work | PASS (the limit) |
+
+### The three costs of going server-less
+
+1. **Latency: ~640 ms per acquire against a LOCAL remote** — and that is the floor.
+   Over GitHub add real network time per acquire *and* per release. A server-local CAS
+   was ~1 ms. That is roughly a 1000× difference in coordination cost.
+2. **Wasted work on loss (S5).** The remote rejects you only after you have already
+   done the work locally. Fine for a cheap lock; wrong for a 45-minute wave gate, where
+   both agents would evaluate the entire gate before one is told it lost. A shared
+   server refuses the loser up front, in ~1 ms.
+3. **One writer at a time per clone.** Four concurrent `dolt sql` writers on a single
+   clone: **2 succeeded, 2 failed** with `cannot update manifest`. The failures are loud
+   (non-zero exit), not silent — but it means several agents on one host must either
+   serialize through a local write mutex, or each get their own clone.
+
+### Choosing
+
+| | Shared `sql-server` | Server-less (push-as-CAS) |
+|---|---|---|
+| Exclusion | ~1 ms, refused **up front** | ~0.6–3 s, refused **after** local work |
+| Concurrent writers per host | many | one per clone |
+| Moving parts | daemon, port, health, **SPOF** | none beyond git |
+| Multi-table atomicity | transactions | the Dolt commit itself |
+| Cell-level merge | yes | yes (via push/pull) |
+| Fit with today's factory | new operational surface | matches the existing fetch/push-per-phase-gate rhythm |
+
+**Recommendation: go server-less for Phases 1–2.** It preserves the current design's
+genuine advantage — zero moving parts beyond git — while still fixing the count drift,
+the dangling references, and the lock's TOCTOU. The factory already pushes at every phase
+gate and already tolerates that latency, so the 640 ms is paid where a fetch/push is paid
+today. Introduce a shared server only if and when Phase 4 (parallel wave branches with
+many agents per host) actually needs sub-second, up-front exclusion.
+
+This materially reduces the adoption cost: **the daemon and its single point of failure
+are no longer entry requirements.**
+
 ## 4. Gaps, risks, and things that are worse
 
 Honest accounting. These are real and some are unattractive.
 
 ### 4.1 Hard constraints
 
-1. **One shared server is mandatory, so there is now a daemon — and a single point of
-   failure.** Embedded Dolt is single-writer, and M5 proves the CAS lock does **not** hold
-   across independent clones (both machines acquired it). So correctness requires every
-   agent to reach *one* `dolt sql-server`: a process, a port, liveness/health handling, a
-   startup dependency for every agent, and a component whose loss halts the factory. The
-   current design's genuine advantage — zero moving parts beyond git — is lost. beads
-   carries an entire `internal/doltserver` package (7,750 lines incl. tests) plus circuit
-   breakers and a `doctor` subsystem for exactly this. Budget for it.
+1. **Cross-machine exclusion needs an arbiter — either a shared server or the remote.**
+   M5 proves the CAS lock does **not** hold across independent clones (both machines
+   acquired it), and the §3c token fix does not change that. Two topologies work:
+   a shared `dolt sql-server` (~1 ms, refused up front, but a daemon + port + health
+   handling + a **single point of failure**; beads carries a 7,750-line
+   `internal/doltserver` package plus circuit breakers and a `doctor` subsystem for
+   exactly this), or **server-less push-as-CAS** (§3d — no daemon, but ~0.6–3 s per
+   acquire, the loser learns only after doing its work, and one writer at a time per
+   clone). Server-less is recommended for Phases 1–2; see §3d for the trade table.
+   What is NOT optional either way is having *an* arbiter — ad-hoc per-clone locks are
+   provably broken.
 
 2. **Markdown must become a generated export.** The value only materializes if the DB is
    the sole writer. If agents keep editing `.md` directly, you get two truths and strictly
@@ -509,6 +573,9 @@ brew install dolt                                   # 2.2.3 verified
 .venv/bin/python -u poc/test_spike.py               # 13/13  store
 .venv/bin/python -u poc/test_graph.py               #  8/8   relationship graph
 .venv/bin/python -u poc/test_multimachine.py        #  6/6   multi-machine (self-provisions)
+.venv/bin/python -u poc/test_locking.py             #  6/6   is the lock still needed?
+.venv/bin/python -u poc/test_serverless_lock.py     #  5/5   no-server push-as-CAS
+.venv/bin/python -u poc/test_cas_patterns.py        #  which CAS patterns are safe
 ```
 
 All three suites are re-runnable and idempotent. `test_multimachine.py` builds its own

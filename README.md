@@ -19,9 +19,30 @@ interface to all vsdd-factory artifacts, replacing the `factory-artifacts` orpha
 | `poc/test_multimachine.py` | 6 tests — two clones, one remote (self-provisioning) |
 | `poc/test_locking.py` | 6 tests — is the factory lock still needed? |
 | `poc/test_cas_patterns.py` | 5-pattern concurrency comparison (which CAS actually holds) |
-| `poc/db/`, `poc/mm/` | Dolt data dirs (gitignored) |
+| `poc/test_serverless_lock.py` | 5 tests — cross-machine exclusion with **no server** |
+| `poc/db/`, `poc/mm/`, `poc/sl/` | Dolt data dirs (gitignored) |
 
-**33/33 passing** against the live corpus.
+**38/38 passing** against the live corpus.
+
+## Do you need to run a central server? No.
+
+Exclusion needs a synchronous *arbiter*, but it can be the **remote** rather than a
+server: `dolt push` is rejected on non-fast-forward, so push **is** an atomic CAS.
+Verified with three clones and no `sql-server` anywhere — 3 simultaneous pushes,
+exactly one wins, clean across 6 contended rounds.
+
+The trade:
+
+| | Shared `sql-server` | Server-less (push-as-CAS) |
+|---|---|---|
+| Exclusion | ~1 ms, refused **up front** | ~0.6–3 s, refused **after** local work |
+| Writers per host | many | one per clone (`cannot update manifest` otherwise) |
+| Moving parts | daemon, port, health, **SPOF** | none beyond git |
+| Fit with today's factory | new operational surface | matches fetch/push-per-phase-gate |
+
+Server-less is recommended for Phases 1–2: it keeps the current design's real
+advantage (zero moving parts beyond git) while still fixing count drift, dangling
+references, and the lock's TOCTOU.
 
 ## The concurrency trap (read before writing any code against Dolt)
 
