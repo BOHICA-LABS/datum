@@ -285,7 +285,7 @@ Resume the dolt-artifact-spike in ~/Dev/scrap/dolt-artifact-spike (local-only gi
 READ FIRST, in this order:
   1. HANDOFF.md                    (this file — snapshot + next actions)
   2. research/DECISIONS.md         (the 3 blocking calls, SETTLED: conflict policy, zones, phase-1 scope)
-  3. research/SPEC.md              (the spec: architecture, capability surface, 12 invariants, CLI, phasing)
+  3. research/SPEC.md              (the spec: architecture, capability surface, 14 invariants, CLI, phasing)
   4. research/ACCESS-PATH.md       (embedded driver vs CLI vs server, measured — and why the headline changed)
   5. research/REMOTE.md            (the real github.com remote: ~10 s per acquire, one data ref per remote)
   5b. research/SCALE.md            (200 agents; EVERY decentralised contention fix, ranked)
