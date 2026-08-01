@@ -128,10 +128,21 @@ adopted" is not testable.
 | **12** | **Body-prose reference extraction** (from #671). Needs code-span exclusion, as-of resolution and per-id adjudication or it manufactures false findings. | Reproduces the known **F-\* findings** from recent adversarial passes without hand-tuning — #671's own phase-1 exit criterion, which `fa` has never been checked against. |
 | **13** | **Per-project profiles.** Each project declares which canonical types it uses. | 10 profiles committed; `fa validate` uses the profile to decide whether ABSENCE of a type is a finding. |
 
-**Story 12 is also the cheapest decisive experiment in the list** and can run first: it
-answers whether a frontmatter-only parser suffices or whether the real drift lives in prose
-references. `fa` reproduced the prototype's 82 findings rule-for-rule and found 71 more,
-but has never been compared to the F-\* findings.
+**#671's exit criterion has now been RUN** — see [FSTAR-COMPARISON](../research/FSTAR-COMPARISON.md).
+It reorders this list:
+
+| class of the adversary's findings | share (95% CI) | which story |
+|---|---|---|
+| derived-data staleness the registry makes **impossible** | **25.3% ±9.1** | **story 7 — the single highest-value change** |
+| needs body-prose extraction | 21.8% ±8.7 | story 12, now with known scope |
+| frontmatter-reachable | 14.9% ±7.5 | stories 5 + 10 |
+| out of reach of ANY parser (external 13.8% · process 12.6% · semantic 11.5%) | **37.9% ±10.2** | none — and the ADR must say so |
+
+So: **story 7 before story 12**, and the ADR must state the 37.9% explicitly. Nobody should
+read this registry as replacing adversarial review — over a third of what the adversary finds
+is beyond any parser, prose-capable or not. Method caveat: A (25.3%) and C (21.8%) overlap
+within their intervals, so "derived beats prose" is the direction and not a proven ordering;
+it would take n≈400 to separate them, and both are worth doing regardless.
 
 ---
 

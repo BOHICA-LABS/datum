@@ -187,6 +187,56 @@ link_types:
        `direction` findings in fa's baseline are one class with one fix: store a single
        dependency direction, not 58 corrected entries."
 
+# ── Prose references: sub-artifact ids that live in document BODIES ──────────
+# ADDED after running #671's exit criterion (research/FSTAR-COMPARISON.md). Measured on a
+# hand-classified random sample of the adversary's own findings: 21.8% (+/-8.7) require
+# reading BODY PROSE, not frontmatter. That is too large to leave out, so the capability is
+# declared here. For scale, the class the registry ALREADY eliminates by making indexes
+# derived is 25.3% (+/-9.1) — so this addition is second in value, not first.
+#
+# These ids are FILE-SCOPED, not globally unique: AC-002 exists in many stories. Their key
+# is therefore (owning_artifact_key, id) — the same composite-key discipline D-C applies to
+# documents. And because D-A stores an addressable section partition, a prose reference
+# resolves to (doc_key, section_ord), so a finding can name the SECTION it lives in rather
+# than a 615 KB document.
+prose_ref_kinds:
+  ac:      {pattern: 'AC-\d+',      scope: file, owner_types: [story, epic], note: "acceptance criterion"}
+  ec:      {pattern: 'EC-\d+',      scope: file, owner_types: [behavioral-contract], note: "edge case"}
+  pc:      {pattern: 'PC-?\d+',     scope: file, owner_types: [behavioral-contract], note: "precondition"}
+  section: {pattern: '§[^,;)]+',    scope: file, owner_types: [any_artifact]}
+  t_task:  {pattern: 'T-\d+',       scope: file, owner_types: [story], note: "task"}
+  finding: {pattern: 'F-[A-Za-z0-9]+-\d+', scope: cycle, owner_types: [adversarial-review], note: "see adversarial-finding"}
+  decision: {pattern: 'D-\d+',      scope: cycle, owner_types: [cycle-decision-log, burst-log]}
+  lesson:  {pattern: 'L-[A-Za-z0-9]*-?\d+', scope: cycle, owner_types: [lessons-learned]}
+  policy:  {pattern: 'POL(?:ICY)?[- ]\d+', scope: project, owner_types: [policies]}
+
+prose_ref_rules:
+  - id: exclude-code-spans
+    rule: >
+      A candidate id inside a backtick span, fenced block or link target is NOT a reference.
+      MEASURED: `ADR-099` appears as an example CLI argument in a code span, and a flat scan
+      reports it as dangling — a false finding against a correct document (PROBE-CYCLES §5).
+  - id: resolve-as-of
+    rule: >
+      Resolve every id through `id_alias` at the citing document's own version, never against
+      today's corpus. MEASURED: BC-1.12.008 was LEGITIMATELY renumbered to BC-3.05.004, so a
+      flat existence check manufactures findings against correct history.
+  - id: scope-sub-artifact-ids
+    rule: >
+      AC-002 is not globally unique. Key is (owning_artifact_key, id). A cross-document
+      citation of a sub-artifact id must name its owner or it is unresolvable, and reporting
+      it as dangling would be the checker's defect, not the document's.
+  - id: section-scoped-counts
+    rule: >
+      A count field is scoped to its declared section. MEASURED: `finding_count: 0` is
+      CORRECT in a document whose `### O-001` headings sit under "Part B — Observations
+      (non-finding)", so a body-wide count manufactures a false finding.
+  - id: report-unresolvable-separately
+    rule: >
+      An id that cannot be resolved because its OWNER is unstated is reported as
+      `unresolvable`, never as `dangling`. Collapsing the two is how a prose extractor
+      produces a large, confident, wrong finding set.
+
 # ── Section schema policy ─────────────────────────────────────────────────────
 section_policies:
   required_ordered:
