@@ -12,6 +12,7 @@ throughout; nothing outside this directory was modified.
 | `CHANGE-MANAGEMENT.md` | the ADR to open, the policy to register, 13 stories, the per-type graduation ladder, 7 sequencing hazards |
 | `validate_registry.py` | the gate. Checks the registry's own completeness, then the corpora's conformance to it |
 | `measure_types.py` · `observe.py` | the measurement passes everything is derived from |
+| `probe_indexes.py` | STORY 7's per-column agreement measurement, run BEFORE the shadow differ's rules were written — see [research/SHADOW-INDEXES.md](../research/SHADOW-INDEXES.md) |
 | `fstar_compare.py` · `fstar_hand_sample.json` | #671's exit criterion, run: extraction + the hand-classified sample behind the 40/22/38 split |
 | `types_measured.json` · `types_observed.json` · `template_schemas.json` | measured output, regenerable |
 
@@ -25,8 +26,14 @@ python3 registry/validate_registry.py     # exit 0 today
 | corpus | main | `factory-artifacts` |
 |---|---|---|
 | vsdd-factory | `82163b7f` | `0aaba144` |
-| prism | `aa2a5fe6e` | `95b90d003` |
+| prism | `a41599fe0` | `9f3443d6f` (was `95b90d003`) |
 | rivetry | `52bd25d` | `2aea395` |
+
+prism's corpus **advanced again during the 2026-08-01 session** — the separate prism factory
+session committed the 24 story files it had been holding in its working tree. Re-measured
+across that advance: prism's conformance total is **10,843 either way**, because the
+working-tree content this was measured against is exactly what got committed. Stated rather
+than assumed, since the alternative is quoting a number whose input moved underneath it.
 
 Pinned because **prism's corpus changed during the day this was measured** (20 files
 between 09:34 and 19:18 on 2026-07-31, from a separate prism factory session — not from
@@ -37,9 +44,26 @@ corpus advance rather than trusting a stale count.
 
 ```
 PART 1  registry completeness         all 7 checks OK · 0 undispositioned values of 225
-PART 2  corpus conformance            18,418 findings — the ratchet's day-one baseline
+PART 2  corpus conformance            18,826 findings — the ratchet's day-one baseline
         D-A invariant                 concat(sections) == body HOLDS on every file
 ```
+
+⚠ **This number was 18,418 until 2026-08-01, and the change is the registry's own
+evolution — not corpus drift.** Re-measured and reconciled exactly, because "off by a
+little" always has a cause:
+
+| | findings |
+|---|---|
+| the `902da9d` registry, on the PINNED corpora | 18,396 |
+| \+ 56 untracked prism markdown files present in the working tree | **18,418** ← the number this file used to quote |
+| the HEAD registry, on the PINNED corpora | 18,804 |
+| the HEAD registry, on the working corpora | **18,826** ← today |
+
+So **+408 is registry evolution on byte-identical input** — dominated by the
+`missing-required` → `empty-required` three-state split (a missing key and a declared-empty
+one are different claims) and by link fields becoming required. **+22 is untracked files.**
+The 24 prism stories another session edited during this work contribute **0** findings: they
+added `## Authority` sections, and the corpus pins are unchanged.
 
 Exit **0** means the registry is complete and internally consistent. It exits **1** the
 moment a new `document_type` appears with no disposition, which makes completeness a CI

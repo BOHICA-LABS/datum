@@ -37,6 +37,8 @@ usage: fa <command> [flags]
   count                      record counts, derived — never stored
   doctor                     store health: writable, unmerged, schema, imported
   waves                      wave schedule, derived from story depends_on (topological)
+  shadow <corpus>            STORY 7: generate each derived index ALONGSIDE the authored
+                             one and report every disagreement. Never writes, never flips.
   graph build|metrics|dot|diff   knowledge-graph projection + algorithms SQL cannot do
   aggregate plan             staging-ref quarantine policy (phase 2 plumbing pending)
   version
@@ -72,6 +74,8 @@ func main() {
 		err = cmdGraph(ctx, os.Args[2:])
 	case "waves":
 		err = cmdWaves(ctx, os.Args[2:])
+	case "shadow":
+		err = cmdShadow(ctx, os.Args[2:])
 	case "version":
 		fmt.Printf("fa %s (schema v%d, embedded dolthub/driver/v2)\n", faVersion, schemaVersion)
 	case "-h", "--help", "help":
@@ -271,6 +275,69 @@ func cmdValidate(ctx context.Context, args []string) error {
 	}
 	if len(d.New) > 0 {
 		return exitError{code: 1}
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------- shadow
+
+// cmdShadow is STORY 7's shadow stage. It is READ-ONLY over both the store and the corpus:
+// the whole discipline is that a derived index is generated ALONGSIDE the authored one and
+// advanced only on evidence, so a `shadow` subcommand that could write would defeat its own
+// purpose.
+func cmdShadow(ctx context.Context, args []string) error {
+	fs := flag.NewFlagSet("shadow", flag.ExitOnError)
+	db := fs.String("db", defaultDB(), "store root")
+	regDir := fs.String("registry-dir", "", "override the embedded registry YAML")
+	jsonOut := fs.String("json", "", "also write the full report as JSON to this path")
+	baselinePath := fs.String("baseline", "", "baseline allowlist to tolerate (default: none)")
+	_ = fs.Parse(args)
+	if fs.NArg() != 1 {
+		return fmt.Errorf("usage: fa shadow <corpus-path> [--db <dir>] [--json <path>]")
+	}
+	corpus, err := filepath.Abs(expandHome(fs.Arg(0)))
+	if err != nil {
+		return err
+	}
+	s, err := Open(ctx, *db, ZoneOpen, false)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	bundle, err := LoadRegistry(*regDir)
+	if err != nil {
+		return err
+	}
+	rep, err := Shadow(ctx, s, bundle, corpus)
+	if err != nil {
+		return err
+	}
+	PrintShadowReport(os.Stdout, rep)
+
+	if *jsonOut != "" {
+		data, err := json.MarshalIndent(map[string]any{
+			"specs": rep.Specs, "findings": rep.Findings, "total": len(rep.Findings),
+		}, "", "  ")
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(*jsonOut, append(data, '\n'), 0o644); err != nil {
+			return err
+		}
+	}
+
+	// Same ratchet as every other gate: findings outside the baseline fail with exit 1,
+	// and `fa` breaking is exit 2 elsewhere. Never collapse the two.
+	if *baselinePath != "" {
+		b, err := LoadBaseline(*baselinePath)
+		if err != nil {
+			return fmt.Errorf("baseline: %w", err)
+		}
+		d := Compare(&Report{Findings: rep.Findings}, b)
+		fmt.Printf("  vs baseline %s: new=%d fixed=%d\n", *baselinePath, len(d.New), len(d.Fixed))
+		if len(d.New) > 0 {
+			return exitError{code: 1}
+		}
 	}
 	return nil
 }

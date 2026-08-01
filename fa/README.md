@@ -36,7 +36,20 @@ fa validate --db .fa-db --baseline baseline.json
 fa doctor --db .fa-db
 fa count  --db .fa-db --by-subsystem       # counts, derived — never stored
 fa baseline write --db .fa-db --out baseline.json --corpus ~/path
+fa waves  --db .fa-db                      # wave schedule, derived from depends_on
+fa graph build|metrics|dot|diff --db .fa-db
+fa shadow --db .fa-db ~/path/.factory      # STORY 7: derived indexes, generated ALONGSIDE
 ```
+
+`fa shadow` is story 7's **shadow** stage of `generate -> prove equal -> retire`. It
+generates each derived index from the store, compares it cell by cell against the authored
+document, and reports every disagreement — and it **writes nothing**, to either side. That
+is the mechanism, not caution: flipping a subtly wrong generator replaces hand-maintained
+drift with generated drift and destroys the evidence. 658 findings on the live corpus, of
+which 573 are real drift, 44 are editorial and 41 are facts about derivation itself (a
+declared scope predicate that keeps 41 retired stories from being resurrected, 38 planned
+rows that cannot exist as records, one withdrawn-in-place row, one underivable column).
+See [research/SHADOW-INDEXES.md](../research/SHADOW-INDEXES.md).
 
 Exit codes: **0** the gate passed · **1** the gate failed · **2** `fa` itself
 failed. Never collapse 1 and 2: in this spike one swallowed exit code caused an
@@ -200,12 +213,16 @@ itself says what it is waiting for instead of pretending to work.
 | `corpus.go` | pure corpus → records + edges + assertions + findings |
 | `import.go` | one transaction, FK rejections recorded as findings |
 | `validate.go` | every gate, as a query |
+| `registry.go` · `registry_gate.go` | the artifact type registry, embedded, and its corpus-side gate |
+| `mdtable.go` | markdown table parsing + cell normalisation, each rule carrying the false-finding count it prevents |
+| `shadow.go` | story 7's shadow stage: derive each index, adjudicate cell by cell, never write |
+| `graph*.go` · `csr.go` | the knowledge-graph projection and the compact CSR engine for 250k+ |
 | `baseline.go` | the dated allowlist and its ratchet |
 | `doctor.go` | writability, half-merge, schema, content |
 | `quarantine.go` | the `fa aggregate` staging-ref policy |
 | `workflows/fa-validate.yml` | the CI gate (deploy to `.github/workflows/` in vsdd-factory) |
 
-Tests: `CGO_ENABLED=1 go test -tags gms_pure_go ./...` — 24 tests, ~3.3 s, no
+Tests: `CGO_ENABLED=1 go test -tags gms_pure_go ./...` — 97 tests, ~6.4 s, no
 network and no `dolt` binary. The integration tests run against a real embedded
 store built from a fixture corpus with one planted violation per gate: a gate that
 has never been shown failing has been run, not tested.

@@ -12,8 +12,10 @@ with a populated contract set, 12 more scaffolded). Per issue #671's own warning
 later phases, it goes through vsdd's change management — an ADR, stories, and a policy with
 `enforced_by` — not a unilateral rewrite.
 
-**The constraint that shapes everything below:** the registry currently reports **18,418
-conformance findings** against the three corpora. Every one is either a real drift or a
+**The constraint that shapes everything below:** the registry currently reports **18,826
+conformance findings** against the three corpora (18,418 when first measured at `902da9d`;
+the +408 is this registry's own tightening on identical input, reconciled line by line in
+[registry/README.md](README.md)). Every one is either a real drift or a
 tightening this registry introduces. A gate turned on at `block` on day one would fail
 every PR in every project and be switched off within a day. That is
 [DECISIONS](../research/DECISIONS.md) D3's whole point, and it is why every type ships at
@@ -131,7 +133,7 @@ adopted" is not testable.
 | **4** | **Mint `adversarial-finding` as rows.** A template exists and **nothing uses it** — findings are prose tables inside review bodies. | `finding_count`, `severity_distribution` and `total_findings` become DERIVED on ≥1 real cycle and agree with the prose they replace. |
 | **5** | **Split the overloaded fields.** `verdict` → `gate_result`/`convergence`/`severity_max`; `status` → lifecycle only. Migration is table-driven from `enums.yaml: migrated_from`. | 745 `retired-field:verdict` and 356 `enum-*:status` findings reach zero; no value lands outside a closed enum. |
 | **6** | **Convert the ledgers to append-only rows.** `burst-log`, `cycle-decision-log`, `lessons-learned`, `session-checkpoints`, `tech-debt-register`. | The nine ledgers with 600+ append commits are rows; two agents appending concurrently produce no conflict (test it, don't assert it). |
-| **7** | **Make the indexes derived — via `shadow -> proven -> retired`, never a flip.** `BC-INDEX` (218 commits), `STORY-INDEX` (381), `ARCH-INDEX` (151), `VP-INDEX` (140), `cycles/INDEX` (98), `epic.story_count`. All 23 derived types ship at `derivation_stage: shadow`. | Per stage: **shadow** = generated alongside the authored form, every disagreement a finding; **proven** = they agree, `fa render` writes it, the authored one still diffed; **retired** = the authored one deleted. Final: the 4-way BC count disagreement is structurally impossible and `fa`'s 7 `count` findings are zero. |
+| **7** | **Make the indexes derived — via `shadow -> proven -> retired`, never a flip.** `BC-INDEX` (218 commits), `STORY-INDEX` (381), `ARCH-INDEX` (151), `VP-INDEX` (140), `cycles/INDEX` (98), `epic.story_count`. All 23 derived types ship at `derivation_stage: shadow`. **⭐ THE SHADOW STAGE IS BUILT AND RUN — `fa shadow`, 3 of the 6 indexes, 658 findings, nothing flipped. See [SHADOW-INDEXES](../research/SHADOW-INDEXES.md).** Five things must land before any type reaches `proven`: adjudicate the 330-row Capability block · move the **scope predicate** into the registry beside `derivation_stage` · settle the 38 planned STORY-INDEX rows · give the store `vp.status` and a withdrawn-in-place representation · story 4 before `cycles/INDEX`. | Per stage: **shadow** = generated alongside the authored form, every disagreement a finding ✅ **DONE for BC/VP/STORY-INDEX**; **proven** = they agree, `fa render` writes it, the authored one still diffed; **retired** = the authored one deleted. Final: the 4-way BC count disagreement is structurally impossible and `fa`'s 7 `count` findings are zero. |
 | **8** | **Retire `delta-archive`.** Load 211 rivetry sidecars as historical versions of their `source_file`, verify the reconstructed sequence, then delete. | Version count per source artifact equals archived-entry count + live entries; **gated by a count assertion, because this is the only place some versions exist**. |
 | **9** | **Retire `input-hash`.** 3,890 files. Replace with derived staleness from `inputs` + history. | `fa` reports staleness for every artifact with `inputs`; no `PENDING-RECOMPUTE` sentinel remains. |
 | **10** | **Materialise filename-only keys.** `bc_id` (2,362 files) and `vp_id` (215) exist only in filenames. | Every record carries its key as data; `path` becomes a derived UNIQUE column. |
