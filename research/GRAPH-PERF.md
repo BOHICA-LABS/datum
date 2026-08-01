@@ -127,6 +127,45 @@ diff then read as "everything is new". Fixed with a ref probe before building �
 now `fa` failing (exit **2**) — plus a guard that errors if no artifact universe resolves at
 all. Pinned by `TestBuildGraphRejectsBadRef`.
 
+## ⭐ The hypothesis test that changed the plan
+
+Betweenness existed for one reason: a claim that the adversary's propagation misses cluster
+on high-betweenness nodes. Before building sampled/parallel Brandes to make it scale, that
+claim was tested — measuring the alternatives to a lever before pulling it.
+
+**Method.** An artifact is FLAGGED if its id appears in the statement / location / defect text
+of any of the 2,138 extracted F-\* findings. AUC = P(a flagged artifact outranks an unflagged
+one); 0.5 is no signal. 231 flagged artifacts against 2,190 unflagged.
+
+| measure | AUC | flagged mean | unflagged mean | cost |
+|---|---|---|---|---|
+| **degree** | **0.871** | 18.2 | 1.66 | **O(E), free** |
+| `PageRankSparse` | 0.843 | 0.00204 | 0.000241 | 16 ms @ 24k |
+| `Betweenness` | **0.725** | 80.2 | 1.69 | **~52 s @ 24k** |
+
+**Betweenness is the WORST of the three predictors and roughly 3,000× the cost.** All three
+carry real signal (well above 0.5), but the cheapest measure predicts best.
+
+**Consequences, and they are large:**
+- Sampled Brandes, parallel Brandes and Brandes-over-CSR come **off the critical path**.
+  Betweenness stays opt-in for research; nothing ships depending on it.
+- **`degree` is promoted into the default metrics** — always computed, since it is free.
+- CSR is still needed at 250k+, but now for **memory** (3.1 GB → ~10 MB) and general
+  traversal speed, not to rescue one algorithm. Much smaller scope.
+
+⚠ **Caveat, because the decision is robust but the explanation is not.** The proxy is "the id
+is mentioned in a finding", and well-connected artifacts get discussed more in general, so
+degree's advantage is partly tautological. That weakens *"centrality predicts risk"* as a
+causal claim. It does **not** weaken *"betweenness is not worth 52 seconds"*, which holds
+under any reading of the confound. The honest statement is: we know what NOT to build; we do
+not yet know that centrality is a risk signal.
+
+Reproduce:
+```sh
+fa graph centrality --db <store> > /tmp/cent.csv    # every node, all three measures
+# then the AUC computation in the session log against registry/fstar_findings.json
+```
+
 ## Reproduce
 
 ```sh

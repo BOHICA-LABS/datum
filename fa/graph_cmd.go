@@ -91,6 +91,10 @@ func cmdGraph(ctx context.Context, args []string) error {
 			BetweennessMaxNodes: *betwMax, Seed: *seed})
 		el := time.Since(t0)
 		fmt.Printf("graph  %d nodes · %d edges   metrics computed in %s\n", m.Nodes, m.Edges, el.Round(time.Millisecond))
+		fmt.Printf("\nDEGREE (O(E) — the best measured predictor of adversary-flagged artifacts, AUC 0.871)\n")
+		for _, x := range m.Degree {
+			fmt.Printf("  %12.0f  %s\n", x.Score, x.Key)
+		}
 		if m.BetweennessSkipped != "" {
 			fmt.Printf("\nBETWEENNESS  skipped — %s\n", m.BetweennessSkipped)
 		} else {
@@ -114,6 +118,40 @@ func cmdGraph(ctx context.Context, args []string) error {
 		fmt.Printf("\nCOMMUNITIES (Louvain, seeded) %d of size>1 — mismatch vs declared subsystem is the signal\n", len(m.Communities))
 		for _, c := range m.Communities[:min(len(m.Communities), 10)] {
 			fmt.Printf("  size %4d  dominant subsystem %-8s\n", c.Size, orDash(c.DominantSubsystem))
+		}
+		return nil
+
+	case "centrality":
+		// Dumps EVERY node's scores so the "does centrality predict findings?" hypothesis
+		// can be tested outside the binary. Degree is included because it is O(E) and would
+		// make the whole betweenness problem moot if it predicts as well.
+		fs := flag.NewFlagSet("graph centrality", flag.ExitOnError)
+		db := fs.String("db", defaultDB(), "store root")
+		betw := fs.Bool("betweenness", true, "include betweenness (expensive)")
+		betwMax := fs.Int("betweenness-max", 1<<30, "node bound for betweenness")
+		_ = fs.Parse(rest)
+		p, err := openProjection(ctx, *db, "")
+		if err != nil {
+			return err
+		}
+		m := p.ComputeMetrics(MetricsOpts{Top: 0, Betweenness: *betw, BetweennessMaxNodes: *betwMax})
+		bt := map[string]float64{}
+		for _, x := range m.Betweenness {
+			bt[x.Key.String()] = x.Score
+		}
+		pr := map[string]float64{}
+		for _, x := range m.PageRank {
+			pr[x.Key.String()] = x.Score
+		}
+		deg := p.Degrees()
+		fmt.Println("node,type,betweenness,pagerank,degree")
+		var keys []NodeKey
+		for k := range p.ids {
+			keys = append(keys, k)
+		}
+		sortNodeKeys(keys)
+		for _, k := range keys {
+			fmt.Printf("%s,%s,%g,%g,%d\n", k.Key, k.Type, bt[k.String()], pr[k.String()], deg[k])
 		}
 		return nil
 

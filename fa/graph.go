@@ -117,6 +117,29 @@ func (p *Projection) Dangling() []NodeKey {
 	return out
 }
 
+// Degrees is total degree per node. O(E) and effectively free — included because if it
+// predicts the adversary's findings as well as betweenness does, the entire O(V*E) problem
+// is moot. Measuring the alternative before optimising the lever.
+func (p *Projection) Degrees() map[NodeKey]int {
+	out := make(map[NodeKey]int, len(p.ids))
+	sg := p.Simple()
+	for k, id := range p.ids {
+		n := 0
+		for it := sg.From(id); it.Next(); {
+			n++
+		}
+		for it := sg.To(id); it.Next(); {
+			n++
+		}
+		out[k] = n
+	}
+	return out
+}
+
+func sortNodeKeys(k []NodeKey) {
+	sort.Slice(k, func(i, j int) bool { return k[i].String() < k[j].String() })
+}
+
 // Simple returns a COLLAPSED single-edge view. Most centrality algorithms require it.
 // The collapse is lossy and named as such: parallel link types become one edge.
 func (p *Projection) Simple() *simple.DirectedGraph {

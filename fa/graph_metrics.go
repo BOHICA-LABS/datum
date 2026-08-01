@@ -153,6 +153,10 @@ type Metric struct {
 }
 
 type Metrics struct {
+	// Degree is FIRST because it is the best predictor measured and costs O(E).
+	// See research/GRAPH-PERF.md: AUC 0.871 at predicting which artifacts the adversary
+	// flags, versus 0.843 for PageRank and 0.725 for betweenness — which costs ~3,000x more.
+	Degree []Metric
 	// BetweennessSkipped says WHY betweenness is absent, if it is. Never silent.
 	BetweennessSkipped string
 	Communities   []Community
@@ -195,11 +199,25 @@ const defaultBetweennessMaxNodes = 5000
 
 // ComputeMetrics runs the algorithms that earn their place.
 //
-// A WARNING THAT BELONGS NEXT TO THE NUMBERS: centrality means "structurally central", NOT
-// "important". It is seductive and easy to over-read. The reason to compute it here is a
-// testable hypothesis — that the adversary's propagation-miss findings cluster on
-// high-centrality nodes — and until that is checked against real findings these scores are
-// a research output, not a signal to act on.
+// THE HYPOTHESIS WAS TESTED AND BETWEENNESS LOST. The reason betweenness was built was a
+// claim that the adversary's propagation misses cluster on high-betweenness nodes. Measured
+// against 2,138 extracted findings (AUC = P(a flagged artifact outranks an unflagged one)):
+//
+//	degree       0.871   O(E), free          <- BEST
+//	pagerank     0.843   16 ms at 24k nodes
+//	betweenness  0.725   ~52 s at 24k nodes  <- WORST, and ~3,000x the cost
+//
+// So the cheap measures predict BETTER. Betweenness stays opt-in for research and is off
+// the critical path; degree and PageRankSparse are the shipped signals.
+//
+// CAVEAT, because the decision is robust but the causal story is not: the proxy is "the
+// artifact id is mentioned in a finding", and well-connected artifacts get discussed more in
+// general, so degree's edge is partly tautological. That undermines "centrality predicts
+// risk" as an explanation; it does NOT undermine "betweenness is not worth 52 seconds",
+// which holds under any reading.
+//
+// And the standing warning still applies: centrality means "structurally central", NOT
+// "important".
 func (p *Projection) ComputeMetrics(opts MetricsOpts) *Metrics {
 	if opts.BetweennessMaxNodes == 0 {
 		opts.BetweennessMaxNodes = defaultBetweennessMaxNodes
@@ -213,6 +231,14 @@ func (p *Projection) ComputeMetrics(opts MetricsOpts) *Metrics {
 		m.ByType[k.Type]++
 	}
 	s := p.Simple()
+
+	// Degree centrality: O(E) and the BEST predictor measured of adversary-flagged
+	// artifacts (AUC 0.871). Computed always, because it is effectively free.
+	for k, d := range p.Degrees() {
+		if d > 0 {
+			m.Degree = append(m.Degree, Metric{k, float64(d)})
+		}
+	}
 
 	// Betweenness: how often a node sits on shortest paths between others. Hypothesis:
 	// these are where propagation misses happen (module-criticality, the four indexes,
@@ -251,7 +277,11 @@ func (p *Projection) ComputeMetrics(opts MetricsOpts) *Metrics {
 	}
 	byScore(m.Betweenness)
 	byScore(m.PageRank)
+	byScore(m.Degree)
 	if top > 0 {
+		if len(m.Degree) > top {
+			m.Degree = m.Degree[:top]
+		}
 		if len(m.Betweenness) > top {
 			m.Betweenness = m.Betweenness[:top]
 		}
