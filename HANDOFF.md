@@ -426,7 +426,7 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 
 ```
 Resume the dolt-artifact-spike in ~/Dev/scrap/dolt-artifact-spike (local-only git, NO remote,
-clean at 6341ab2).
+clean at d564f36; the work itself is 902da9d..6341ab2).
 
 READ FIRST — ONLY THESE FOUR:
   1. HANDOFF.md TOP BLOCK              (7 commits, the 4 settled doors, 5 self-corrections)
@@ -453,13 +453,13 @@ REBUILD AND RE-VERIFY (the 148 MB binary is gitignored):
 REFERENCE CORPORA — LOCAL and READ-ONLY. DO NOT WRITE until the standard is agreed:
   ~/Dev/vsdd-factory/.factory   (pin 0aaba144)   ~/Dev/prism/.factory   (95b90d003)
   ~/Dev/rivetry/.factory        (2aea395)
-  ⚠ prism is ACTIVELY WORKED BY ANOTHER SESSION (its corpus advanced 20 files at 09:34-19:18
-  and 24 more at ~23:42-23:46 on 2026-07-31, none of it from this work). All numbers here were
-  measured at the pins above, so RE-RUN measure_types.py + observe.py before trusting a prism
-  count. vsdd-factory and rivetry were static throughout.
   ~/Dev/vsdd-factory/plugins/vsdd-factory/templates/            # the 81 document_types
   ~/Dev/vsdd-factory/plugins/vsdd-factory/config/artifact-path-registry.yaml   # the OTHER 46
   gh issue view 671 -R drbothen/vsdd-factory                    # unanswered; see below
+  ⚠ prism is ACTIVELY WORKED BY ANOTHER SESSION (its corpus advanced 20 files at 09:34-19:18
+    and 24 more at ~23:42-23:46 on 2026-07-31, NONE of it from this work). Every number here
+    was measured at the pins above, so RE-RUN measure_types.py + observe.py before trusting
+    any prism count. vsdd-factory and rivetry were static throughout.
 
 TASK — in this order, because the F-* measurement set it:
   1. STORY 7: make the indexes DERIVED via shadow -> prove equal -> retire. Worth 25.3% +/-9.1
