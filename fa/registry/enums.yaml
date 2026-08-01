@@ -349,6 +349,86 @@ enums:
           place in one. Migration DELETES it after verifying the store carries the
           same information. See `delta-archive`.
 
+  # ── Reference currency: the axis #671 was actually policing ─────────────────
+  pin_policy:
+    description: >
+      HOW a reference resolves to a VERSION of its target. Taken from #671, whose
+      `validate-index-cite-refresh` exists solely to police version cites like
+      `per BC-INDEX v1.25` by hand-rolled string scanning.
+      THE POINT: the same syntax carries opposite verdicts depending on this field.
+      `ARCH-INDEX` citing `BC-INDEX v1.25` when current is v1.26 is a DEFECT; a pass-74
+      review citing `BC-INDEX v1.25` is CORRECT — it reviewed that version. Without
+      declaring the policy, a prose extractor cannot tell them apart and manufactures
+      findings against correct history, which is the same trap as the BC-1.12.008
+      renumbering (PROBE-CYCLES §5).
+    closed: true
+    values:
+      floating:
+        note: >
+          MUST resolve to the target's current version. A lagging cite is a finding.
+          Correct for indexes citing indexes, and for any live claim of currency.
+      pinned:
+        note: >
+          Cites a SPECIFIC version deliberately. Lagging is EXPECTED and is NOT a finding.
+          Correct for reviews, findings, checkpoints and archived entries — anything that
+          records what it saw. A pinned ref whose target VERSION NEVER EXISTED is still a
+          finding.
+      as_of:
+        note: >
+          Resolve at the CITING document's own version, through id_alias. The default for
+          traceability links: BC-1.12.008 was legitimately renumbered to BC-3.05.004, so a
+          flat existence check against today's corpus is wrong.
+
+  # ── Derived-artifact migration: the `generate -> prove -> retire` ladder ────
+  derivation_stage:
+    description: >
+      Taken from #671's sequencing tail (observe -> query -> advise -> enforce -> generate
+      -> retire). An `authority: derived` type cannot simply be FLIPPED to derived: if the
+      generator is subtly wrong, hand-maintained drift is replaced by generated drift AND
+      the evidence is deleted. The corpus asserts FOUR different BC totals, so the first
+      diffs are expected to be informative rather than clean. Every derived type therefore
+      declares which stage it is in, and advances only on evidence.
+    closed: true
+    values:
+      shadow:
+        note: >
+          Generate alongside the hand-maintained artifact. Do not write it. Every
+          disagreement is a finding. This is where every derived type starts.
+        exit: "the generated form and the authored form agree for N consecutive cycles"
+      proven:
+        note: >
+          They agree. The generated form is written by `fa render`; the authored one is
+          still present and still diffed, so a regression is visible.
+        exit: "one full cycle at `proven` with zero diffs, and the ratchet at zero"
+      retired:
+        note: >
+          The hand-maintained artifact is deleted. Only the generated form exists, and it
+          cannot disagree with its source because it IS its source.
+    default_stage: shadow
+
+  # ── Where enforcement happens ──────────────────────────────────────────────
+  enforcement_point:
+    description: >
+      Taken from #671, which puts its gate in `factory-dispatcher` hooks rather than in CI.
+      This is not a detail: CI catches drift AFTER the fact, when the authoring agent's
+      context is gone, so it reports rather than shapes. A write-time hook refuses the bad
+      write while the agent can still fix it — and it reuses an enforcement surface that
+      already exists instead of building a new one. It also explains how the drift got this
+      far: the path registry CLAIMS to block unregistered paths, yet 151 prism files sit in
+      4 undeclared specs/ subdirectories.
+    closed: true
+    values:
+      ci:
+        note: "`fa validate --registry` in a CI job. Reports; cannot prevent."
+      write:
+        note: "a PreToolUse hook calling `fa`. Refuses the write. The only point that shapes behaviour."
+      both:
+        note: "write-time refusal plus a CI backstop for anything written outside the hook (git, editors, other tooling)."
+    default_point: both
+    rule: >
+      A type at `enforcement_level: block` MUST be enforced at `write` or `both`. A `block`
+      level enforced only in CI is a contradiction: the write already happened.
+
   # ── Gate wiring ─────────────────────────────────────────────────────────────
   gate_severity:
     description: What a violation of this type's declared schema costs.

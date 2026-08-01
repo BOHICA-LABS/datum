@@ -49,6 +49,22 @@ type TypeSpec struct {
 	EnforcementLevel string            `yaml:"enforcement_level"`
 	PendingTemplate  bool              `yaml:"pending_template"`
 	Evidence         string            `yaml:"evidence"`
+	// DerivationStage is #671's generate -> prove equal -> retire ladder. A derived type is
+	// never FLIPPED to derived: if the generator is subtly wrong, hand-maintained drift is
+	// replaced by generated drift and the evidence is gone.
+	DerivationStage  string            `yaml:"derivation_stage"`
+	EnforcementPoint string            `yaml:"enforcement_point"`
+}
+
+// LinkType declares what a reference may point at AND how it resolves to a VERSION.
+// pin_policy is taken from #671: the same syntax carries opposite verdicts depending on it.
+type LinkType struct {
+	Targets       []string `yaml:"targets"`
+	Cardinality   string   `yaml:"cardinality"`
+	PinPolicy     string   `yaml:"pin_policy"`
+	SymmetricWith string   `yaml:"symmetric_with"`
+	CarriesVersion bool    `yaml:"carries_version"`
+	Note          string   `yaml:"note"`
 }
 
 type Defaults struct {
@@ -56,6 +72,7 @@ type Defaults struct {
 	Optional            []string `yaml:"optional"`
 	DerivedNeverAuthored []string `yaml:"derived_never_authored"`
 	Forbidden           []string `yaml:"forbidden"`
+	EnforcementPoint    string   `yaml:"enforcement_point"`
 	ShapeOverrides      map[string]struct {
 		Required []string `yaml:"required"`
 	} `yaml:"shape_overrides"`
@@ -64,6 +81,7 @@ type Defaults struct {
 type Registry struct {
 	Version         int                  `yaml:"version"`
 	Defaults        Defaults             `yaml:"defaults"`
+	LinkTypes       map[string]*LinkType `yaml:"link_types"`
 	Types           map[string]*TypeSpec `yaml:"types"`
 	GapTypes        map[string]*TypeSpec `yaml:"gap_types"`
 	RetiredTypes    map[string]struct {
@@ -201,6 +219,33 @@ func (b *RegistryBundle) RequiredFor(ts *TypeSpec) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// EnforcementPointFor is the type's enforcement point, falling back to the global default.
+// A type at enforcement_level: block enforced only in CI is a contradiction — the write has
+// already happened — and IsContradictoryEnforcement reports exactly that.
+func (b *RegistryBundle) EnforcementPointFor(ts *TypeSpec) string {
+	if ts.EnforcementPoint != "" {
+		return ts.EnforcementPoint
+	}
+	if b.Reg.Defaults.EnforcementPoint != "" {
+		return b.Reg.Defaults.EnforcementPoint
+	}
+	return "both"
+}
+
+func (b *RegistryBundle) IsContradictoryEnforcement(ts *TypeSpec) bool {
+	return ts.EnforcementLevel == "block" && b.EnforcementPointFor(ts) == "ci"
+}
+
+// PinPolicyFor returns how a link resolves to a version. An UNDECLARED policy defaults to
+// as_of, deliberately: as_of can under-report, but it cannot manufacture a finding against
+// a correct historical document, which floating would.
+func (b *RegistryBundle) PinPolicyFor(link string) string {
+	if lt, ok := b.Reg.LinkTypes[link]; ok && lt != nil && lt.PinPolicy != "" {
+		return lt.PinPolicy
+	}
+	return "as_of"
 }
 
 // CheckEnum classifies a value against a declared enum.

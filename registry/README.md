@@ -12,6 +12,7 @@ throughout; nothing outside this directory was modified.
 | `CHANGE-MANAGEMENT.md` | the ADR to open, the policy to register, 13 stories, the per-type graduation ladder, 7 sequencing hazards |
 | `validate_registry.py` | the gate. Checks the registry's own completeness, then the corpora's conformance to it |
 | `measure_types.py` · `observe.py` | the measurement passes everything is derived from |
+| `fstar_compare.py` · `fstar_hand_sample.json` | #671's exit criterion, run: extraction + the hand-classified sample behind the 40/22/38 split |
 | `types_measured.json` · `types_observed.json` · `template_schemas.json` | measured output, regenerable |
 
 ```sh
@@ -66,6 +67,17 @@ gate rather than a claim.
    own POLICY-22) and `input-hash` (3,890 files — a hand-maintained content hash whose own
    archive text admits it reports "spurious DRIFT").
 
+## Taken from #671
+
+Four things, each machine-checked by `validate_registry.py` (checks 1j–1m) and by Go tests:
+
+| | where |
+|---|---|
+| **`generate -> prove equal -> retire`** — a derived type is never *flipped* | `derivation_stage` on all **23** derived types, all starting at `shadow` |
+| **Write-time enforcement**, not only CI | `enforcement_point` (default `both`); a `block` type enforced only in CI is now rejected as a contradiction |
+| **Version-pinned citations** — same syntax, opposite verdicts | `pin_policy` on all **23** link types, plus `index_cite` (floating) / `reviewed_version` (pinned) and the `version_cite` prose kind |
+| **`impact`** — the reverse closure | `query_verbs`, with a declared "how to add a verb" path |
+
 ## Corrections this work made to its own inputs
 
 - **"~12 legacy spellings"** → 181, with a singleton-dominated tail that changes the strategy.
@@ -95,4 +107,5 @@ Kept as a record, because a registry that was never run is a wish list.
 | full spine required of `config`/`blob` shapes | `policies.yaml` correctly carries no `status`; now a `shape_override` |
 | `complexity` bound to an enum on no evidence | guessing dressed as a schema. Left unbound and marked unmeasured |
 | one `registry_namespace_defect` boolean for THREE defects | overstated the namespace disagreement as **17** when it is **2**. Now `namespace_status: name_disagreement \| path_missing \| template_missing`, and the validator checks each kind separately |
+| `link_types` held a rules LIST beside entry MAPS | untypeable in Go: `LoadRegistry` errored, a test discarded the error, and a schema-parse failure surfaced as a **nil dereference**. Hoisted to `link_rules`; tests no longer discard the load error. A schema only one of two readers can parse is the exact defect this file exists to prevent |
 | a regex that matched flag lines belonging to LATER type blocks | silently mis-assigned 17 of 17 `namespace_status` values while parsing cleanly. Fixed with block-scoped editing; caught by printing the resulting groups instead of trusting the edit |

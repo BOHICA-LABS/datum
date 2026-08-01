@@ -132,6 +132,17 @@ defaults:
     rather than as a per-file authoring defect. This is also why the id must move INTO the
     store: while it lives only in the path, the 1,852 measured renames are silent identity
     changes.
+  enforcement_point: both
+  # TAKEN FROM #671, which puts its gate in factory-dispatcher hooks rather than in CI.
+  # Not a detail: CI catches drift AFTER the fact, when the authoring agent's context is
+  # gone, so it REPORTS rather than SHAPES. A PreToolUse hook refuses the write while the
+  # agent can still fix it, and it reuses an enforcement surface that already exists.
+  # It also explains how the drift got this far: artifact-path-registry.yaml's own header
+  # claims "the hook always blocks writes to .factory/ paths that match NO entry", yet 151
+  # prism files sit in 4 undeclared specs/ subdirectories. A claimed hook that does not run
+  # is worth less than no hook, because it is trusted.
+  # CONSTRAINT (enums.yaml): a type at enforcement_level: block MUST be enforced at `write`
+  # or `both`. `block` enforced only in CI is a contradiction — the write already happened.
   shape_overrides:
     config:         {required: [document_type], note: "policies.yaml / release-config.yaml carry no status or producer, correctly"}
     blob-with-path: {required: [document_type], note: "opaque bytes; fa models the path, not the content"}
@@ -158,31 +169,61 @@ defaults:
 # grep-over-everything, or every reference resolves trivially and the check proves
 # nothing.
 link_types:
+  # `pin_policy` is TAKEN FROM #671 and is the field that makes version cites checkable.
+  # See enums.yaml: floating (must be current) · pinned (deliberately historical) ·
+  # as_of (resolve at the citing document's own version). Declaring it per link type is
+  # what stops a prose extractor reporting a correct historical citation as drift.
   traces_to:
     targets: [capability, domain_invariant, nfr, fr, adr, behavioral-contract, verification-property, epic, prd]
     cardinality: list
-    resolution: as_of        # resolve through id_alias at the document's own version
-  verified_by:      {targets: [verification-property], cardinality: list, resolution: as_of}
-  behavioral_contracts: {targets: [behavioral-contract], cardinality: list, resolution: as_of}
-  verification_properties: {targets: [verification-property], cardinality: list, resolution: as_of}
-  depends_on:       {targets: [story], cardinality: list, resolution: as_of, symmetric_with: blocks}
-  blocks:           {targets: [story], cardinality: list, resolution: as_of, symmetric_with: depends_on}
-  supersedes:       {targets: [adr], cardinality: list, resolution: as_of, symmetric_with: superseded_by}
-  superseded_by:    {targets: [adr], cardinality: scalar, resolution: as_of, symmetric_with: supersedes}
-  subsystems:       {targets: [subsystem], cardinality: list}
-  subsystems_affected: {targets: [subsystem], cardinality: list}
-  epic_id:          {targets: [epic], cardinality: scalar}
-  story_id:         {targets: [story], cardinality: scalar}
-  capability:       {targets: [capability], cardinality: scalar}
-  prd_capabilities: {targets: [capability], cardinality: list}
-  prd_requirements: {targets: [fr, nfr], cardinality: list}
-  inputs:           {targets: [any_artifact], cardinality: list, note: "feeds derived staleness"}
-  previous_review:  {targets: [adversarial-review], cardinality: scalar, resolution: as_of}
-  source_bc:        {targets: [behavioral-contract], cardinality: scalar, resolution: as_of}
-  module:           {targets: [module], cardinality: scalar}
-  screens:          {targets: [ux-spec-screen], cardinality: list}
-  replacement:      {targets: [behavioral-contract, verification-property], cardinality: scalar}
-  rules:
+    pin_policy: as_of        # resolve through id_alias at the document's own version
+  verified_by:      {targets: [verification-property], cardinality: list, pin_policy: as_of}
+  behavioral_contracts: {targets: [behavioral-contract], cardinality: list, pin_policy: as_of}
+  verification_properties: {targets: [verification-property], cardinality: list, pin_policy: as_of}
+  depends_on:       {targets: [story], cardinality: list, pin_policy: as_of, symmetric_with: blocks}
+  blocks:           {targets: [story], cardinality: list, pin_policy: as_of, symmetric_with: depends_on}
+  supersedes:       {targets: [adr], cardinality: list, pin_policy: as_of, symmetric_with: superseded_by}
+  superseded_by:    {targets: [adr], cardinality: scalar, pin_policy: as_of, symmetric_with: supersedes}
+  subsystems:       {targets: [subsystem], cardinality: list, pin_policy: floating}
+  subsystems_affected: {targets: [subsystem], cardinality: list, pin_policy: as_of}
+  epic_id:          {targets: [epic], cardinality: scalar, pin_policy: floating}
+  story_id:         {targets: [story], cardinality: scalar, pin_policy: floating}
+  capability:       {targets: [capability], cardinality: scalar, pin_policy: floating}
+  prd_capabilities: {targets: [capability], cardinality: list, pin_policy: as_of}
+  prd_requirements: {targets: [fr, nfr], cardinality: list, pin_policy: as_of}
+  inputs:           {targets: [any_artifact], cardinality: list, pin_policy: floating, note: "feeds derived staleness"}
+  previous_review:  {targets: [adversarial-review], cardinality: scalar, pin_policy: pinned}
+  source_bc:        {targets: [behavioral-contract], cardinality: scalar, pin_policy: as_of}
+  module:           {targets: [module], cardinality: scalar, pin_policy: floating}
+  screens:          {targets: [ux-spec-screen], cardinality: list, pin_policy: floating}
+  replacement:      {targets: [behavioral-contract, verification-property], cardinality: scalar, pin_policy: floating}
+  # ── the version-cite links #671 exists to police ───────────────────────────
+  index_cite:
+    targets: [behavioral-contract-index, verification-property-index, story-index, architecture-index]
+    cardinality: list
+    pin_policy: floating
+    carries_version: true
+    note: >
+      An INDEX citing a sibling INDEX's version (`per BC-INDEX v1.25`). floating, so a lag
+      IS a finding — measured: `ARCH-INDEX cite "per BC-INDEX v1.25" lags actual v1.26`.
+      This is the 4-index version-cite ledger that `validate-index-cite-refresh` polices by
+      string scanning today, and the reason #671 was written.
+  reviewed_version:
+    targets: [any_artifact]
+    cardinality: list
+    pin_policy: pinned
+    carries_version: true
+    note: >
+      What a review/finding/checkpoint SAW. pinned, so lag is CORRECT and must never be
+      reported. Same syntax as index_cite, opposite verdict — which is exactly why the
+      policy has to be declared rather than inferred from the text.
+
+# Rules that apply to ALL link types. Hoisted out of `link_types` because a rules LIST
+# sitting beside entry MAPS made the block untypeable — Go's map[string]*LinkType could not
+# unmarshal it, and the failure surfaced as a nil dereference in a test that had discarded
+# the error. A schema that only one of two readers can parse is the defect this file exists
+# to prevent.
+link_rules:
     - "A link field holds IDs ONLY. Measured violations `fa validate` already reports:
        16 `VP.scope is multi-valued`, 8 `VP.bcs holds an id plus prose`, 7 `VP.bcs value
        is not an id`, 4 `story.functional_requirements not an id`, 2 `bc.replacement
@@ -190,6 +231,58 @@ link_types:
     - "A symmetric_with pair is stored ONCE and the reverse direction is DERIVED. The 58
        `direction` findings in fa's baseline are one class with one fix: store a single
        dependency direction, not 58 corrected entries."
+    - "A link that `carries_version: true` is checked against its pin_policy, NEVER against
+       today's corpus alone. floating + lagging = finding. pinned + lagging = correct.
+       pinned + a version that NEVER EXISTED = finding in either case, and that check is
+       only possible because the store keeps history."
+    - "A pin_policy MUST be declared. An undeclared policy defaults to `as_of`, which is
+       the SAFE default: it can under-report, but it cannot manufacture a finding against a
+       correct historical document."
+
+# ── Query verbs: the agent-facing surface ────────────────────────────────────
+# Settled by measurement, not preference (STANDARDIZATION §4): SQL already does every hard
+# part — recursive CTEs for cycle detection and transitive closure (26,130 paths), a
+# whole-corpus 4-hop rollup in 3 ms, FULLTEXT over 1,959 bodies in 0.15 s. So the question
+# was never the language, it is WHO QUERIES HOLDING WHAT. An LLM composing joins across 25
+# tables returns plausible-but-wrong answers with NO error — the exact failure class this
+# project exists to eliminate. Agents therefore get named verbs with stable JSON output:
+# testable contracts, gateable per zone, stable across schema change.
+#
+# Accepted cost: every new question needs a new verb. That is a feature — it forces each
+# query to be named, tested and baselined — but it needs an explicit "how to add a verb"
+# path or people route around it via `fa sql`.
+query_verbs:
+  built:
+    count:    "records and derived counts, never stored"
+    validate: "every gate as a query, incl. the registry gate"
+    doctor:   "store health: writable (not merely openable), unmerged, schema, imported"
+  phase_2:
+    get:      {returns: "one artifact by key", note: "the base case"}
+    trace:    {returns: "the forward closure from an artifact", note: "what does this touch"}
+    coverage: {returns: "verification coverage per BC/subsystem", note: "measured: 90.2% of BCs have no verifying VP"}
+    history:  {returns: "every version of one key", note: "dolt_history_*; retires delta-archive's 211 hand-rotated files"}
+    asof:     {returns: "the corpus as of a commit/date", note: "what makes a pinned cite checkable"}
+    diff:     {returns: "a unified diff between two versions", note: "~50 lines over from_body/to_body; the PR review surface"}
+    impact:
+      returns: "the REVERSE closure — every artifact that must change if this one changes"
+      taken_from: "#671"
+      why: >
+        TAKEN FROM #671, and the verb the adversary actually needs. `trace`/`coverage`
+        answer "what does this touch"; `impact` answers the inverse, which is the question
+        behind the propagation misses the adversary keeps reporting: a VP count widened in
+        one place and not its three siblings; `module-criticality` updated without
+        `verification-coverage-matrix`; "F-P27-005 closure incomplete — VP-INDEX harmonized,
+        source VP files NOT updated". Every one of those is a missing reverse-closure query.
+      note: >
+        Cheap here and expensive in #671's design: the reverse closure is one recursive CTE
+        over the edge table, where an in-memory graph rebuilt per invocation must re-parse
+        the whole corpus to answer it.
+    waves:    {returns: "the wave schedule derived from story.wave + depends_on", taken_from: "#671"}
+  how_to_add_a_verb: >
+    A verb enters by: a named entry here, a declared JSON output schema, a test with a
+    fixture corpus, and a baseline entry if it produces findings. `fa sql --read-only`
+    stays available for exploration precisely so nobody has to fake a verb to ask a
+    one-off question.
 
 # ── Namespace reconciliation (story 1) ───────────────────────────────────────
 # artifact-path-registry.yaml declares 46 `artifact_type` names; this file declares the
@@ -299,6 +392,15 @@ prose_ref_kinds:
   decision: {pattern: 'D-\d+',      scope: cycle, owner_types: [cycle-decision-log, burst-log]}
   lesson:  {pattern: 'L-[A-Za-z0-9]*-?\d+', scope: cycle, owner_types: [lessons-learned]}
   policy:  {pattern: 'POL(?:ICY)?[- ]\d+', scope: project, owner_types: [policies]}
+  version_cite:
+    pattern: '(?:per|see|against)\s+([A-Z-]+(?:-INDEX)?(?:\.md)?)\s+v(\d+\.\d+)'
+    scope: project
+    owner_types: [any_artifact]
+    carries_version: true
+    pin_policy_from: link_type   # index_cite -> floating · reviewed_version -> pinned
+    note: >
+      TAKEN FROM #671. The prose form of a version cite. Extracting it is only safe once
+      pin_policy is declared, which is why this kind exists here and not in the first cut.
 
 prose_ref_rules:
   - id: exclude-code-spans
@@ -321,11 +423,24 @@ prose_ref_rules:
       A count field is scoped to its declared section. MEASURED: `finding_count: 0` is
       CORRECT in a document whose `### O-001` headings sit under "Part B — Observations
       (non-finding)", so a body-wide count manufactures a false finding.
+  - id: pin-policy-decides-the-verdict
+    rule: >
+      A version cite is judged by its link's pin_policy, not by whether it matches today.
+      floating + lagging is a finding; pinned + lagging is CORRECT and reporting it is the
+      checker's defect. Measured evidence on both sides: `ARCH-INDEX cite "per BC-INDEX
+      v1.25" lags actual v1.26` is a real finding, while a pass-74 review citing the
+      4-index state it reviewed is not.
+  - id: pinned-to-a-version-that-never-existed
+    rule: >
+      Regardless of pin_policy, a cite naming a version the target never had IS a finding.
+      This check requires HISTORY, so it is one a markdown-only checker cannot make — the
+      clearest case where the store earns its keep over #671's rehydrate-per-invocation graph.
   - id: report-unresolvable-separately
     rule: >
       An id that cannot be resolved because its OWNER is unstated is reported as
       `unresolvable`, never as `dangling`. Collapsing the two is how a prose extractor
       produces a large, confident, wrong finding set.
+
 
 # ── Section schema policy ─────────────────────────────────────────────────────
 section_policies:
@@ -411,6 +526,7 @@ types:
       shard names, and shard names differ per project while `section` does not.
 
   domain-spec-index:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: spec
     profile: core
     shape: document
@@ -539,6 +655,7 @@ types:
       totals, both of which are consequences of hand-maintained derived data.
 
   behavioral-contract-index:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     namespace_status: template_missing
     family: spec
     profile: core
@@ -563,6 +680,7 @@ types:
       derived artifact it simply stops existing.
 
   behavioral-contract-id-mapping:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     namespace_status: template_missing
     family: spec
     profile: core
@@ -606,6 +724,7 @@ types:
       those 33 findings mechanically detectable rather than a matter of taste.
 
   verification-property-index:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     namespace_status: template_missing
     family: spec
     profile: core
@@ -699,6 +818,7 @@ types:
       without it the type cannot be told apart from its siblings.
 
   architecture-index:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: architecture
     profile: core
     shape: document
@@ -781,6 +901,7 @@ types:
       the dangling count is a floor.
 
   story-index:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: delivery
     profile: core
     shape: document
@@ -796,6 +917,7 @@ types:
     notes: "THE most-churned file in the corpus after STATE.md: 381 commits. Derived."
 
   story-id-mapping:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     namespace_status: template_missing
     family: delivery
     profile: core
@@ -832,6 +954,7 @@ types:
       stories, because there is nothing to disagree with.
 
   epic-index:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: delivery
     profile: core
     shape: document
@@ -844,6 +967,7 @@ types:
     evidence: "template epic-index-template.md; 0 typed files (prism has 1 `epic-registry`)"
 
   wave-schedule:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: delivery
     profile: core
     shape: document
@@ -921,6 +1045,7 @@ types:
       false finding.
 
   adversarial-review-index:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: review
     profile: core
     shape: document
@@ -1114,6 +1239,7 @@ types:
     evidence: "template implementation-readiness-template.md; 0 typed files"
 
   findings-tracker:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: review
     profile: core
     shape: document
@@ -1256,6 +1382,7 @@ types:
       carries them — a declared schema nothing enforces, which is this project in one line.
 
   spec-changelog:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: ledger
     profile: core
     shape: append-only-event
@@ -1290,6 +1417,7 @@ types:
     notes: "`cycle_id` is the anchor the whole cycles/ tree keys on — 189 plugin files embed cycles/ paths."
 
   cycle-index:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     namespace_status: template_missing
     family: cycle
     profile: core
@@ -1385,6 +1513,7 @@ types:
       projects, so presence is a profile decision, not a core one.
 
   holdout-scenario-index:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: verification
     profile: core
     shape: document
@@ -1418,6 +1547,7 @@ types:
     notes: "One of the two genuine dedup cases in the 81 (the other is traceability-matrix)."
 
   evaluation-summary:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: verification
     profile: core
     shape: document
@@ -1432,6 +1562,7 @@ types:
     notes: "Aggregate of holdout-evaluation rows. Derived."
 
   evaluation-index:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: verification
     profile: core
     shape: document
@@ -1458,6 +1589,7 @@ types:
     evidence: "0 typed canonical files; vsdd has 1 `convergence-record` + 1 `adversarial-convergence-record`, prism 1 `gate-convergence-report`"
 
   convergence-trajectory:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: verification
     profile: core
     shape: append-only-event
@@ -1596,6 +1728,7 @@ types:
       demos (2) vs demo-recordings (1) — CROSS-CORPUS §4. Canonical dir: demo-evidence/.
 
   release-notes:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: delivery
     profile: core
     shape: document
@@ -1754,6 +1887,7 @@ types:
       before it was declared, which [1b] caught.
 
   research-index:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: research
     profile: core
     shape: document
@@ -1770,6 +1904,7 @@ types:
   # corpus. This is the product-variation claim discharged: rivetry needed no new
   # vocabulary for its UX specs, only a profile that declares it uses them.
   ux-spec-index:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: ux
     profile: ui
     shape: document
@@ -1821,6 +1956,7 @@ types:
     evidence: "n=20, rivetry only. `wireframe` is a PATH to an asset -> see ui-asset (blob-with-path)."
 
   traceability-matrix:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: verification
     profile: core
     shape: document
@@ -1925,6 +2061,7 @@ types:
     evidence: "declared by the path registry (wave-state.yaml); no template document_type"
 
   regression-state:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     family: state
     profile: core
     shape: config
@@ -2410,6 +2547,7 @@ gap_types:
     evidence: "9 prism files: audit-report 3, audit 1, architecture-audit 1, consistency-audit 1, consistency-audit-report 1, audit-table 1 (vsdd), architect-audit 2"
 
   merge-result:
+    derivation_stage: shadow    # generate -> prove equal -> retire (#671's tail); never flipped straight to derived
     profile: core
     shape: record
     authority: derived

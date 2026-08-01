@@ -385,3 +385,105 @@ func TestGateCountsMigrationItemsNotFindings(t *testing.T) {
 		t.Errorf("a conformant BC must produce zero findings, got %v", rep.Findings)
 	}
 }
+
+// ── the four things taken from #671 ──────────────────────────────────────────
+// Each is asserted here so it cannot silently regress out of the registry.
+
+// #3 pin_policy: the same version-cite syntax carries OPPOSITE verdicts depending on it.
+func TestPinPolicyDeclaredForEveryLink(t *testing.T) {
+	b, err := LoadRegistry("")
+	if err != nil {
+		t.Fatalf("registry does not load: %v", err) // never discard this: a parse failure
+	} //                                                otherwise surfaces as a nil deref
+	legal := map[string]bool{"floating": true, "pinned": true, "as_of": true}
+	if len(b.Reg.LinkTypes) == 0 {
+		t.Fatal("no link_types parsed")
+	}
+	for name, lt := range b.Reg.LinkTypes {
+		if lt == nil {
+			continue
+		}
+		if lt.PinPolicy == "" {
+			t.Errorf("link_type %q declares no pin_policy — a version cite through it is unjudgeable", name)
+			continue
+		}
+		if !legal[lt.PinPolicy] {
+			t.Errorf("link_type %q has illegal pin_policy %q", name, lt.PinPolicy)
+		}
+	}
+	// The pair that makes the point: identical syntax, opposite verdict.
+	if got := b.PinPolicyFor("index_cite"); got != "floating" {
+		t.Errorf("index_cite must be floating (a lagging index cite IS a finding), got %q", got)
+	}
+	if got := b.PinPolicyFor("reviewed_version"); got != "pinned" {
+		t.Errorf("reviewed_version must be pinned (a review citing what it saw is CORRECT), got %q", got)
+	}
+	// An undeclared link must default to as_of: it can under-report, but it cannot
+	// manufacture a finding against a correct historical document.
+	if got := b.PinPolicyFor("no-such-link"); got != "as_of" {
+		t.Errorf("an undeclared link must default to as_of, got %q", got)
+	}
+}
+
+// #1 every derived type carries a migration stage; none is FLIPPED to derived.
+func TestDerivedTypesDeclareAStage(t *testing.T) {
+	b, err := LoadRegistry("")
+	if err != nil {
+		t.Fatalf("registry does not load: %v", err)
+	}
+	legal := map[string]bool{"shadow": true, "proven": true, "retired": true}
+	derived := 0
+	for name, ts := range b.allTypes {
+		if ts == nil {
+			continue
+		}
+		if ts.Authority == "derived" {
+			derived++
+			if ts.DerivationStage == "" {
+				t.Errorf("%q is authority: derived with no derivation_stage — it would be flipped, not migrated", name)
+			} else if !legal[ts.DerivationStage] {
+				t.Errorf("%q has illegal derivation_stage %q", name, ts.DerivationStage)
+			}
+		} else if ts.DerivationStage != "" {
+			t.Errorf("%q declares a derivation_stage but is not authority: derived", name)
+		}
+	}
+	if derived < 20 {
+		t.Errorf("expected the full derived set (indexes, counts, changelogs), got %d", derived)
+	}
+	// The four highest-churn indexes in the corpus MUST start in shadow: flipping
+	// BC-INDEX (218 commits) or STORY-INDEX (381) straight to derived would replace
+	// hand-maintained drift with generated drift and delete the evidence.
+	for _, n := range []string{"behavioral-contract-index", "story-index", "architecture-index", "verification-property-index"} {
+		ts := b.allTypes[n]
+		if ts == nil {
+			t.Fatalf("%q missing", n)
+		}
+		if ts.DerivationStage != "shadow" {
+			t.Errorf("%q must start at shadow, got %q", n, ts.DerivationStage)
+		}
+	}
+}
+
+// #2 a `block` type enforced only in CI is a contradiction: the write already happened.
+func TestBlockIsNeverCIOnly(t *testing.T) {
+	b, err := LoadRegistry("")
+	if err != nil {
+		t.Fatalf("registry does not load: %v", err)
+	}
+	if b.Reg.Defaults.EnforcementPoint == "" {
+		t.Fatal("defaults.enforcement_point is undeclared")
+	}
+	for name, ts := range b.allTypes {
+		if ts != nil && b.IsContradictoryEnforcement(ts) {
+			t.Errorf("%q is enforcement_level: block but enforced only in CI", name)
+		}
+	}
+	// and the helper must actually detect it
+	if !b.IsContradictoryEnforcement(&TypeSpec{EnforcementLevel: "block", EnforcementPoint: "ci"}) {
+		t.Error("IsContradictoryEnforcement failed to detect block+ci")
+	}
+	if b.IsContradictoryEnforcement(&TypeSpec{EnforcementLevel: "advisory", EnforcementPoint: "ci"}) {
+		t.Error("advisory+ci is not a contradiction")
+	}
+}

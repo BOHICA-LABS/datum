@@ -161,8 +161,6 @@ def part1(reg, enums, al, observed):
     universes = {"capability", "domain_invariant", "nfr", "fr", "subsystem", "module", "any_artifact"}
     linkbad = []
     for ln, spec in reg["link_types"].items():
-        if ln == "rules":
-            continue
         for tgt in (spec or {}).get("targets", []):
             if tgt not in canon and tgt not in gaps and tgt not in universes:
                 linkbad.append((ln, tgt))
@@ -215,6 +213,83 @@ def part1(reg, enums, al, observed):
               f"remain — {nr.get('exit_criterion','')}")
     else:
         print(f"       EXIT CRITERION MET: zero name disagreements")
+
+    # 1j every link type must declare a pin_policy (#671's version-cite axis)
+    legal_pin = set(enums["enums"]["pin_policy"]["values"])
+    nopin, badpin = [], []
+    for ln, spec in reg["link_types"].items():
+        if not isinstance(spec, dict):
+            continue
+        pp = spec.get("pin_policy")
+        if not pp:
+            nopin.append(ln)
+        elif pp not in legal_pin:
+            badpin.append((ln, pp))
+    for ln in nopin:
+        findings.append(("pin-policy-missing",
+                         f"link_type '{ln}' declares no pin_policy — a version cite through it is unjudgeable"))
+    for ln, pp in badpin:
+        findings.append(("pin-policy-illegal", f"link_type '{ln}' has pin_policy '{pp}'"))
+    carries = [ln for ln, sp in reg["link_types"].items()
+               if isinstance(sp, dict) and sp.get("carries_version")]
+    if not (reg.get("link_rules") or []):
+        findings.append(("link-rules-missing", "link_rules is empty — the ID-only and pin-policy rules are load-bearing"))
+    print(f"[1j] link types                          : {len(legal_pin)} legal pin policies · "
+          f"{len(nopin)} missing · {len(carries)} carry a version ({', '.join(carries)})")
+
+    # 1k every derived type must declare a derivation_stage (#671's generate->prove->retire)
+    legal_stage = set(enums["enums"]["derivation_stage"]["values"])
+    nostage, badstage, wrongly = [], [], []
+    for t, sp in allrows.items():
+        sp = sp or {}
+        st = sp.get("derivation_stage")
+        if sp.get("authority") == "derived":
+            if not st:
+                nostage.append(t)
+            elif st not in legal_stage:
+                badstage.append((t, st))
+        elif st:
+            wrongly.append(t)
+    for t in nostage:
+        findings.append(("derivation-stage-missing",
+                         f"'{t}' is authority: derived but declares no derivation_stage — it would be FLIPPED, not migrated"))
+    for t, st in badstage:
+        findings.append(("derivation-stage-illegal", f"'{t}' has derivation_stage '{st}'"))
+    for t in wrongly:
+        findings.append(("derivation-stage-misapplied",
+                         f"'{t}' declares a derivation_stage but is not authority: derived"))
+    stages = collections.Counter((allrows[t] or {}).get("derivation_stage")
+                                 for t in allrows if (allrows[t] or {}).get("authority") == "derived")
+    print(f"[1k] derived types                       : {sum(stages.values())} staged · "
+          f"{len(nostage)} unstaged · stages {dict(stages)}")
+
+    # 1l enforcement point: `block` enforced only in CI is a contradiction
+    legal_pt = set(enums["enums"]["enforcement_point"]["values"])
+    gp = reg["defaults"].get("enforcement_point")
+    if gp not in legal_pt:
+        findings.append(("enforcement-point-illegal", f"defaults.enforcement_point '{gp}' is not declared"))
+    bad_block = []
+    for t, sp in allrows.items():
+        sp = sp or {}
+        pt = sp.get("enforcement_point", gp)
+        if sp.get("enforcement_level") == "block" and pt == "ci":
+            bad_block.append(t)
+    for t in bad_block:
+        findings.append(("enforcement-point-contradiction",
+                         f"'{t}' is enforcement_level: block but enforced only in CI — the write already happened"))
+    print(f"[1l] enforcement point                   : default '{gp}' · "
+          f"{len(bad_block)} block-in-CI contradiction(s)")
+
+    # 1m the verb catalogue: impact must exist, and every verb needs a purpose
+    verbs = reg.get("query_verbs") or {}
+    built, ph2 = verbs.get("built") or {}, verbs.get("phase_2") or {}
+    if "impact" not in ph2 and "impact" not in built:
+        findings.append(("verb-missing", "no `impact` verb — the reverse closure the adversary's propagation misses need"))
+    if not verbs.get("how_to_add_a_verb"):
+        findings.append(("verb-no-growth-path",
+                         "the verb catalogue has no declared 'how to add a verb' path, so people will route around it"))
+    print(f"[1m] query verbs                          : {len(built)} built · {len(ph2)} phase-2 · "
+          f"impact {'declared' if 'impact' in ph2 or 'impact' in built else 'MISSING'}")
 
     # 1i mass accounting: is every observed FILE covered?
     tot = sum(sum(c.values()) for c in observed.values())
