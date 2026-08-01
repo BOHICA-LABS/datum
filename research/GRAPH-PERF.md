@@ -1,0 +1,140 @@
+---
+title: GRAPH-PERF — the knowledge-graph projection, and the speed claims it refuted
+date: 2026-07-31
+purpose: measure the projection rather than extrapolate from operation counts, and record what the measurement changed
+method: Go benchmarks over synthetic graphs matching the live corpus's SHAPE at 1x / 10x / 100x, plus the live corpus end to end
+status: two of my three performance claims were WRONG. Both are fixed; the design changed as a result.
+hardware: M-series Mac, 16 logical cores, Go 1.26.5
+---
+
+# The projection, measured
+
+## What I claimed, and what is true
+
+| claim | verdict | measured |
+|---|---|---|
+| "Betweenness is O(V·E) ≈ 3.5M ops: single-digit milliseconds" | **WRONG** | **236 ms** at 2.4k nodes |
+| "There is no performance problem at current scale" | **holds** | full metrics suite **73 ms** by default |
+| "…and probably none at 10×" | **WRONG** | **52.2 s** at 24k nodes — 106× for a 10× node count |
+
+The third one is the consequential error. An operation count is not a runtime, and "probably
+fine at 10×" is exactly the kind of consequence-from-a-structural-fact this project has a
+standing rule against. Betweenness is now **opt-in and bounded**.
+
+## Per-algorithm cost at live scale (2,400 nodes / ~3,200 edges)
+
+| algorithm | cost | scaling to 10× |
+|---|---|---|
+| `topo.TarjanSCC` | 0.8 ms | fine |
+| collapse to `simple` | 1.6 ms | fine |
+| `articulationPoints` (hand-rolled) | 5.0 ms | 59 ms |
+| `community.Modularize` (Louvain) | 20 ms | — |
+| `network.PageRankSparse` | **1.1 ms** | 16 ms |
+| `network.PageRank` (dense) | **218 ms** | would allocate ~4.6 GB |
+| `network.Betweenness` | **236 ms** | **~52 s** |
+
+## The bug benchmarking found
+
+**gonum's `network.PageRank` builds a dense V×V matrix.** At 2,400 nodes that is 5.76M
+float64 — measured **47 MB allocated per call**. At 24,000 nodes it is 576M entries, roughly
+**4.6 GB**. Our graph is sparse (4,060 edges over 2,421 nodes), so the correct call is
+`PageRankSparse`:
+
+| | time | allocated |
+|---|---|---|
+| `PageRank` dense, 2,400 nodes | 218 ms | 47.4 MB |
+| `PageRankSparse`, 2,400 nodes | **1.1 ms** | **1.1 MB** |
+| `PageRankSparse`, 24,000 nodes | 16 ms | 10.9 MB |
+
+**197× faster and 43× less memory**, for identical output on a sparse graph. Nothing in the
+design review would have caught this — only running it did.
+
+## Whole-projection cost, live corpus (2,421 nodes · 4,060 edges)
+
+| | before | after |
+|---|---|---|
+| `fa graph metrics` (default) | 577 ms | **73 ms** |
+| `fa graph metrics --betweenness` | — | 322 ms |
+| projection build alone | 85 ms | 85 ms |
+
+Both fixes contribute: sparse PageRank, and betweenness off unless asked for.
+
+## Scaling, 1× → 100×
+
+Synthetic graphs matching the corpus's **shape** — a few hubs with high in-degree plus a long
+tail — not uniform random graphs, because betweenness cost is very sensitive to structure and
+a random graph would have flattered the numbers.
+
+| | 1× (2.4k) | 10× (24k) | 100× (240k) |
+|---|---|---|---|
+| projection build | 3.3 ms | 37.8 ms | 643 ms |
+| `Waves` (topological layering) | 2.8 ms | 45.7 ms | 710 ms |
+| `articulationPoints` | 5.4 ms | 58.8 ms | 980 ms |
+| full metrics **with** betweenness | 493 ms | **52.2 s** | not run — extrapolates to ~1.5 h |
+
+Everything except betweenness is **linear-ish and fine to 100×**. Betweenness is the sole
+superlinear cost, and the 100× figure is deliberately marked as an extrapolation rather than
+measured — the point of this document is not to repeat the mistake it records.
+
+`SectionsLossless` (D-A's partition, which runs over every markdown body on every import):
+**156 µs for a 200-section document, 54 MB/s**. Not a bottleneck.
+
+## What the measurements changed in the code
+
+1. **`PageRank` → `PageRankSparse`.** 197×.
+2. **Betweenness is opt-in** (`--betweenness`) and **refuses above 5,000 nodes** with a
+   message naming the measurement, rather than hanging. It is *refused*, never silently
+   skipped: a metrics report that quietly dropped its most expensive column would be
+   indistinguishable from one where nothing was central.
+3. **Louvain is seeded** (`--seed`, default 1). It is randomised; an unseeded run returns
+   different communities every invocation, which would make it useless as a gate.
+
+## Correctness, not just speed
+
+`articulationPoints` is **hand-rolled**, because an earlier design note of mine claimed
+`topo.BiconnectedComponents` exists in gonum. **It does not** — gonum v0.17.0's `topo` package
+offers `ConnectedComponents`, `TarjanSCC`, `Sort`, `DirectedCyclesIn`, `KCore`,
+`BronKerbosch` and no biconnectivity at all. So it is Hopcroft–Tarjan DFS lowlink, iterative
+rather than recursive (a recursive DFS over a 100k-node projection would blow the stack), and
+pinned by **7 tests whose answers are worked out by hand**: path-of-3, triangle, bowtie, star,
+disconnected pairs, path-of-4, triangle-plus-tail — plus a 500-node pure cycle to prove it
+terminates and reports no cut vertices. An unverified graph algorithm returning a
+plausible-looking list is worse than not having one.
+
+## Live corpus results (2,421 nodes · 4,060 edges)
+
+- **0 strongly connected components of size > 1** — no dependency cycles anywhere, which is
+  why the wave schedule exists at all.
+- **148 stories in 16 waves**, derived from `depends_on` by longest-path layering (a plain
+  topological *order* would let a story sit in the same wave as its own dependency).
+- **50 articulation points** — artifacts whose removal disconnects the traceability graph,
+  including `BC-1.12.002`, `BC-1.12.003`, `E-12`, `E-14`, `S-1.02`, `S-1.05`.
+- **11 Louvain communities** of size > 1, the largest dominated by SS-05 (649) and SS-06 (581).
+- Top betweenness is all **stories** (`S-2.08` at 4,183); top PageRank is all **subsystems**
+  (`SS-06`, `SS-05`). Two differently-biased views, as intended.
+
+⚠ **The edge count is 4,060, not the 1,509 quoted elsewhere.** Different extraction rules, and
+both are correct: 1,509 counts frontmatter *reference* edges, while the projection also
+materialises `bc → subsystem` (1,959) and `bc → capability` as edges. Stating the rule because
+an unexplained second number is how the corpus ended up asserting four different BC totals.
+
+## A second silent failure, caught
+
+`fa graph diff --from no-such-ref` originally reported **`nodes 0 → 2421 (+2421 added)`** and
+exited 0. Cause: `BuildGraph` tolerates a missing table (phase 1 does not populate every
+universe), and that tolerance turned an unresolvable ref into an *empty* projection, which
+diff then read as "everything is new". Fixed with a ref probe before building — a bad ref is
+now `fa` failing (exit **2**) — plus a guard that errors if no artifact universe resolves at
+all. Pinned by `TestBuildGraphRejectsBadRef`.
+
+## Reproduce
+
+```sh
+cd fa
+CGO_ENABLED=1 go test -tags gms_pure_go -run XXX -bench 'BenchmarkAlgorithmsSeparately' -benchtime 3x ./...
+CGO_ENABLED=1 go test -tags gms_pure_go -run XXX -bench 'BenchmarkPageRankDenseVsSparse' -benchmem -benchtime 3x ./...
+CGO_ENABLED=1 go test -tags gms_pure_go -run XXX -bench 'BenchmarkWaves|BenchmarkArticulation|BenchmarkProjectionBuild' -benchtime 3x ./...
+CGO_ENABLED=1 go test -tags gms_pure_go -run XXX -bench 'BenchmarkBetweenness' -benchtime 1x -timeout 60m ./...   # ~53 s
+```
+
+54 tests · 7 benchmarks · no network · no `dolt` binary.

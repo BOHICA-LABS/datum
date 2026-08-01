@@ -256,6 +256,8 @@ query_verbs:
     count:    "records and derived counts, never stored"
     validate: "every gate as a query, incl. the registry gate"
     doctor:   "store health: writable (not merely openable), unmerged, schema, imported"
+    waves:    "topological wave schedule from story depends_on — longest-path layering, refuses on a cycle"
+    graph:    "build | metrics | dot | diff over the gonum projection (see research/GRAPH-PERF.md)"
   phase_2:
     get:      {returns: "one artifact by key", note: "the base case"}
     trace:    {returns: "the forward closure from an artifact", note: "what does this touch"}
@@ -277,7 +279,8 @@ query_verbs:
         Cheap here and expensive in #671's design: the reverse closure is one recursive CTE
         over the edge table, where an in-memory graph rebuilt per invocation must re-parse
         the whole corpus to answer it.
-    waves:    {returns: "the wave schedule derived from story.wave + depends_on", taken_from: "#671"}
+    # `waves` and `impact` moved: waves is BUILT (above); impact stays phase 2 and stays in
+    # SQL, because reverse closure is one recursive CTE and the projection would add nothing.
   how_to_add_a_verb: >
     A verb enters by: a named entry here, a declared JSON output schema, a test with a
     fixture corpus, and a baseline entry if it produces findings. `fa sql --read-only`

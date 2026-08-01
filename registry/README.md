@@ -78,6 +78,25 @@ Four things, each machine-checked by `validate_registry.py` (checks 1j–1m) and
 | **Version-pinned citations** — same syntax, opposite verdicts | `pin_policy` on all **23** link types, plus `index_cite` (floating) / `reviewed_version` (pinned) and the `version_cite` prose kind |
 | **`impact`** — the reverse closure | `query_verbs`, with a declared "how to add a verb" path |
 
+## The knowledge-graph projection
+
+The Dolt store IS the knowledge graph; `fa/graph*.go` projects it into gonum so the
+algorithms SQL cannot express become available. Measured, not asserted — see
+[research/GRAPH-PERF.md](../research/GRAPH-PERF.md).
+
+```sh
+fa waves                                   # 148 stories in 16 waves, 0 cycles
+fa graph build                             # 2,421 nodes · 4,060 edges in 85 ms
+fa graph metrics                           # 73 ms default; --betweenness for the O(V*E) one
+fa graph dot --scope subsystem | dot -Tsvg
+fa graph diff --from HEAD                  # what a rehydrate-per-run graph cannot do
+```
+
+Two performance claims of mine were refuted by benchmarking them: betweenness is 236 ms at
+live scale (not "single-digit milliseconds") and **52 s at 10x** (not "probably fine"). It is
+now opt-in and bounded. And gonum's dense `PageRank` allocates 47 MB per call on a sparse
+graph — `PageRankSparse` is **197x faster**. Default `graph metrics` went 577 ms -> 73 ms.
+
 ## Corrections this work made to its own inputs
 
 - **"~12 legacy spellings"** → 181, with a singleton-dominated tail that changes the strategy.

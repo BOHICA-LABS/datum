@@ -36,6 +36,8 @@ usage: fa <command> [flags]
       --registry <corpus>      include the registry gate's findings in the baseline
   count                      record counts, derived — never stored
   doctor                     store health: writable, unmerged, schema, imported
+  waves                      wave schedule, derived from story depends_on (topological)
+  graph build|metrics|dot|diff   knowledge-graph projection + algorithms SQL cannot do
   aggregate plan             staging-ref quarantine policy (phase 2 plumbing pending)
   version
 
@@ -66,6 +68,10 @@ func main() {
 		err = cmdDoctor(ctx, os.Args[2:])
 	case "aggregate":
 		err = cmdAggregate(ctx, os.Args[2:])
+	case "graph":
+		err = cmdGraph(ctx, os.Args[2:])
+	case "waves":
+		err = cmdWaves(ctx, os.Args[2:])
 	case "version":
 		fmt.Printf("fa %s (schema v%d, embedded dolthub/driver/v2)\n", faVersion, schemaVersion)
 	case "-h", "--help", "help":
