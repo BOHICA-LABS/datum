@@ -278,7 +278,74 @@ stories, a policy with `enforced_by` — not a unilateral rewrite.
 
 ---
 
-## 8. The next action
+## 8. Disposition of issue #671 (`factory-graph`) — an ALTERNATIVE design exists
+
+Recorded because it is an **open, unbuilt proposal by another author on the same repo**
+that attacks the same problem, and a session that doesn't know it exists will duplicate or
+contradict it.
+
+**[#671](https://github.com/drbothen/vsdd-factory/issues/671)** — *"Proposal:
+`factory-graph` — derived traceability graph rehydrated from `.factory/` markdown to
+eliminate identifier cite drift"*. Open since 2026-07-16, author `Zious11`, **zero
+comments, nothing built** (there is no `factory-graph` crate in `crates/`). It is the only
+graph/traceability proposal in the tracker.
+
+**What it proposes:** an in-tree **Rust crate** that rehydrates an in-memory `petgraph`
+from `.factory/` on every invocation — frontmatter via Serde, **body prose via
+`pulldown-cmark`** — with **no database at all**. Then a query CLI for agents, advisory →
+blocking dispatcher hooks, and finally the four INDEX files become
+`factory-graph generate-indexes` output. Sequencing principle: *observe → query → advise →
+enforce → generate → retire.*
+
+**It explicitly evaluated and REJECTED Dolt:** *"Git semantics but SQL, binary prolly-tree
+storage (not git-diffable), no GraphQL."* Thesis: *"a standalone database dehydrated into
+git would create a second replica of data that already lives in git — replicas needing
+sync are precisely the current failure mode."*
+
+| its claim | assessment |
+|---|---|
+| "not git-diffable" | **TRUE**, and the spike agrees — it is exactly why `fa render` and `fa diff` matter (§5) |
+| "no GraphQL" | true and irrelevant; #671 itself says *"No GraphQL server is required"* |
+| "a second replica needing sync" | **does not apply to phase 1 as built** — `fa`'s store is rebuilt from files per run and thrown away, the same lifecycle as its in-memory graph. The objection bites at the **authority inversion**, not here |
+
+**A hard constraint decides more than the design debate does:** #671 wants an in-tree Rust
+crate consumed by `factory-dispatcher` hooks. **Dolt has no C API and no Rust bindings**
+([dolt#8953](https://github.com/dolthub/dolt/issues/8953) open); only DoltLite is
+embeddable from Rust, and it is a different engine and on-disk format. So if the thing must
+live in the Rust workspace inside dispatcher hooks, `fa`'s access path is **structurally
+unavailable** to it.
+
+**Scope it covers that `fa` does not** — and this is most of its value claim:
+**body-prose references** (`ADR-NNN §Decision N`, `file.rs::test_fn`, BC version cells
+copied into story tables), **composite sub-artifact IDs** (`AC-NNN`, `PC-N`, `EC-NNN` —
+file-scoped, not globally unique), the **4-index version-cite ledger**, generated indexes,
+`impact` and `waves`.
+
+**Evidence it contributes, which independently corroborates this whole project's premise:**
+E-19 reached **adversarial pass 29 with a 0/3 clean streak**, nearly all findings citation
+misalignment rather than behaviour; **POLICY 5 has been extended six times**
+(META-LEVEL 31→36) trying to fix cite drift with prose rules; and
+`validate-index-cite-refresh` exists *solely* to police the 4-index version-cite ledger via
+hand-rolled string scanning. Its conclusion — *"nothing actually parses the reference
+graph"* — is the same one CROSS-CORPUS reaches from vocabulary drift.
+
+**DISPOSITION under the new vision: they are a FORK IN THE ROAD, not complements.** #671 is
+derived-data-only and keeps markdown authoritative **forever**; the vision has `fa` own the
+artifacts. Both cannot be true. Before the vision changed they were arguably complementary
+(#671 validates the present, `fa` remembers the past); now a choice is required, and the
+choice has been made in `fa`'s favour — so #671 should be answered on the issue rather than
+left open and silently contradicted.
+
+**One thing from #671 still worth doing regardless, and NOT yet done:** its phase-1 exit
+criterion is *"reproduces known F-* findings from recent adversarial passes without
+hand-tuning."* `fa` reproduced the prototype's 82 findings rule-for-rule and found 71 more,
+but **has never been checked against the F-* findings from those adversarial passes**. That
+comparison is cheap and decides whether a frontmatter-only parser is sufficient or whether
+the prose-reference extraction #671 insists on is where the real drift lives.
+
+---
+
+## 9. The next action
 
 Build the type registry: seed from the 81 (**dedup first**), cross-check against **actual
 usage in vsdd-factory AND prism AND rivetry** — never vsdd alone, it is the outlier — and

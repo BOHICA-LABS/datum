@@ -238,12 +238,21 @@ session; keep it that way until the standard is agreed.
    which locate the BC-total drift in **SS-03 (states 53, actual 56), SS-05 (656 vs
    655), SS-08 (214 vs 218)**. The 58 `direction` findings are ONE class — fix by
    storing a single dependency direction, not by editing 58 entries.
-5. **Extract prose-embedded references** — now much better priced: needs code-span
+5. **Run #671's unmet exit criterion** (cheap, decides item 6's scope): check `fa`'s 153
+   findings against the **F-\* findings from recent adversarial passes**. `fa` reproduced
+   the prototype's 82 rule-for-rule and found 71 more, but has NEVER been compared to the
+   F-\* findings — which is #671's own phase-1 gate (*"reproduces known F-* findings
+   without hand-tuning"*). It answers whether a frontmatter-only parser suffices or whether
+   prose-reference extraction is where the real drift lives. See
+   [`research/STANDARDIZATION.md`](research/STANDARDIZATION.md) §8 for the full disposition
+   of #671 — an OPEN, UNBUILT alternative design by another author that the new vision now
+   makes a fork in the road rather than a complement.
+6. **Extract prose-embedded references** — now much better priced: needs code-span
    exclusion, as-of (or alias) resolution, and per-id adjudication, or it manufactures
    false findings. The 41 legacy stories under `stories/v1.0-legacy/` have **no
    frontmatter at all** (prose `**Blocks:** S-2.8`), which is why the dangling count is
    a floor.
-6. **Phase 2 per SPEC §7**: the lease to `fa lease`, delete the `STATE.md` YAML lock.
+7. **Phase 2 per SPEC §7**: the lease to `fa lease`, delete the `STATE.md` YAML lock.
    That is where `fa aggregate`'s network plumbing lands, on top of the quarantine
    policy already implemented and tested in `fa/quarantine.go`.
 
