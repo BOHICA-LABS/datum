@@ -2,7 +2,10 @@ module fa
 
 go 1.26.2
 
-require github.com/dolthub/driver/v2 v2.2.0
+require (
+	github.com/dolthub/driver/v2 v2.2.0
+	go.yaml.in/yaml/v2 v2.4.2
+)
 
 require (
 	cel.dev/expr v0.25.1 // indirect

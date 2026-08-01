@@ -30,7 +30,10 @@ usage: fa <command> [flags]
   init                       create or upgrade the store (both zones)
   import <corpus>            shadow a markdown corpus into the store (idempotent)
   validate                   run the gates; fails on findings not in the baseline
+      --registry <corpus>      also run the artifact type registry gate on that corpus
+      --registry-dir <dir>     override the embedded registry YAML
   baseline write             record the current findings as the dated allowlist
+      --registry <corpus>      include the registry gate's findings in the baseline
   count                      record counts, derived — never stored
   doctor                     store health: writable, unmerged, schema, imported
   aggregate plan             staging-ref quarantine policy (phase 2 plumbing pending)
@@ -176,6 +179,8 @@ func cmdValidate(ctx context.Context, args []string) error {
 	strict := fs.Bool("strict", false, "fail on ANY finding, ignoring the baseline")
 	jsonOut := fs.String("json", "", "also write the full report as JSON to this path")
 	crossZone := fs.Bool("cross-zone", true, "run the cross-zone integrity pass (D2)")
+	regCorpus := fs.String("registry", "", "also run the artifact type registry gate over this .factory corpus")
+	regDir := fs.String("registry-dir", "", "override the embedded registry YAML (for iterating on the standard)")
 	_ = fs.Parse(args)
 
 	s, err := Open(ctx, *db, ZoneOpen, false)
@@ -201,6 +206,23 @@ func cmdValidate(ctx context.Context, args []string) error {
 		return err
 	}
 
+	// The registry gate is corpus-side: it checks whether artifacts DECLARE themselves
+	// correctly, where the gates above check whether the declared graph is CONSISTENT.
+	// Its findings join the same report so the one dated baseline covers both — two
+	// baselines for one gate would be exactly the drift this project exists to remove.
+	var regRep *RegistryReport
+	if *regCorpus != "" {
+		bundle, err := LoadRegistry(*regDir)
+		if err != nil {
+			return err
+		}
+		regRep, err = ValidateRegistry(bundle, *regCorpus)
+		if err != nil {
+			return err
+		}
+		rep.Findings = append(rep.Findings, regRep.Findings...)
+	}
+
 	var b *Baseline
 	if *baselinePath != "" {
 		b, err = LoadBaseline(*baselinePath)
@@ -209,6 +231,9 @@ func cmdValidate(ctx context.Context, args []string) error {
 		}
 	}
 	d := Compare(rep, b)
+	if regRep != nil {
+		PrintRegistryReport(os.Stdout, regRep)
+	}
 	PrintReport(os.Stdout, rep, b, d, *strict)
 
 	if *jsonOut != "" {
@@ -255,6 +280,8 @@ func cmdBaseline(ctx context.Context, args []string) error {
 	out := fs.String("out", "baseline.json", "where to write the allowlist")
 	corpus := fs.String("corpus", "", "corpus path, recorded for provenance")
 	date := fs.String("date", time.Now().UTC().Format("2006-01-02"), "the baseline date")
+	regCorpus := fs.String("registry", "", "also baseline the artifact type registry gate over this .factory corpus")
+	regDir := fs.String("registry-dir", "", "override the embedded registry YAML")
 	_ = fs.Parse(args[1:])
 
 	s, err := Open(ctx, *db, ZoneOpen, false)
@@ -270,6 +297,21 @@ func cmdBaseline(ctx context.Context, args []string) error {
 	rep, err := Validate(ctx, s, walled)
 	if err != nil {
 		return err
+	}
+	// The baseline MUST be able to cover the registry gate's findings, or the ratchet does
+	// not apply to them and `advisory -> warn -> block` has nothing to graduate on. Writing
+	// a baseline without --registry while validating WITH it would silently mark every
+	// registry finding as new on the next run.
+	if *regCorpus != "" {
+		bundle, err := LoadRegistry(*regDir)
+		if err != nil {
+			return err
+		}
+		regRep, err := ValidateRegistry(bundle, *regCorpus)
+		if err != nil {
+			return err
+		}
+		rep.Findings = append(rep.Findings, regRep.Findings...)
 	}
 	fp, _ := s.Str(ctx, "SELECT fingerprint FROM import_run ORDER BY fingerprint LIMIT 1")
 

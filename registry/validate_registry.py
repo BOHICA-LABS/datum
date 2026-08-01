@@ -37,9 +37,11 @@ FENCE = re.compile(r'^\s*(```|~~~)')
 
 
 def load():
-    reg = yaml.safe_load(open(os.path.join(HERE, "artifact-type-registry.yaml")))
-    enums = yaml.safe_load(open(os.path.join(HERE, "enums.yaml")))
-    al = yaml.safe_load(open(os.path.join(HERE, "aliases.yaml")))
+    RD = os.path.join(os.path.dirname(HERE), "fa", "registry")   # ONE canonical location:
+    # the YAML is embedded into the fa binary from there, so there is no second copy to drift.
+    reg = yaml.safe_load(open(os.path.join(RD, "artifact-type-registry.yaml")))
+    enums = yaml.safe_load(open(os.path.join(RD, "enums.yaml")))
+    al = yaml.safe_load(open(os.path.join(RD, "aliases.yaml")))
     return reg, enums, al
 
 
@@ -237,11 +239,25 @@ def part2(reg, enums, al):
                 block, body = fm_body(txt)
                 if block is None:
                     continue
-                fields = {}
+                # Parse keys AND block-style list continuations. Without the
+                # continuation handling, `behavioral_contracts:\n  - BC-x` reads as an
+                # empty value and the field is wrongly reported missing — which is exactly
+                # what the Go/Python parity diff caught on 7 link fields.
+                fields, order = {}, []
                 for line in block:
                     m = KEY.match(line)
                     if m:
-                        fields.setdefault(m.group(1), m.group(2).strip().strip('"\''))
+                        # strip trailing YAML comments: the corpus writes
+                        # `verification_properties: []  # [process-gap] ...`, and without
+                        # this the value reads as non-empty. Found by a Go/Python parity
+                        # diff that was off by exactly ONE file.
+                        v = re.sub(r'\s+#.*$', '', m.group(2)).strip().strip('"\'')
+                        fields.setdefault(m.group(1), v)
+                        order.append(m.group(1))
+                    elif order and re.match(r'^\s+-\s*\S', line):
+                        k = order[-1]
+                        if fields.get(k, "") == "":
+                            fields[k] = "[block-list]"
                 dt = fields.get("document_type")
                 if not dt:
                     continue
@@ -279,11 +295,15 @@ def part2(reg, enums, al):
                         continue                       # derived on write, not authored
                     if r in applied:
                         continue                       # the alias supplies it
-                    if r not in fields or fields[r] == "":
+                    # three states: absent / present-but-empty / present
+                    if r not in fields:
                         findings[f"missing-required:{r}"] += 1
                         per_corpus[corp]["missing-required"] += 1
                         if len(examples[f"missing-required:{r}"]) < 2:
                             examples[f"missing-required:{r}"].append(f"{corp}:{rel} ({resolved})")
+                    elif fields[r] in ("", "[]", "{}", "null", "~"):
+                        findings[f"empty-required:{r}"] += 1
+                        per_corpus[corp]["empty-required"] += 1
 
                 # forbidden / retired fields
                 for bad in forbidden | retired_fields:
