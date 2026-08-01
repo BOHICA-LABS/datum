@@ -45,6 +45,14 @@ files is not counting artifacts.
 
 **10 corpora have a populated behavioural-contract set.** All numbers below use those.
 
+**Full population, so nobody re-scans:** `~/Dev` holds **24** directories with a
+`.factory`. The 12 above are every one with >100 files. The other 12 are scaffolded and
+unused — `research-factory` 20 · `multi-repo` 17 · `thought-leadership` 13 ·
+`dpg_business` 10 · `scrap` 9 · `incident_response` 3 · `ot-ics-research` 3 · `test-sec` 3 ·
+`presentation-factory` 2 · `teach_me` 2 · `customer-problem-definition` 1 ·
+`dark-factory` 1. They carry no evidence either way, but they DO mean a standard would
+apply to ~24 projects, not 10.
+
 ## 2. The structural spine is SMALL
 
 Top-level `.factory/` directories, counting only **non-empty** ones:
