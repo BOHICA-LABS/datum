@@ -1,0 +1,844 @@
+# aliases.yaml — legacy `document_type` spellings -> canonical, with the field defaults
+# that preserve what the spelling was encoding. schema_version: 1
+#
+# WHY `set:` EXISTS AND WHY A RENAME MAP WOULD BE WRONG.
+# The 12 "adversarial review" spellings are not 12 mistakes. `local-adversary-review`,
+# `per-story-adversary-review`, `pr-level-security-review` and `gate-step-report` differ
+# by SCOPE; `pr-level-security-review` and `pr-level-pr-reviewer-review` differ ONLY by
+# REVIEWER. Renaming all of them to `adversarial-review` would silently destroy both
+# dimensions. Every alias therefore carries `set:` — the fields the old name was carrying
+# in its characters — and migration is a rename PLUS those fields, verified by a count
+# assertion per alias.
+#
+# SCOPE OF THIS FILE, stated because the input plan expected ~12 entries.
+# Measured: 181 distinct non-canonical values over 1,138 files. The distribution decides
+# the strategy:
+#     108 values appear exactly once ...........  108 files  ( 9.5% of the mass)
+#      48 values appear 2-5 times .............   131 files  (11.5%)
+#      13 values appear 6-20 times ............   116 files  (10.2%)
+#      10 values appear 21-100 times ..........   416 files  (36.6%)
+#       2 values appear >100 times ............   367 files  (32.2%)
+# So 12 values carry 783 of 1,138 files. This file aliases the HEAD (everything >=2
+# files, plus every singleton that is an obvious respelling of a canonical type). The
+# remaining singletons are NOT aliased: they are handled by the closed-enum gate, which
+# is the correct instrument for one-off invention. Aliasing 108 singletons would encode
+# the drift permanently under the appearance of fixing it.
+#
+# RETIREMENT. An alias is a MIGRATION AND HISTORY device, not a permanent tolerance.
+# Each entry carries `retire_after`, and history keeps resolving through it forever —
+# historical documents must stay valid (PROBE-CYCLES §5 found BC-1.12.008 was
+# LEGITIMATELY renumbered to BC-3.05.004, so a flat existence check against today's
+# corpus manufactures false findings against correct documents).
+
+version: 1
+retire_after_default: "the type's finding baseline reaches zero and enforcement_level is block"
+
+# ── The review family: 425 files, 11 spellings, one canonical type ────────────
+aliases:
+
+  adversarial-review-pass:
+    canonical: adversarial-review
+    set: {}
+    n: 156
+    corpora: {prism: 109, vsdd-factory: 47}
+    note: Pure respelling. `pass` is already a field, so the suffix carried nothing.
+
+  adversary-review:
+    canonical: adversarial-review
+    set: {}
+    n: 73
+    corpora: {vsdd-factory: 69, prism: 4}
+    note: >
+      The canonical spelling appears in 64 plugin files against this one's 1 — the
+      cleanest evidence that the standard already had an answer and nothing enforced it.
+
+  adversary-pass-report:
+    canonical: adversarial-review
+    set: {}
+    n: 63
+    corpora: {vsdd-factory: 28, prism: 35}
+
+  adversarial-review-report:
+    canonical: adversarial-review
+    set: {}
+    n: 46
+    corpora: {prism: 46}
+
+  adversarial-pass-report:
+    canonical: adversarial-review
+    set: {}
+    n: 42
+    corpora: {prism: 42}
+    note: Carries `verdict` on all 42 -> must be split per enums.yaml gate_result/convergence/severity_max.
+
+  adversary-pass:
+    canonical: adversarial-review
+    set: {}
+    n: 21
+    corpora: {vsdd-factory: 21}
+
+  local-adversary-review:
+    canonical: adversarial-review
+    set: {scope: story, reviewer_role: adversary}
+    n: 6
+    corpora: {vsdd-factory: 6}
+    note: >
+      `local-` WAS the scope. Carries diff_base/diff_head/streak/finding_count/
+      finding_breakdown, i.e. the richest review frontmatter measured — evidence that
+      the canonical type is under-specified, not that this one is deviant.
+
+  per-story-adversary-review:
+    canonical: adversarial-review
+    set: {scope: story, reviewer_role: adversary}
+    n: 6
+    corpora: {vsdd-factory: 6}
+
+  pr-adversary-pass-report:
+    canonical: adversarial-review
+    set: {scope: pr, reviewer_role: adversary}
+    n: 8
+    corpora: {prism: 8}
+
+  pr-level-pr-reviewer-review:
+    canonical: code-review
+    set: {scope: pr, reviewer_role: pr-reviewer}
+    n: 8
+    corpora: {prism: 8}
+    note: >
+      Differs from pr-level-security-review ONLY in reviewer_role. Two names for one
+      artifact shape is exactly the information a rename-only alias would lose.
+
+  pr-level-security-review:
+    canonical: security-review
+    set: {scope: pr, reviewer_role: security-reviewer}
+    n: 8
+    corpora: {prism: 8}
+
+  adversary-report:
+    canonical: adversarial-review
+    set: {}
+    n: 4
+    corpora: {prism: 4}
+
+  adversary-in-cycle-scan-report:
+    canonical: adversarial-review
+    set: {scope: cycle, reviewer_role: adversary}
+    n: 3
+    corpora: {rivetry: 3}
+
+  adversarial-pass-manifest:
+    canonical: adversarial-review-index
+    set: {}
+    n: 7
+    corpora: {rivetry: 7}
+    note: A per-pass rollup, not a review. Index, therefore derived.
+
+  pass-manifest:
+    canonical: adversarial-review-index
+    set: {}
+    n: 2
+    corpora: {rivetry: 2}
+
+  in-cycle-scan-report:
+    canonical: adversarial-review
+    set: {scope: cycle, reviewer_role: adversary}
+    n: 1
+    corpora: {rivetry: 1}
+
+  adversarial-review-rejected:
+    canonical: adversarial-review
+    set: {status: withdrawn}
+    n: 1
+    corpora: {prism: 1}
+    note: A LIFECYCLE STATE in a type name. The alias moves it to `status`.
+
+  adversarial-convergence-record:
+    canonical: convergence-report
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+
+  convergence-record:
+    canonical: convergence-report
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+
+  gate-convergence-report:
+    canonical: convergence-report
+    set: {scope: wave-gate}
+    n: 1
+    corpora: {prism: 1}
+
+  review-findings:
+    canonical: pr-review-findings
+    set: {}
+    n: 13
+    corpora: {prism: 9, vsdd-factory: 4}
+    note: >
+      THE SAME FILENAME review-findings.md carries the canonical AND the drifted spelling
+      in BOTH corpora, and collides 111x in prism / 34x in vsdd. Filename cannot
+      disambiguate; the composite key (story_id, pr_number) can.
+
+  review-report:
+    canonical: pr-review-findings
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+
+  pr-final-review:
+    canonical: code-review
+    set: {scope: pr, reviewer_role: pr-reviewer}
+    n: 1
+    corpora: {prism: 1}
+
+  pr-reviewer:
+    canonical: code-review
+    set: {scope: pr, reviewer_role: pr-reviewer}
+    n: 1
+    corpora: {prism: 1}
+    note: An AGENT NAME used as a document type.
+
+  code-review-report:
+    canonical: code-review
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+
+  security-triage:
+    canonical: security-review
+    set: {}
+    n: 2
+    corpora: {prism: 2}
+
+  security-delta-confirm:
+    canonical: security-review
+    set: {scope: pr}
+    n: 2
+    corpora: {prism: 2}
+
+  security-cosign-review:
+    canonical: security-review
+    set: {}
+    n: 1
+    corpora: {rivetry: 1}
+
+  security-cosign-tracking:
+    canonical: security-review
+    set: {}
+    n: 1
+    corpora: {rivetry: 1}
+
+  # ── Gate steps -> the wave-gate-report GAP type ─────────────────────────────
+  gate-step-report:
+    canonical: wave-gate-report
+    set: {scope: wave-gate}
+    n: 21
+    corpora: {prism: 21}
+    pending_template: true
+
+  gate-step-f-holdout-evaluation:
+    canonical: holdout-evaluation
+    set: {scope: wave-gate}
+    n: 6
+    corpora: {prism: 6}
+    note: Gate step F IS the holdout evaluation. The canonical type already exists and has zero files.
+
+  wave-gate-final-verdict:
+    canonical: wave-gate-report
+    set: {scope: wave-gate}
+    n: 1
+    corpora: {vsdd-factory: 1}
+    pending_template: true
+
+  wave-gate-compensating-controls:
+    canonical: wave-gate-report
+    set: {scope: wave-gate}
+    n: 1
+    corpora: {vsdd-factory: 1}
+    pending_template: true
+
+  # ── Indexes: the derived-authority cluster ──────────────────────────────────
+  bc-index:
+    canonical: behavioral-contract-index
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+    note: vsdd and prism spell the same file differently. Both resolve to one derived type.
+
+  vp-index:
+    canonical: verification-property-index
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+
+  epic-registry:
+    canonical: epic-index
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+
+  cycle-index:
+    canonical: cycle-index
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+    note: >
+      NOT drift against the standard — it is declared in artifact-path-registry.yaml and
+      absent from templates/. Listed here to make the two-namespace defect explicit in the
+      one file a migration script reads.
+
+  # ── Ledger spellings ───────────────────────────────────────────────────────
+  lessons:
+    canonical: lessons-learned
+    set: {}
+    n: 3
+    corpora: {vsdd-factory: 1, prism: 2}
+  cycle-lessons:
+    canonical: lessons-learned
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+  lessons-codification:
+    canonical: lessons-learned
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+  cycle-reflection:
+    canonical: lessons-learned
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+  cycle-decision-log:
+    canonical: cycle-decision-log
+    set: {}
+    n: 2
+    corpora: {vsdd-factory: 1}
+    note: Path-registry-declared, template-absent. Same two-namespace defect as cycle-index.
+  wave-cycle-decision:
+    canonical: cycle-decision-log
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+  decision-note:
+    canonical: cycle-decision-log
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+  session-resume-checkpoint:
+    canonical: session-checkpoints
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+  session-resume:
+    canonical: session-checkpoints
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+  session-handoff:
+    canonical: session-checkpoints
+    set: {}
+    n: 2
+    corpora: {prism: 1, rivetry: 1}
+  cycle-snapshot:
+    canonical: session-checkpoints
+    set: {}
+    n: 2
+    corpora: {prism: 1}
+  td-register-supplement:
+    canonical: tech-debt-register
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+  vsdd-plugin-tech-debt-register:
+    canonical: tech-debt-register
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    note: A PROJECT NAME in a type name — the register of a different project.
+
+  # ── Spec-side spellings ────────────────────────────────────────────────────
+  architecture-decision-record:
+    canonical: adr
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+    note: The type name spelled out in full, on a file already named ADR-023-*.md.
+  adr-amendment:
+    canonical: adr
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    note: >
+      An AMENDMENT to an accepted ADR. Under a versioned store an amendment is a new
+      version of the same key, not a new document — one of the clearest cases where the
+      absence of history forced a new type into existence.
+  hook-specifications:
+    canonical: architecture-section
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+  architecture-baseline:
+    canonical: performance-report
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+  architecture-gap-analysis:
+    canonical: architecture-feasibility-report
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+  architecture-design:
+    canonical: architecture-section
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+  architecture-design-system:
+    canonical: design-system-overview
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    pending_template: true
+  architecture-work-order:
+    canonical: architect-decision
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    pending_template: true
+  architecture-scoping:
+    canonical: architecture-feasibility-report
+    set: {}
+    n: 3
+    corpora: {prism: 3}
+  architecture-scoping-correction:
+    canonical: architecture-feasibility-report
+    set: {}
+    n: 3
+    corpora: {prism: 3}
+  feature-design-map:
+    canonical: architecture-feasibility-report
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+  behavioral-contract-summary:
+    canonical: behavioral-contract-index
+    set: {}
+    n: 3
+    corpora: {prism: 3}
+    note: A per-subsystem index. Derived.
+  prd-supplement:
+    canonical: prd-supplement-nfr-catalog
+    set: {}
+    n: 3
+    corpora: {prism: 3}
+    note: >
+      AMBIGUOUS BY CONSTRUCTION. prism uses one generic value with a `section` field
+      (error-taxonomy / nfr-catalog / …) where the standard declares four specific types.
+      The alias resolves by `section`, NOT unconditionally — migration must read the field.
+      Flagged as requiring per-file adjudication rather than a bulk rewrite.
+    requires_per_file_adjudication: true
+  prd-supplement-open-questions:
+    canonical: spec-open-questions
+    set: {}
+    n: 1
+    corpora: {rivetry: 1}
+  prd-supplement-edge-case-catalog:
+    canonical: prd-supplement-test-vectors
+    set: {}
+    n: 1
+    corpora: {rivetry: 1}
+    note: >
+      ADDED BY THE VALIDATOR ([1a] flagged it undispositioned). An edge-case catalog is
+      the test-vector supplement's own content; rivetry split it out. Marked for per-file
+      adjudication rather than assumed.
+    requires_per_file_adjudication: true
+
+  prd-supplement-feature-gap-audit:
+    canonical: audit-report
+    set: {}
+    n: 1
+    corpora: {rivetry: 1}
+    pending_template: true
+    note: ADDED BY THE VALIDATOR. A gap audit is an audit, not a PRD supplement.
+
+  open-questions-register:
+    canonical: spec-open-questions
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+  grammar-reference:
+    canonical: domain-spec-section
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+  matured-vision:
+    canonical: product-brief
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+  positioning-narrative:
+    canonical: product-brief
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+  legacy-id-mapping:
+    canonical: story-id-mapping
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+  bc-id-mapping:
+    canonical: behavioral-contract-id-mapping
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+  vp-snapshot:
+    canonical: verification-property-index
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+  vp-tbd-decision-matrix:
+    canonical: traceability-matrix
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+  ux-spec:
+    canonical: ux-spec-index
+    set: {}
+    n: 2
+    corpora: {prism: 2}
+    note: >
+      Also the deduped target of the template set's own `ux_spec` — the single underscore
+      in an 81-value kebab-case vocabulary.
+  ux-screen-spec:
+    canonical: ux-spec-screen
+    set: {}
+    n: 2
+    corpora: {rivetry: 2}
+    note: Word order transposed. Undetectable by eye, trivially detectable by a closed enum.
+
+  # ── Delivery / process spellings ───────────────────────────────────────────
+  feature-delta-analysis:
+    canonical: delta-analysis-report
+    set: {}
+    n: 4
+    corpora: {vsdd-factory: 4}
+    note: Path-registry-declared, template-declares-the-other-name. Two-namespace defect.
+  feature-gate-report:
+    canonical: wave-gate-report
+    set: {}
+    n: 2
+    corpora: {vsdd-factory: 2}
+    pending_template: true
+  phase-handoff:
+    canonical: session-checkpoints
+    set: {}
+    n: 2
+    corpora: {vsdd-factory: 2}
+  code-delivery-artifact:
+    canonical: code-delivery-artifact
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+    note: Path-registry-declared, template-absent.
+  stage-transition:
+    canonical: merge-result
+    set: {}
+    n: 2
+    corpora: {prism: 2}
+    pending_template: true
+  fix-plan:
+    canonical: fix
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+  fix-burst-plan:
+    canonical: fix
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+  fix-burst-closure-report:
+    canonical: fix-burst-closure
+    set: {}
+    n: 37
+    corpora: {prism: 37}
+    pending_template: true
+  fix-burst-closure-record:
+    canonical: fix-burst-closure
+    set: {}
+    n: 11
+    corpora: {prism: 11}
+    pending_template: true
+  fix-burst-report:
+    canonical: fix-burst-closure
+    set: {}
+    n: 5
+    corpora: {prism: 5}
+    pending_template: true
+  fix-burst-record:
+    canonical: fix-burst-closure
+    set: {}
+    n: 2
+    corpora: {prism: 2}
+    pending_template: true
+  fix-pass-closure-report:
+    canonical: fix-burst-closure
+    set: {}
+    n: 6
+    corpora: {prism: 6}
+    pending_template: true
+  cascade-summary:
+    canonical: fix-burst-closure
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    pending_template: true
+  cascade-convergence-report:
+    canonical: convergence-report
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+  cascade-exit-record:
+    canonical: convergence-report
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+  cascade-cycle-record:
+    canonical: cycle-decision-log
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+  pr-level-cascade-disposition:
+    canonical: pr-review-findings
+    set: {scope: pr}
+    n: 1
+    corpora: {prism: 1}
+  phase-5-deferred-findings:
+    canonical: adversarial-review-index
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    note: "`phase-5` IN A TYPE NAME. `phase` is already a field."
+  deferred-findings-phase-5:
+    canonical: adversarial-review-index
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    note: The same concept as the entry above with the words reversed. Both in prism.
+  drift-items-resolved:
+    canonical: remediation-manifest
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    pending_template: true
+  drift-items-deferred:
+    canonical: remediation-manifest
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    pending_template: true
+  remediation-log:
+    canonical: remediation-manifest
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    pending_template: true
+  blocking-issues-resolved:
+    canonical: blocking-issues-resolved
+    set: {}
+    n: 2
+    corpora: {prism: 1, rivetry: 1}
+    note: Canonical already; listed for the completeness check only.
+  input-hash-recompute-report:
+    canonical: null
+    disposition: retired_with_field
+    n: 1
+    corpora: {prism: 1}
+    note: A report about maintaining input-hash. Retires with the field it services.
+
+  # ── Research / analysis spellings ──────────────────────────────────────────
+  research:
+    canonical: research-note
+    set: {}
+    n: 54
+    corpora: {prism: 54}
+    pending_template: true
+  research-artifact:
+    canonical: research-note
+    set: {}
+    n: 2
+    corpora: {prism: 2}
+    pending_template: true
+  research-sidecar:
+    canonical: research-note
+    set: {}
+    n: 2
+    corpora: {prism: 2}
+    pending_template: true
+  architectural-research:
+    canonical: research-note
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    pending_template: true
+  library-version-research:
+    canonical: research-note
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    pending_template: true
+  preflight-research-findings:
+    canonical: research-note
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    pending_template: true
+  design-investigation:
+    canonical: research-note
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    pending_template: true
+  analysis:
+    canonical: research-note
+    set: {}
+    n: 3
+    corpora: {prism: 1, rivetry: 2}
+    pending_template: true
+  "research/audit":
+    canonical: research-note
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    note: CONTAINS A SLASH. A path fragment used as a type value; no gate would have caught it.
+    pending_template: true
+  "research/plan":
+    canonical: research-note
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    note: Second slash-bearing value in the same corpus.
+    pending_template: true
+  uncertainty-batch-summary:
+    canonical: uncertainty-map
+    set: {}
+    n: 1
+    corpora: {prism: 1}
+    pending_template: true
+  investigation-report:
+    canonical: research-note
+    set: {}
+    n: 1
+    corpora: {vsdd-factory: 1}
+    pending_template: true
+  comparative:
+    canonical: research-note
+    set: {}
+    n: 0
+    corpora: {}
+    note: Directory-level only (pregolya). Recorded from CROSS-CORPUS §4 for completeness.
+    pending_template: true
+
+  # ── Authority / adjudication spellings -> the architect-decision GAP ───────
+  architect-proposal:        {canonical: proposal, set: {}, n: 3, corpora: {prism: 3}}
+  architect-decision:        {canonical: architect-decision, set: {}, n: 4, corpora: {vsdd-factory: 4}, pending_template: true}
+  architect-decision-log:    {canonical: architect-decision, set: {}, n: 1, corpora: {vsdd-factory: 1}, pending_template: true}
+  architect-decision-document: {canonical: architect-decision, set: {}, n: 1, corpora: {vsdd-factory: 1}, pending_template: true}
+  architect-decision-note:   {canonical: architect-decision, set: {}, n: 2, corpora: {prism: 2}, pending_template: true}
+  architect-adjudication:    {canonical: architect-decision, set: {}, n: 2, corpora: {prism: 2}, pending_template: true}
+  architecture-adjudication: {canonical: architect-decision, set: {}, n: 1, corpora: {prism: 1}, pending_template: true}
+  adjudication-note:         {canonical: architect-decision, set: {}, n: 1, corpora: {prism: 1}, pending_template: true}
+  pr-architect-decision:     {canonical: architect-decision, set: {scope: pr}, n: 1, corpora: {prism: 1}, pending_template: true}
+  po-adjudication:           {canonical: architect-decision, set: {producer: product-owner}, n: 5, corpora: {prism: 5}, pending_template: true}
+  po-ratification-draft:     {canonical: architect-decision, set: {producer: product-owner, status: draft}, n: 1, corpora: {prism: 1}, pending_template: true}
+  disposition:               {canonical: architect-decision, set: {}, n: 1, corpora: {prism: 1}, pending_template: true}
+  architect-audit:           {canonical: audit-report, set: {}, n: 2, corpora: {prism: 2}, pending_template: true}
+  audit:                     {canonical: audit-report, set: {}, n: 1, corpora: {prism: 1}, pending_template: true}
+  audit-table:               {canonical: audit-report, set: {}, n: 1, corpora: {vsdd-factory: 1}, pending_template: true}
+  architecture-audit:        {canonical: audit-report, set: {}, n: 1, corpora: {vsdd-factory: 1}, pending_template: true}
+  consistency-audit:         {canonical: consistency-report, set: {}, n: 1, corpora: {prism: 1}}
+  consistency-audit-report:  {canonical: consistency-report, set: {}, n: 1, corpora: {prism: 1}}
+  consistency-validation:    {canonical: consistency-report, set: {}, n: 2, corpora: {vsdd-factory: 2}}
+  consistency-review:        {canonical: consistency-report, set: {}, n: 2, corpora: {vsdd-factory: 2}}
+
+  # ── Session / orchestration spellings -> the dispatch-package GAP ──────────
+  orchestrator-task-snapshot: {canonical: dispatch-package, set: {}, n: 4, corpora: {vsdd-factory: 4}, pending_template: true}
+  session-tasks:              {canonical: dispatch-package, set: {}, n: 3, corpora: {prism: 3}, pending_template: true}
+  task-ledger:                {canonical: dispatch-package, set: {}, n: 1, corpora: {prism: 1}, pending_template: true}
+  parallelization-plan:       {canonical: dispatch-package, set: {}, n: 1, corpora: {prism: 1}, pending_template: true}
+  iterate-list:               {canonical: dispatch-package, set: {}, n: 1, corpora: {prism: 1}, pending_template: true}
+  session-review-proposal:    {canonical: session-review, set: {}, n: 1, corpora: {prism: 1}}
+  preflight-findings-iter2:   {canonical: preflight-findings, set: {iteration: 2}, n: 2, corpora: {prism: 2}, pending_template: true}
+  preflight-summary:          {canonical: preflight-findings, set: {}, n: 1, corpora: {prism: 1}, pending_template: true}
+  triage-capture:             {canonical: preflight-findings, set: {}, n: 1, corpora: {prism: 1}, pending_template: true}
+  sprint-review-brief:        {canonical: session-review, set: {}, n: 1, corpora: {prism: 1}}
+  phase-0-final-synthesis:    {canonical: recovered-architecture, set: {}, n: 1, corpora: {vsdd-factory: 1}}
+  extraction-validation-report: {canonical: extraction-validation, set: {}, n: 2, corpora: {prism: 2}}
+  correction-log:             {canonical: semport-artifact, set: {}, n: 2, corpora: {prism: 2}}
+  proposal:                   {canonical: proposal, set: {}, n: 3, corpora: {vsdd-factory: 3}, note: Path-registry-declared, template-absent.}
+  story-scope-document:       {canonical: proposal, set: {}, n: 1, corpora: {prism: 1}}
+  design-sketch:              {canonical: proposal, set: {}, n: 1, corpora: {prism: 1}}
+  design-note:                {canonical: proposal, set: {}, n: 1, corpora: {prism: 1}}
+  design-decision:            {canonical: adr, set: {status: draft}, n: 2, corpora: {prism: 2}}
+  proposed-adr:               {canonical: proposed-adr, set: {}, n: 28, corpora: {prism: 28}, pending_template: true}
+  working-note:               {canonical: research-note, set: {}, n: 1, corpora: {prism: 1}, pending_template: true}
+  planning:                   {canonical: dispatch-package, set: {}, n: 1, corpora: {prism: 1}, pending_template: true}
+  demo-scope:                 {canonical: demo-evidence-report, set: {}, n: 1, corpora: {prism: 1}}
+  demo-runbook:               {canonical: demo-evidence-report, set: {}, n: 1, corpora: {prism: 1}}
+  merge-result:               {canonical: merge-result, set: {}, n: 3, corpora: {prism: 3}, pending_template: true}
+  governance-policy-registry: {canonical: policies, set: {}, n: 1, corpora: {vsdd-factory: 1}}
+  po-obligations:             {canonical: po-obligations, set: {}, n: 1, corpora: {vsdd-factory: 1}}
+  traceability-path-convention: {canonical: traceability-matrix, set: {}, n: 1, corpora: {rivetry: 1}}
+  local-verification-label-convention: {canonical: verification-property-index, set: {}, n: 1, corpora: {rivetry: 1}}
+  registry:                   {canonical: policies, set: {}, n: 1, corpora: {rivetry: 1}}
+  brandbook:                  {canonical: brandbook, set: {}, n: 1, corpora: {rivetry: 1}, pending_template: true}
+  brand-token-direction:      {canonical: brandbook, set: {}, n: 1, corpora: {rivetry: 1}, pending_template: true}
+  brand-decision-log:         {canonical: brandbook, set: {}, n: 1, corpora: {rivetry: 1}, pending_template: true, note: An append-only ledger; model as one, not as a brand document.}
+  design-system-overview:     {canonical: design-system-overview, set: {}, n: 1, corpora: {rivetry: 1}, pending_template: true}
+  design-system-governance:   {canonical: design-system-overview, set: {}, n: 1, corpora: {rivetry: 1}, pending_template: true}
+  storyboard-narrative:       {canonical: storyboard-narrative, set: {}, n: 1, corpora: {rivetry: 1}, pending_template: true}
+  persona-journey-map:        {canonical: persona-journey-map, set: {}, n: 7, corpora: {rivetry: 7}, pending_template: true}
+  test-strategy:              {canonical: test-strategy, set: {}, n: 1, corpora: {prism: 1}, pending_template: true}
+  remediation-manifest:       {canonical: remediation-manifest, set: {}, n: 31, corpora: {prism: 31}, pending_template: true}
+  uncertainty-map:            {canonical: uncertainty-map, set: {}, n: 13, corpora: {prism: 13}, pending_template: true}
+  fix-burst-closure:          {canonical: fix-burst-closure, set: {}, n: 17, corpora: {prism: 17}, pending_template: true}
+  wave-gate-report:           {canonical: wave-gate-report, set: {}, n: 3, corpora: {prism: 3}, pending_template: true}
+  audit-report:               {canonical: audit-report, set: {}, n: 3, corpora: {prism: 3}, pending_template: true}
+  preflight-findings:         {canonical: preflight-findings, set: {}, n: 4, corpora: {prism: 4}, pending_template: true}
+  dispatch-package:           {canonical: dispatch-package, set: {}, n: 4, corpora: {vsdd-factory: 4}, pending_template: true}
+  verification-property-index: {canonical: verification-property-index, set: {}, n: 2, corpora: {prism: 1, rivetry: 1}}
+  behavioral-contract-index:  {canonical: behavioral-contract-index, set: {}, n: 2, corpora: {prism: 1, rivetry: 1}}
+  cycle-manifest:             {canonical: cycle-manifest, set: {}, n: 0, corpora: {}, note: Canonical; listed for completeness only.}
+
+# ── Retired, not aliased ────────────────────────────────────────────────────
+retired:
+  delta-archive:               {n: 211, corpora: {rivetry: 211}, replaced_by: dolt_history_*}
+  decisions-archive:           {n: 4, corpora: {prism: 4}, replaced_by: cycle-decision-log rows}
+  decisions-log-archive:       {n: 1, corpora: {rivetry: 1}, replaced_by: cycle-decision-log rows}
+  lessons-archive:             {n: 1, corpora: {vsdd-factory: 1}, replaced_by: lessons-learned rows}
+  session-checkpoints-archive: {n: 4, corpora: {vsdd-factory: 1, prism: 3}, replaced_by: session-checkpoints rows}
+  adversarial-review-cascade-summary: {n: 2, corpora: {prism: 2}, replaced_by: adversarial-review-index (derived)}
+
+# ── Unresolved: recorded rather than guessed ────────────────────────────────
+# The registry does not get to pretend it knows what these are. Each needs one question
+# answered by whoever wrote it, and a wrong alias here silently mislabels real content.
+unresolved:
+  consistency-validation-report:
+    n: 1
+    corpora: {vsdd-factory: 1}
+    question: >
+      A near-duplicate of `consistency-report` INSIDE THE STANDARD ITSELF — two templates,
+      two document_types, one concept. This is a third collision in the 81 alongside
+      traceability-matrix/matrices and holdout-evaluation/-report, and it is the only one
+      where both spellings have a template and neither is obviously primary.
+  feature:
+    n: 0
+    corpora: {}
+    question: "secops-factory has a top-level `feature/` directory; no document_type observed. Directory-only signal."
+  phase-f1-delta-analysis:
+    n: 0
+    corpora: {}
+    question: >
+      secops-factory has top-level phase-f1-delta-analysis/ and phase-f2-spec-evolution/
+      DIRECTORIES — a phase number in a directory name, the same failure mode as
+      preflight-findings-iter2. Not measured further; secops-factory has 0 BCs so it was
+      excluded from the corpus evidence set.

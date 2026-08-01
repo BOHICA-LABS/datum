@@ -1,0 +1,1258 @@
+{
+ "canonical": {
+  "burst-log": [
+   "burst-log-template.md"
+  ],
+  "performance-report": [
+   "performance-report-template.md"
+  ],
+  "tech-debt-register": [
+   "tech-debt-register-template.md"
+  ],
+  "implementation-readiness": [
+   "implementation-readiness-template.md"
+  ],
+  "pr-review-findings": [
+   "review-findings-template.md"
+  ],
+  "dtu-fidelity-report": [
+   "dtu-fidelity-report-template.md"
+  ],
+  "behavioral-contract": [
+   "behavioral-contract-template.md"
+  ],
+  "fuzz-report": [
+   "fuzz-report-template.md"
+  ],
+  "spec-changelog": [
+   "spec-changelog-template.md"
+  ],
+  "idea-brief": [
+   "idea-brief-template.md"
+  ],
+  "story-index": [
+   "story-index-template.md"
+  ],
+  "gene-transfusion-assessment": [
+   "gene-transfusion-assessment-template.md"
+  ],
+  "ux-spec-flow": [
+   "ux-spec-flow-template.md"
+  ],
+  "convergence-trajectory": [
+   "convergence-trajectory-template.md"
+  ],
+  "security-scan-report": [
+   "security-scan-report-template.md"
+  ],
+  "evaluation-index": [
+   "evaluation-index-template.md"
+  ],
+  "story": [
+   "story-template.md"
+  ],
+  "agent-file-review": [
+   "agent-file-review-template.md"
+  ],
+  "blocking-issues-resolved": [
+   "blocking-issues-resolved-template.md"
+  ],
+  "architecture-section": [
+   "architecture-section-template.md",
+   "verification-architecture-template.md",
+   "verification-coverage-matrix-template.md"
+  ],
+  "prd-supplement-test-vectors": [
+   "prd-supplement-test-vectors-template.md"
+  ],
+  "holdout-scenario-index": [
+   "holdout-scenario-index-template.md"
+  ],
+  "ux_spec": [
+   "ux-spec-template.md"
+  ],
+  "lessons-learned": [
+   "lessons-template.md"
+  ],
+  "consistency-validation-report": [
+   "consistency-validation-report-template.md"
+  ],
+  "domain-spec-section": [
+   "L2-domain-spec-section-template.md"
+  ],
+  "epic": [
+   "epic-template.md"
+  ],
+  "evaluation-summary": [
+   "evaluation-summary-template.md"
+  ],
+  "delta-analysis-report": [
+   "delta-analysis-report-template.md"
+  ],
+  "pipeline-state": [
+   "state-template.md"
+  ],
+  "research-index": [
+   "research-index-template.md"
+  ],
+  "prd": [
+   "prd-template.md"
+  ],
+  "design-drift-report": [
+   "design-drift-template.md"
+  ],
+  "ux-spec-screen": [
+   "ux-spec-screen-template.md"
+  ],
+  "wave-schedule": [
+   "wave-schedule-template.md"
+  ],
+  "extraction-validation": [
+   "extraction-validation-template.md"
+  ],
+  "dtu-clone-spec": [
+   "dtu-clone-spec-template.md"
+  ],
+  "architecture-index": [
+   "architecture-index-template.md"
+  ],
+  "module-criticality": [
+   "module-criticality-template.md"
+  ],
+  "holdout-scenario": [
+   "holdout-scenario-template.md"
+  ],
+  "code-review": [
+   "code-review-template.md"
+  ],
+  "vp-withdrawal": [
+   "vp-withdrawal-template.md"
+  ],
+  "architecture": [
+   "architecture-template.md"
+  ],
+  "traceability-matrices": [
+   "traceability-matrices-template.md"
+  ],
+  "domain-research": [
+   "domain-research-template.md"
+  ],
+  "spec-drift-report": [
+   "spec-drift-report-template.md"
+  ],
+  "security-review": [
+   "security-review-template.md"
+  ],
+  "maintenance-sweep-report": [
+   "sweep-report-template.md"
+  ],
+  "holdout-evaluation-report": [
+   "holdout-evaluation-report-template.md"
+  ],
+  "demo-evidence-report": [
+   "demo-evidence-report-template.md"
+  ],
+  "holdout-evaluation": [
+   "evaluation-per-scenario-template.md"
+  ],
+  "session-checkpoints": [
+   "session-checkpoints-template.md"
+  ],
+  "brief-validation": [
+   "brief-validation-template.md"
+  ],
+  "adversarial-finding": [
+   "adversarial-finding-template.md"
+  ],
+  "prd-supplement-error-taxonomy": [
+   "prd-supplement-error-taxonomy-template.md"
+  ],
+  "domain-spec-index": [
+   "L2-domain-spec-index-template.md"
+  ],
+  "red-gate-log": [
+   "red-gate-log-template.md"
+  ],
+  "prd-supplement-interface-definitions": [
+   "prd-supplement-interface-definitions-template.md"
+  ],
+  "domain-spec": [
+   "L2-domain-spec-template.md"
+  ],
+  "dtu-assessment": [
+   "dtu-assessment-template.md"
+  ],
+  "traceability-matrix": [
+   "traceability-matrix-template.md"
+  ],
+  "ux-spec-index": [
+   "ux-spec-index-template.md"
+  ],
+  "release-notes": [
+   "release-notes-template.md"
+  ],
+  "formal-verification-report": [
+   "formal-verification-template.md"
+  ],
+  "discovery-report": [
+   "discovery-report-template.md"
+  ],
+  "adversarial-review-index": [
+   "adversarial-review-index-template.md"
+  ],
+  "session-review": [
+   "session-review-template.md"
+  ],
+  "consistency-report": [
+   "consistency-report-template.md"
+  ],
+  "adr": [
+   "adr-template.md"
+  ],
+  "verification-property": [
+   "L4-verification-property-template.md"
+  ],
+  "convergence-report": [
+   "convergence-report-template.md"
+  ],
+  "findings-tracker": [
+   "findings-tracker-template.md"
+  ],
+  "cycle-manifest": [
+   "cycle-manifest-template.md"
+  ],
+  "prd-supplement-nfr-catalog": [
+   "prd-supplement-nfr-catalog-template.md"
+  ],
+  "fix": [
+   "fix-template.md"
+  ],
+  "adversarial-review": [
+   "adversarial-review-template.md"
+  ],
+  "feature-request": [
+   "feature-request-template.md"
+  ],
+  "epic-index": [
+   "epic-index-template.md"
+  ],
+  "product-brief": [
+   "product-brief-template.md"
+  ],
+  "architecture-feasibility-report": [
+   "architecture-feasibility-report-template.md"
+  ],
+  "adversary-prompt-template": [
+   "adversary-prompt-templates/phase-1d-spec-review.md",
+   "adversary-prompt-templates/phase-2-story-review.md",
+   "adversary-prompt-templates/phase-5-code-review.md"
+  ]
+ },
+ "corpora": {
+  "vsdd-factory": {
+   "total_files": 3089,
+   "typed": 2724,
+   "no_frontmatter": 320,
+   "fm_no_dtype": 45,
+   "canonical": {
+    "adr": 22,
+    "adversarial-review": 256,
+    "architecture-index": 1,
+    "architecture-section": 11,
+    "behavioral-contract": 1959,
+    "burst-log": 2,
+    "consistency-validation-report": 1,
+    "domain-spec-index": 1,
+    "domain-spec-section": 7,
+    "dtu-assessment": 1,
+    "epic": 17,
+    "extraction-validation": 2,
+    "pipeline-state": 1,
+    "pr-review-findings": 6,
+    "prd": 1,
+    "red-gate-log": 3,
+    "security-review": 2,
+    "session-checkpoints": 1,
+    "story": 106,
+    "story-index": 1,
+    "tech-debt-register": 1,
+    "verification-property": 80
+   },
+   "noncanonical": {
+    "adversary-review": 69,
+    "adversarial-review-pass": 47,
+    "adversary-pass-report": 28,
+    "adversary-pass": 21,
+    "local-adversary-review": 6,
+    "per-story-adversary-review": 6,
+    "dispatch-package": 4,
+    "architect-decision": 4,
+    "orchestrator-task-snapshot": 4,
+    "feature-delta-analysis": 4,
+    "review-findings": 4,
+    "proposal": 3,
+    "consistency-validation": 2,
+    "consistency-review": 2,
+    "cycle-decision-log": 2,
+    "phase-handoff": 2,
+    "feature-gate-report": 2,
+    "governance-policy-registry": 1,
+    "po-obligations": 1,
+    "fix-burst-plan": 1,
+    "adversarial-convergence-record": 1,
+    "lessons-codification": 1,
+    "architect-decision-document": 1,
+    "audit-table": 1,
+    "vp-snapshot": 1,
+    "review-report": 1,
+    "wave-gate-final-verdict": 1,
+    "wave-gate-compensating-controls": 1,
+    "architect-decision-log": 1,
+    "fix-plan": 1,
+    "session-checkpoints-archive": 1,
+    "session-resume-checkpoint": 1,
+    "cycle-lessons": 1,
+    "lessons-archive": 1,
+    "cycle-index": 1,
+    "lessons": 1,
+    "convergence-record": 1,
+    "investigation-report": 1,
+    "phase-0-final-synthesis": 1,
+    "code-delivery-artifact": 1,
+    "open-questions-register": 1,
+    "vp-index": 1,
+    "bc-id-mapping": 1,
+    "bc-index": 1,
+    "architecture-decision-record": 1,
+    "legacy-id-mapping": 1,
+    "architecture-baseline": 1,
+    "architecture-gap-analysis": 1,
+    "architecture-audit": 1
+   },
+   "noncanonical_examples": {
+    "governance-policy-registry": [
+     "policies.yaml"
+    ],
+    "po-obligations": [
+     "po-obligations.md"
+    ],
+    "adversary-review": [
+     "cycles/v1.0-brownfield-backfill/adv-bc-007-008-pass-1.md",
+     "cycles/v1.0-brownfield-backfill/adv-bc-007-008-pass-10.md",
+     "cycles/v1.0-brownfield-backfill/adv-bc-007-008-pass-11.md"
+    ],
+    "consistency-validation": [
+     "cycles/v1.0-brownfield-backfill/consistency-validation-phase-1.md",
+     "phase-0-ingestion/consistency-validation.md"
+    ],
+    "consistency-review": [
+     "cycles/v1.0-brownfield-backfill/wave-15-gate-rerun-1-consistency.md",
+     "cycles/v1.0-brownfield-backfill/wave-15-gate-rerun-2-consistency.md"
+    ],
+    "dispatch-package": [
+     "cycles/v1.0-brownfield-backfill/s-15.03-wave-m1-dispatch.md",
+     "cycles/v1.0-brownfield-backfill/s-15.03-wave-m2-dispatch.md",
+     "cycles/v1.0-brownfield-backfill/s-15.03-wave-m2-wave-2-dispatch.md"
+    ],
+    "adversarial-review-pass": [
+     "cycles/v1.0-brownfield-backfill/adv-e8-p1.md",
+     "cycles/v1.0-brownfield-backfill/adv-e8-p10.md",
+     "cycles/v1.0-brownfield-backfill/adv-e8-p11.md"
+    ],
+    "architect-decision": [
+     "cycles/v1.0-brownfield-backfill/architect-2026-05-15-td-66-67-split.md",
+     "cycles/v1.0-brownfield-backfill/architect-m2-2026-05-16.md",
+     "cycles/v1.0-brownfield-backfill/architect-m2-q5-tool-attribute-2026-05-16.md"
+    ],
+    "fix-burst-plan": [
+     "cycles/v1.0-brownfield-backfill/wave-15-gate-fix-burst-plan.md"
+    ],
+    "cycle-decision-log": [
+     "cycles/v1.0-brownfield-backfill/decision-log.md",
+     "cycles/v1.0-feature-engine-discipline-pass-1/decision-log.md"
+    ],
+    "adversarial-convergence-record": [
+     "cycles/v1.0-brownfield-backfill/wave-13-ss-03-S-4.05-pass-48-CONVERGED.md"
+    ],
+    "local-adversary-review": [
+     "cycles/v1.0-brownfield-backfill/s-15.08-local-adversary-pass-1.md",
+     "cycles/v1.0-brownfield-backfill/s-15.08-local-adversary-pass-2.md",
+     "cycles/v1.0-brownfield-backfill/s-15.08-local-adversary-pass-3.md"
+    ],
+    "orchestrator-task-snapshot": [
+     "cycles/v1.0-brownfield-backfill/orchestrator-task-snapshot-2026-05-15.md",
+     "cycles/v1.0-brownfield-backfill/orchestrator-task-snapshot-2026-05-16-post-s-15.07-ship.md",
+     "cycles/v1.0-brownfield-backfill/orchestrator-task-snapshot-2026-05-16.md"
+    ],
+    "lessons-codification": [
+     "cycles/v1.0-brownfield-backfill/lessons.md"
+    ],
+    "architect-decision-document": [
+     "cycles/v1.0-brownfield-backfill/s-15.03-wave-plan-2026-05-15.md"
+    ],
+    "audit-table": [
+     "cycles/v1.0-brownfield-backfill/E-8-bc-anchor-table.md"
+    ],
+    "vp-snapshot": [
+     "cycles/v1.0-brownfield-backfill/rc1-vp-snapshot.md"
+    ],
+    "review-report": [
+     "cycles/v1.0-brownfield-backfill/spec-review-bc-007-008.md"
+    ],
+    "wave-gate-final-verdict": [
+     "cycles/v1.0-brownfield-backfill/wave-15-gate-final-verdict.md"
+    ],
+    "wave-gate-compensating-controls": [
+     "cycles/v1.0-brownfield-backfill/wave-15-gate-compensating-controls.md"
+    ],
+    "architect-decision-log": [
+     "cycles/v1.0-feature-engine-discipline-pass-1/F5-pass-2-architect-decisions.md"
+    ],
+    "fix-plan": [
+     "cycles/v1.0-feature-engine-discipline-pass-1/F5-pass-1-fix-plan.md"
+    ],
+    "feature-delta-analysis": [
+     "cycles/v1.0-feature-engine-discipline-pass-1/F1-delta-analysis.md",
+     "cycles/v1.0-feature-engine-discipline-pass-1/F1-platform-amendment-delta-analysis.md",
+     "cycles/v1.0-feature-plugin-async-semantics-pass-1/F1-delta-analysis.md"
+    ],
+    "session-checkpoints-archive": [
+     "cycles/v1.0-feature-engine-discipline-pass-1/session-checkpoints.md"
+    ],
+    "session-resume-checkpoint": [
+     "cycles/v1.0-feature-engine-discipline-pass-1/SESSION-CHECKPOINT.md"
+    ],
+    "cycle-lessons": [
+     "cycles/v1.0-feature-engine-discipline-pass-1/lessons.md"
+    ],
+    "lessons-archive": [
+     "cycles/v1.0-feature-engine-discipline-pass-1/lessons-archive-pass1-49.md"
+    ],
+    "cycle-index": [
+     "cycles/v1.0-feature-engine-discipline-pass-1/INDEX.md"
+    ],
+    "per-story-adversary-review": [
+     "cycles/v1.0-feature-engine-discipline-pass-1/S-12.06/adversary-pass-1.md",
+     "cycles/v1.0-feature-engine-discipline-pass-1/S-12.06/adversary-pass-2.md",
+     "cycles/v1.0-feature-engine-discipline-pass-1/S-12.06/adversary-pass-3.md"
+    ],
+    "adversary-pass": [
+     "code-delivery/S-15.07/adv-local-pass-1.md",
+     "code-delivery/S-15.07/adv-local-pass-2.md",
+     "code-delivery/S-15.07/adv-local-pass-3.md"
+    ],
+    "phase-handoff": [
+     "cycles/v1.0-feature-plugin-async-semantics-pass-1/F4-handoff.md",
+     "cycles/v1.0-feature-plugin-async-semantics-pass-1/F5-pre-compact-handoff.md"
+    ],
+    "lessons": [
+     "cycles/v1.0-feature-plugin-async-semantics-pass-1/lessons.md"
+    ],
+    "convergence-record": [
+     "cycles/v1.0-feature-plugin-async-semantics-pass-1/CONVERGENCE.md"
+    ],
+    "investigation-report": [
+     "cycles/v1.0-feature-plugin-async-semantics-pass-1/F-P2-001-mechanism-investigation.md"
+    ],
+    "phase-0-final-synthesis": [
+     "phase-0-ingestion/pass-8-final-synthesis.md"
+    ],
+    "code-delivery-artifact": [
+     "code-delivery/S-13.01/pr-status.md"
+    ],
+    "adversary-pass-report": [
+     "code-delivery/S-15.09/adv-local-pass-1.md",
+     "code-delivery/S-15.09/adv-local-pass-10.md",
+     "code-delivery/S-15.09/adv-local-pass-2.md"
+    ],
+    "review-findings": [
+     "code-delivery/S-15.12/review-findings.md",
+     "code-delivery/S-3.03/review-findings.md",
+     "code-delivery/S-5.01/review-findings.md"
+    ],
+    "open-questions-register": [
+     "specs/open-questions.md"
+    ],
+    "vp-index": [
+     "specs/verification-properties/VP-INDEX.md"
+    ],
+    "bc-id-mapping": [
+     "specs/behavioral-contracts/bc-id-mapping.md"
+    ],
+    "bc-index": [
+     "specs/behavioral-contracts/BC-INDEX.md"
+    ],
+    "architecture-decision-record": [
+     "specs/architecture/decisions/ADR-023-trajectory-tail-cell-completeness-cycle-conditional-site-model.md"
+    ],
+    "feature-gate-report": [
+     "feature-delta/F-block-ai-attribution-message-file-arm/F2-consistency-audit.md",
+     "feature-delta/F-block-ai-attribution-message-file-arm/F3-consistency-audit.md"
+    ],
+    "legacy-id-mapping": [
+     "stories/legacy-id-mapping.md"
+    ],
+    "architecture-baseline": [
+     "architecture/perf-baseline-w16.md"
+    ],
+    "architecture-gap-analysis": [
+     "architecture/gap-analysis-w16-subprocess.md"
+    ],
+    "architecture-audit": [
+     "architecture/audit-w16.md"
+    ],
+    "proposal": [
+     "proposals/plugin-module-architecture.md",
+     "proposals/spec-kit-mcp.md",
+     "proposals/unified-plugin-system.md"
+    ]
+   }
+  },
+  "prism": {
+   "total_files": 2789,
+   "typed": 1899,
+   "no_frontmatter": 742,
+   "fm_no_dtype": 148,
+   "canonical": {
+    "adr": 54,
+    "adversarial-review": 469,
+    "adversarial-review-index": 4,
+    "architecture-index": 1,
+    "architecture-section": 24,
+    "behavioral-contract": 269,
+    "blocking-issues-resolved": 1,
+    "burst-log": 4,
+    "code-review": 1,
+    "consistency-report": 1,
+    "convergence-trajectory": 2,
+    "cycle-manifest": 4,
+    "domain-spec-index": 1,
+    "domain-spec-section": 11,
+    "dtu-assessment": 1,
+    "holdout-scenario": 21,
+    "holdout-scenario-index": 1,
+    "lessons-learned": 1,
+    "pipeline-state": 1,
+    "pr-review-findings": 7,
+    "prd": 1,
+    "prd-supplement-test-vectors": 1,
+    "product-brief": 1,
+    "red-gate-log": 12,
+    "research-index": 1,
+    "security-review": 9,
+    "session-checkpoints": 4,
+    "session-review": 1,
+    "story": 263,
+    "story-index": 1,
+    "tech-debt-register": 1,
+    "verification-property": 80
+   },
+   "noncanonical": {
+    "adversarial-review-pass": 109,
+    "research": 54,
+    "adversarial-review-report": 46,
+    "adversarial-pass-report": 42,
+    "fix-burst-closure-report": 37,
+    "adversary-pass-report": 35,
+    "remediation-manifest": 31,
+    "proposed-adr": 28,
+    "gate-step-report": 21,
+    "fix-burst-closure": 17,
+    "uncertainty-map": 13,
+    "fix-burst-closure-record": 11,
+    "review-findings": 9,
+    "pr-level-security-review": 8,
+    "pr-level-pr-reviewer-review": 8,
+    "pr-adversary-pass-report": 8,
+    "fix-pass-closure-report": 6,
+    "gate-step-f-holdout-evaluation": 6,
+    "fix-burst-report": 5,
+    "po-adjudication": 5,
+    "adversary-review": 4,
+    "preflight-findings": 4,
+    "decisions-archive": 4,
+    "adversary-report": 4,
+    "session-tasks": 3,
+    "wave-gate-report": 3,
+    "session-checkpoints-archive": 3,
+    "audit-report": 3,
+    "merge-result": 3,
+    "prd-supplement": 3,
+    "behavioral-contract-summary": 3,
+    "architecture-scoping": 3,
+    "architecture-scoping-correction": 3,
+    "architect-proposal": 3,
+    "research-artifact": 2,
+    "research-sidecar": 2,
+    "cycle-snapshot": 2,
+    "architect-adjudication": 2,
+    "preflight-findings-iter2": 2,
+    "lessons": 2,
+    "security-delta-confirm": 2,
+    "stage-transition": 2,
+    "adversarial-review-cascade-summary": 2,
+    "security-triage": 2,
+    "fix-burst-record": 2,
+    "design-decision": 2,
+    "ux-spec": 2,
+    "correction-log": 2,
+    "extraction-validation-report": 2,
+    "architect-decision-note": 2,
+    "architect-audit": 2,
+    "session-handoff": 1,
+    "vsdd-plugin-tech-debt-register": 1,
+    "research/audit": 1,
+    "research/plan": 1,
+    "analysis": 1,
+    "design-investigation": 1,
+    "uncertainty-batch-summary": 1,
+    "library-version-research": 1,
+    "remediation-log": 1,
+    "cycle-reflection": 1,
+    "cascade-cycle-record": 1,
+    "sprint-review-brief": 1,
+    "td-register-supplement": 1,
+    "deferred-findings-phase-5": 1,
+    "architectural-research": 1,
+    "code-review-report": 1,
+    "audit": 1,
+    "pr-final-review": 1,
+    "preflight-summary": 1,
+    "preflight-research-findings": 1,
+    "cascade-exit-record": 1,
+    "pr-reviewer": 1,
+    "adversarial-review-rejected": 1,
+    "drift-items-deferred": 1,
+    "drift-items-resolved": 1,
+    "phase-5-deferred-findings": 1,
+    "pr-level-cascade-disposition": 1,
+    "consistency-audit-report": 1,
+    "design-note": 1,
+    "vp-tbd-decision-matrix": 1,
+    "input-hash-recompute-report": 1,
+    "decision-note": 1,
+    "gate-convergence-report": 1,
+    "wave-cycle-decision": 1,
+    "cascade-summary": 1,
+    "cascade-convergence-report": 1,
+    "epic-registry": 1,
+    "matured-vision": 1,
+    "iterate-list": 1,
+    "positioning-narrative": 1,
+    "architecture-design-system": 1,
+    "design-sketch": 1,
+    "po-ratification-draft": 1,
+    "consistency-audit": 1,
+    "session-resume": 1,
+    "working-note": 1,
+    "disposition": 1,
+    "verification-property-index": 1,
+    "behavioral-contract-index": 1,
+    "feature-design-map": 1,
+    "architecture-work-order": 1,
+    "architecture-design": 1,
+    "architecture-adjudication": 1,
+    "adjudication-note": 1,
+    "hook-specifications": 1,
+    "adr-amendment": 1,
+    "test-strategy": 1,
+    "grammar-reference": 1,
+    "planning": 1,
+    "triage-capture": 1,
+    "demo-runbook": 1,
+    "demo-scope": 1,
+    "task-ledger": 1,
+    "session-review-proposal": 1,
+    "pr-architect-decision": 1,
+    "parallelization-plan": 1,
+    "story-scope-document": 1
+   },
+   "noncanonical_examples": {
+    "session-handoff": [
+     "SESSION-HANDOFF.md"
+    ],
+    "vsdd-plugin-tech-debt-register": [
+     "vsdd-plugin-tech-debt.md"
+    ],
+    "research": [
+     "research/armis-aql-time-window-syntax-2026-06.md",
+     "research/axiathon-detection-engine-analysis-2026-06-25.md",
+     "research/backup-recovery-2026-06-27.md"
+    ],
+    "research-artifact": [
+     "research/armis-aql-discriminator-syntax-2026-06.md",
+     "research/multi-tenant-sensor-endpoint-overrides-2026-05-23.md"
+    ],
+    "research/audit": [
+     "research/prismql-grammar-usability-audit-2026-06-24.md"
+    ],
+    "research/plan": [
+     "research/demo-finding-remediation-plan-2026-06-26.md"
+    ],
+    "research-sidecar": [
+     "research/build-optimization-2026.md",
+     "research/test-suite-performance-diagnosis-2026-06-26.md"
+    ],
+    "analysis": [
+     "research/central-surfacing-ripple-analysis-2026-06-27.md"
+    ],
+    "design-investigation": [
+     "research/toml-http-infusion-vs-wasm-pivot-002-2026-06-17.md"
+    ],
+    "uncertainty-batch-summary": [
+     "research/W3-BATCH-uncertainty-summary.md"
+    ],
+    "library-version-research": [
+     "research/W3-library-versions.md"
+    ],
+    "remediation-log": [
+     "research/W3-spec-remediation-log.md"
+    ],
+    "uncertainty-map": [
+     "research/S-3.01/uncertainty-map.md",
+     "research/S-3.02/uncertainty-map.md",
+     "research/S-3.03/uncertainty-map.md"
+    ],
+    "cycle-snapshot": [
+     "cycles/wave-4-operations/S-PLUGIN-PREREQ-D-CYCLE-SNAPSHOT.md",
+     "cycles/wave-4-operations/S-PLUGIN-PREREQ-E-CYCLE-SNAPSHOT.md"
+    ],
+    "cycle-reflection": [
+     "cycles/wave-4-operations/adr-023-cycle-reflection.md"
+    ],
+    "session-tasks": [
+     "cycles/wave-4-operations/SESSION-D580-TASKS.md",
+     "cycles/wave-4-operations/SESSION-D644-TASKS.md",
+     "cycles/wave-4-operations/SESSION-D664-TASKS.md"
+    ],
+    "cascade-cycle-record": [
+     "cycles/wave-4-operations/pr-139-deferred-items.md"
+    ],
+    "architect-adjudication": [
+     "cycles/wave-0-plugin-prereqs/architect-adjudications/FB-PR-1-error-taxonomy-test-relocation.md",
+     "cycles/wave-4-operations/FB37-architect-adjudication.md"
+    ],
+    "sprint-review-brief": [
+     "cycles/wave-4-operations/sprint-review-PREREQ-trio.md"
+    ],
+    "td-register-supplement": [
+     "cycles/wave-4-operations/td-from-adr-023-pass-1.md"
+    ],
+    "deferred-findings-phase-5": [
+     "cycles/wave-4-operations/deferred-findings-phase-5.md"
+    ],
+    "architectural-research": [
+     "cycles/wave-4-operations/research/audit-emitter-architecture-2026-05-09.md"
+    ],
+    "adversarial-review-report": [
+     "cycles/wave-4-operations/adversarial-reviews/S-3.02-FOLLOWUP-RUNTIME-pass-1.md",
+     "cycles/wave-4-operations/adversarial-reviews/S-3.02-FOLLOWUP-RUNTIME-pass-2.md",
+     "cycles/wave-4-operations/adversarial-reviews/S-3.02-FOLLOWUP-RUNTIME-pass-3.md"
+    ],
+    "fix-burst-closure-report": [
+     "cycles/wave-4-operations/adversarial-reviews/S-PLUGIN-PREREQ-D-fix-burst-1.md",
+     "cycles/wave-4-operations/adversarial-reviews/S-PLUGIN-PREREQ-D-fix-burst-10.md",
+     "cycles/wave-4-operations/adversarial-reviews/S-PLUGIN-PREREQ-D-fix-burst-11.md"
+    ],
+    "adversarial-pass-report": [
+     "cycles/wave-0-plugin-prereqs/s-config-pass-13.md",
+     "cycles/wave-0-plugin-prereqs/s-config-pass-7.md",
+     "cycles/wave-0-plugin-prereqs/s-config-pass-8.md"
+    ],
+    "adversarial-review-pass": [
+     "code-delivery/PLUGIN-MIGRATION-001-D/adversarial-review/local-pass-1.md",
+     "code-delivery/PLUGIN-MIGRATION-001-D/adversarial-review/local-pass-10.md",
+     "code-delivery/PLUGIN-MIGRATION-001-D/adversarial-review/local-pass-11.md"
+    ],
+    "fix-pass-closure-report": [
+     "cycles/wave-4-operations/adversarial-reviews/S-3.02-FOLLOWUP-RUNTIME-fix-pass-1.md",
+     "cycles/wave-4-operations/adversarial-reviews/S-3.02-FOLLOWUP-RUNTIME-fix-pass-2.md",
+     "cycles/wave-4-operations/adversarial-reviews/S-3.02-FOLLOWUP-RUNTIME-fix-pass-3.md"
+    ],
+    "adversary-review": [
+     "cycles/wave-4-operations/adversarial-reviews/pass-13.md",
+     "cycles/wave-4-operations/adversarial-reviews/pass-14.md",
+     "cycles/wave-4-operations/adversarial-reviews/pass-15.md"
+    ],
+    "fix-burst-closure": [
+     "code-delivery/PLUGIN-MIGRATION-001-D/adversarial-review/PLUGIN-MIGRATION-001-D-fix-burst-1.md",
+     "code-delivery/PLUGIN-MIGRATION-001-D/adversarial-review/PLUGIN-MIGRATION-001-D-fix-burst-17.md",
+     "code-delivery/PLUGIN-MIGRATION-001-D/adversarial-review/PLUGIN-MIGRATION-001-D-fix-burst-19.md"
+    ],
+    "code-review-report": [
+     "cycles/wave-4-operations/code-reviews/pr-135-code-review.md"
+    ],
+    "audit": [
+     "cycles/wave-4-operations/audits/plugin-only-violations-2026-05-10.md"
+    ],
+    "pr-final-review": [
+     "cycles/wave-4-operations/pr-reviews/pr-135-final-review.md"
+    ],
+    "preflight-findings": [
+     "cycles/wave-4-operations/preflight-findings/architect-adr-identification.md",
+     "cycles/wave-4-operations/preflight-findings/consistency-drift-audit.md",
+     "cycles/wave-4-operations/preflight-findings/spec-quality-review.md"
+    ],
+    "preflight-summary": [
+     "cycles/wave-4-operations/preflight-findings/preflight-summary.md"
+    ],
+    "preflight-research-findings": [
+     "cycles/wave-4-operations/preflight-findings/research-findings.md"
+    ],
+    "preflight-findings-iter2": [
+     "cycles/wave-4-operations/preflight-findings/consistency-drift-audit-iter2.md",
+     "cycles/wave-4-operations/preflight-findings/spec-quality-review-iter2.md"
+    ],
+    "wave-gate-report": [
+     "cycles/phase-3-dtu-wave-0/wave-gates/wave-0-retrospective.md",
+     "cycles/phase-3-dtu-wave-1-5/wave-gates/wave-1-5-gate.md",
+     "cycles/phase-3-dtu-wave-1/wave-gates/wave-1-gate.md"
+    ],
+    "lessons": [
+     "code-delivery/S-5.01-FOLLOWUP-MCP-BOOT/lessons.md",
+     "cycles/phase-3-dtu-wave-0/lessons/pr-manager-failure-modes.md"
+    ],
+    "pr-level-security-review": [
+     "cycles/wave-0-plugin-prereqs/S-CONFIG-pr-pass-1-redux-security.md",
+     "cycles/wave-0-plugin-prereqs/S-CONFIG-pr-pass-2-security.md",
+     "cycles/wave-0-plugin-prereqs/S-CONFIG-pr-pass-3-security.md"
+    ],
+    "cascade-exit-record": [
+     "cycles/wave-0-plugin-prereqs/s-config-option-b-exit.md"
+    ],
+    "adversary-pass-report": [
+     "cycles/phase-2-patch/adversary-pass-80.md",
+     "cycles/phase-2-patch/adversary-pass-81.md",
+     "cycles/phase-2-patch/adversary-pass-82.md"
+    ],
+    "pr-level-pr-reviewer-review": [
+     "cycles/wave-0-plugin-prereqs/S-CONFIG-pr-pass-1-redux-pr-reviewer.md",
+     "cycles/wave-0-plugin-prereqs/S-CONFIG-pr-pass-2-pr-reviewer.md",
+     "cycles/wave-0-plugin-prereqs/S-CONFIG-pr-pass-3-pr-reviewer.md"
+    ],
+    "fix-burst-report": [
+     "cycles/wave-0-plugin-prereqs/PLUGIN-MIGRATION-001-E/fix-burst-4.md",
+     "cycles/wave-0-plugin-prereqs/PLUGIN-MIGRATION-001-E/fix-burst-5.md",
+     "cycles/wave-0-plugin-prereqs/PLUGIN-MIGRATION-001-E/fix-burst-6.md"
+    ],
+    "po-adjudication": [
+     "cycles/wave-0-plugin-prereqs/S-DTU-CYBERINT-AUTH-FIDELITY-001/po-adjudications/F-LP1-MED-002.md",
+     "cycles/wave-0-plugin-prereqs/S-DTU-CYBERINT-AUTH-FIDELITY-001/po-adjudications/F-LP10-MED-001.md",
+     "cycles/wave-0-plugin-prereqs/S-DTU-CYBERINT-AUTH-FIDELITY-001/po-adjudications/F-LP12-LOW-001.md"
+    ],
+    "pr-reviewer": [
+     "cycles/wave-0-plugin-prereqs/S-DTU-CYBERINT-AUTH-FIDELITY-001/adversarial-review/pr-reviewer-1.md"
+    ],
+    "adversarial-review-rejected": [
+     "cycles/wave-0-plugin-prereqs/S-DTU-CYBERINT-AUTH-FIDELITY-001/adversarial-review/local-pass-5-REJECTED.md"
+    ],
+    "drift-items-deferred": [
+     "cycles/wave-5-e-demo-fidelity/drift-items-deferred.md"
+    ],
+    "decisions-archive": [
+     "cycles/phase-3-dtu-wave-2/decisions-archive-d001-d032.md",
+     "cycles/wave-5-e-demo-fidelity/decisions-archive-D1055-D1123.md",
+     "cycles/wave-5-e-demo-fidelity/decisions-archive-D1124-D1138.md"
+    ],
+    "session-checkpoints-archive": [
+     "cycles/phase-3-dtu-wave-1-5/session-checkpoints.md",
+     "cycles/wave-3-multi-tenant/session-checkpoints.md",
+     "cycles/wave-5-e-demo-fidelity/session-checkpoints.md"
+    ],
+    "drift-items-resolved": [
+     "cycles/wave-5-e-demo-fidelity/drift-items-resolved.md"
+    ],
+    "phase-5-deferred-findings": [
+     "cycles/wave-5-e-demo-fidelity/phase-5-deferred-findings.md"
+    ],
+    "security-delta-confirm": [
+     "code-delivery/DEFECT-DEMO-CONFIGURE-ADMINTOKEN-001/security-delta-confirm-5c9458d6.md",
+     "cycles/wave-5-e-demo-fidelity/DEFECT-DEMO-CONFIGURE-ADMINTOKEN-001/security-delta-confirm-5c9458d6.md"
+    ],
+    "pr-level-cascade-disposition": [
+     "cycles/wave-5-e-demo-fidelity/S-DEMO-ENRICHMENT-PIVOT-003/implementation/prlevel-cascade-round-1-disposition.md"
+    ],
+    "stage-transition": [
+     "cycles/wave-5-e-demo-fidelity/DEFECT-PQL-FNCALL-LHS-001/pr-223-created.md",
+     "cycles/wave-5-e-demo-fidelity/S-MAINT-CI-DISK-EXHAUSTION-001/pr-224-created.md"
+    ],
+    "adversarial-review-cascade-summary": [
+     "cycles/wave-5-e-demo-fidelity/DEFECT-CSDEVICES-EMPTY-PIPELINE-001/cascade-summary.md",
+     "cycles/wave-5-e-demo-fidelity/DEFECT-EQUERY042-GROUPBY-DEADARM-001/cascade-summary.md"
+    ],
+    "security-triage": [
+     "cycles/wave-5-e-demo-fidelity/S-PRISMQL-CASE-INSENSITIVE-001/security-reviews/pr-217-c1-control-triage.md",
+     "proposals/security-triage-rule9-cookie-name-charset.md"
+    ],
+    "consistency-audit-report": [
+     "cycles/wave-5-e-demo-fidelity/S-DEMO-MULTI-TENANT-DTU-001/consistency-audit-pre-pass-6.md"
+    ],
+    "pr-adversary-pass-report": [
+     "cycles/wave-5-e-demo-fidelity/S-DEMO-MULTI-TENANT-DTU-001/pr-adversary-pass-10.md",
+     "cycles/wave-5-e-demo-fidelity/S-DEMO-MULTI-TENANT-DTU-001/pr-adversary-pass-3.md",
+     "cycles/wave-5-e-demo-fidelity/S-DEMO-MULTI-TENANT-DTU-001/pr-adversary-pass-4.md"
+    ],
+    "design-note": [
+     "cycles/wave-5-e-demo-fidelity/S-DEMO-QUERY-PUSHDOWN-001/pushdown-redesign.md"
+    ],
+    "adversary-report": [
+     "cycles/phase-2-patch/adversary-pass-59.md",
+     "cycles/phase-2-patch/adversary-pass-60.md",
+     "cycles/phase-2-patch/adversary-pass-61.md"
+    ],
+    "audit-report": [
+     "cycles/phase-2-patch/template-audit-bcs.md",
+     "cycles/phase-2-patch/template-audit-stories.md",
+     "cycles/phase-2-patch/template-audit-vps-and-supplements.md"
+    ],
+    "vp-tbd-decision-matrix": [
+     "cycles/phase-2-patch/vp-tbd-decision-matrix.md"
+    ],
+    "remediation-manifest": [
+     "cycles/phase-2-patch/archive/pre-convergence-remediation/remediation-bcs-wave1.md",
+     "cycles/phase-2-patch/archive/pre-convergence-remediation/remediation-bcs-wave2.md",
+     "cycles/phase-2-patch/archive/pre-convergence-remediation/remediation-bcs-wave3.md"
+    ],
+    "input-hash-recompute-report": [
+     "cycles/phase-2-patch/archive/step5-drift-rebaseline/input-hash-recompute-report.md"
+    ],
+    "decision-note": [
+     "cycles/phase-3-dtu-wave-2/decision-pass7-token-id-shape.md"
+    ],
+    "gate-step-report": [
+     "cycles/phase-3-dtu-wave-2/gate-step-c-code-review.md",
+     "cycles/phase-3-dtu-wave-2/gate-step-d-security-review.md",
+     "cycles/phase-3-dtu-wave-2/gate-step-e-consistency-validation.md"
+    ],
+    "gate-convergence-report": [
+     "cycles/phase-3-dtu-wave-2/wave-2-gate-convergence-report.md"
+    ],
+    "wave-cycle-decision": [
+     "cycles/phase-3-dtu-wave-2/decision-w2-mutate-005-carveout.md"
+    ],
+    "gate-step-f-holdout-evaluation": [
+     "cycles/wave-3-multi-tenant/gate-step-f-holdout-evaluation-pass2.md",
+     "cycles/wave-3-multi-tenant/gate-step-f-holdout-evaluation-pass3.md",
+     "cycles/wave-3-multi-tenant/gate-step-f-holdout-evaluation-pass4.md"
+    ],
+    "review-findings": [
+     "code-delivery/FIX-IEQ-ERRPATH-001/review-findings.md",
+     "code-delivery/PLUGIN-MIGRATION-001-D/review-findings.md",
+     "code-delivery/PLUGIN-MIGRATION-001-E/review-findings.md"
+    ],
+    "merge-result": [
+     "code-delivery/S-3.2.06/merge-result.md",
+     "code-delivery/S-3.2.07/merge-result.md",
+     "code-delivery/S-3.3.01/merge-result.md"
+    ],
+    "cascade-summary": [
+     "code-delivery/S-5.01-FOLLOWUP-MCP-BOOT/cascade-summary.md"
+    ],
+    "fix-burst-closure-record": [
+     "code-delivery/PLUGIN-MIGRATION-001-D/adversarial-review/PLUGIN-MIGRATION-001-D-fix-burst-10.md",
+     "code-delivery/PLUGIN-MIGRATION-001-D/adversarial-review/PLUGIN-MIGRATION-001-D-fix-burst-11.md",
+     "code-delivery/PLUGIN-MIGRATION-001-D/adversarial-review/PLUGIN-MIGRATION-001-D-fix-burst-12.md"
+    ],
+    "fix-burst-record": [
+     "code-delivery/PLUGIN-MIGRATION-001-D/adversarial-review/PLUGIN-MIGRATION-001-D-fix-burst-15.md",
+     "code-delivery/PLUGIN-MIGRATION-001-D/adversarial-review/PLUGIN-MIGRATION-001-D-fix-burst-16.md"
+    ],
+    "cascade-convergence-report": [
+     "code-delivery/PLUGIN-MIGRATION-001-D/adversarial-review/PLUGIN-MIGRATION-001-D-convergence-report.md"
+    ],
+    "epic-registry": [
+     "specs/epics.md"
+    ],
+    "matured-vision": [
+     "specs/matured-vision-day2-requirements.md"
+    ],
+    "proposed-adr": [
+     "specs/day2-design-decisions/ADR-PROP-active-query-devices.md",
+     "specs/day2-design-decisions/ADR-PROP-backup-recovery.md",
+     "specs/day2-design-decisions/ADR-PROP-capability-descriptor-pushdown.md"
+    ],
+    "design-decision": [
+     "specs/day2-design-decisions/ml-depth-phasing.md",
+     "specs/day2-design-decisions/prismql-sequence-sugar-decisions.md"
+    ],
+    "iterate-list": [
+     "specs/day2-design-decisions/positioning-fidelity-iterate-list.md"
+    ],
+    "positioning-narrative": [
+     "specs/day2-design-decisions/positioning-executive-narrative.md"
+    ],
+    "architecture-design-system": [
+     "specs/day2-design-decisions/ARCHITECTURE-DESIGN-SYSTEM.md"
+    ],
+    "design-sketch": [
+     "specs/day2-design-decisions/secret-subsystem-sketch.md"
+    ],
+    "po-ratification-draft": [
+     "specs/day2-design-decisions/po-ratifications.md"
+    ],
+    "consistency-audit": [
+     "specs/day2-design-decisions/consistency-audit-2026-06-27.md"
+    ],
+    "session-resume": [
+     "specs/day2-design-decisions/SESSION-RESUME-2026-06-27.md"
+    ],
+    "working-note": [
+     "specs/day2-design-decisions/prism-as-ot-sensor-note.md"
+    ],
+    "ux-spec": [
+     "specs/day2-ui-design/S2-investigations-console.md",
+     "specs/day2-ui-design/U1-admin-console-inventory.md"
+    ],
+    "disposition": [
+     "specs/day2-ui-design/S3-conversational-canvas-disposition.md"
+    ],
+    "verification-property-index": [
+     "specs/verification-properties/VP-INDEX.md"
+    ],
+    "prd-supplement": [
+     "specs/prd-supplements/error-taxonomy.md",
+     "specs/prd-supplements/interface-definitions.md",
+     "specs/prd-supplements/nfr-catalog.md"
+    ],
+    "behavioral-contract-summary": [
+     "specs/behavioral-contracts/SUBSYSTEMS-01-04-SUMMARY.md",
+     "specs/behavioral-contracts/SUBSYSTEMS-05-07-SUMMARY.md",
+     "specs/behavioral-contracts/SUBSYSTEMS-08-10-SUMMARY.md"
+    ],
+    "behavioral-contract-index": [
+     "specs/behavioral-contracts/BC-INDEX.md"
+    ],
+    "feature-design-map": [
+     "specs/architecture/prismql-case-insensitive-design-map.md"
+    ],
+    "architecture-scoping": [
+     "specs/architecture/demo-readiness-remediation-design-2026-06-24.md",
+     "specs/architecture/scoping/S-1.11-read-side-completion-scope.md",
+     "specs/architecture/scoping/probe-table-field-design.md"
+    ],
+    "architecture-work-order": [
+     "specs/architecture/work-orders/WO-D1109-enrichment-pivot.md"
+    ],
+    "architecture-scoping-correction": [
+     "specs/architecture/scoping/onboarding-001-B-columnnotfound-variant-shape-correction.md",
+     "specs/architecture/scoping/onboarding-001-B-normalized-pql-envelope-correction.md",
+     "specs/architecture/scoping/onboarding-001-tableregistry-datapath-correction.md"
+    ],
+    "architecture-design": [
+     "specs/architecture/scoping/resolved-spec-map-reload-aware-design.md"
+    ],
+    "architecture-adjudication": [
+     "specs/architecture/scoping/001-A-reload-notify-diff-adjudication.md"
+    ],
+    "adjudication-note": [
+     "specs/architecture/scoping/onboarding-001-B-obs-adjudication.md"
+    ],
+    "hook-specifications": [
+     "specs/architecture/decisions/hook-specs-bundle-a.md"
+    ],
+    "adr-amendment": [
+     "specs/architecture/decisions/ADR-026-AMENDMENT-rule-c-keyring-scope.md"
+    ],
+    "test-strategy": [
+     "specs/test-strategy/TS-PLUGIN-PARITY-001-dtu-canonicalization.md"
+    ],
+    "grammar-reference": [
+     "specs/domain-spec/prismql-grammar.md"
+    ],
+    "planning": [
+     "planning/file-size-decomposition-plan-2026-07-21.md"
+    ],
+    "triage-capture": [
+     "planning/findings-remediation-2026-07-20/triage-capture.md"
+    ],
+    "demo-runbook": [
+     "objectives/T13-capstone-demo-runbook.md"
+    ],
+    "demo-scope": [
+     "objectives/DEMO-SCOPE.md"
+    ],
+    "task-ledger": [
+     "objectives/multi-client-soc-demo-tasks.md"
+    ],
+    "correction-log": [
+     "semport/poller-express/poller-express-corrections.md",
+     "semport/serveMyAPI/serveMyAPI-corrections.md"
+    ],
+    "extraction-validation-report": [
+     "semport/poller-express/poller-express-extraction-validation.md",
+     "semport/serveMyAPI/serveMyAPI-extraction-validation.md"
+    ],
+    "session-review-proposal": [
+     "proposals/2026-05-18-cascade-asymptote-assessment.md"
+    ],
+    "architect-decision-note": [
+     "proposals/TD-S-PLUGIN-PREREQ-A-004-close-as-superseded-ratification.md",
+     "proposals/cache-envelope-adjudication-2026-06-10.md"
+    ],
+    "pr-architect-decision": [
+     "proposals/PR-163-architect-decision.md"
+    ],
+    "parallelization-plan": [
+     "proposals/WAVE-5-PARALLELIZATION-PLAN.md"
+    ],
+    "architect-audit": [
+     "proposals/HARNESS-DTU-FIDELITY-AUDIT-2026-05-30.md",
+     "proposals/POLLER-DTU-FIDELITY-AUDIT-2026-05-29.md"
+    ],
+    "story-scope-document": [
+     "proposals/S-MAINT-VERIFY-PIPELINE-001-scope.md"
+    ],
+    "architect-proposal": [
+     "proposals/E2E-DEMO-WIRING-PLAN.md",
+     "proposals/S-DEMO-003-credential-channel-adjudication.md",
+     "proposals/wave-a-engine-story-adjudication-Q1-Q5.md"
+    ]
+   }
+  },
+  "rivetry": {
+   "total_files": 712,
+   "typed": 590,
+   "no_frontmatter": 122,
+   "fm_no_dtype": 0,
+   "canonical": {
+    "adr": 54,
+    "architecture-feasibility-report": 1,
+    "architecture-index": 1,
+    "architecture-section": 9,
+    "behavioral-contract": 134,
+    "blocking-issues-resolved": 1,
+    "burst-log": 1,
+    "consistency-report": 14,
+    "convergence-trajectory": 1,
+    "cycle-manifest": 1,
+    "domain-spec-index": 1,
+    "domain-spec-section": 12,
+    "dtu-assessment": 1,
+    "lessons-learned": 1,
+    "module-criticality": 1,
+    "pipeline-state": 1,
+    "prd": 1,
+    "prd-supplement-error-taxonomy": 1,
+    "prd-supplement-interface-definitions": 1,
+    "prd-supplement-nfr-catalog": 1,
+    "security-review": 6,
+    "session-checkpoints": 1,
+    "traceability-matrix": 1,
+    "ux-spec-flow": 18,
+    "ux-spec-index": 1,
+    "ux-spec-screen": 20,
+    "verification-property": 55
+   },
+   "noncanonical": {
+    "delta-archive": 211,
+    "adversarial-pass-manifest": 7,
+    "persona-journey-map": 7,
+    "adversary-in-cycle-scan-report": 3,
+    "pass-manifest": 2,
+    "analysis": 2,
+    "session-handoff": 1,
+    "decisions-log-archive": 1,
+    "security-cosign-tracking": 1,
+    "security-cosign-review": 1,
+    "in-cycle-scan-report": 1,
+    "traceability-path-convention": 1,
+    "local-verification-label-convention": 1,
+    "brand-token-direction": 1,
+    "brandbook": 1,
+    "brand-decision-log": 1,
+    "verification-property-index": 1,
+    "prd-supplement-edge-case-catalog": 1,
+    "prd-supplement-feature-gap-audit": 1,
+    "prd-supplement-open-questions": 1,
+    "behavioral-contract-index": 1,
+    "storyboard-narrative": 1,
+    "design-system-governance": 1,
+    "design-system-overview": 1
+   },
+   "noncanonical_examples": {
+    "session-handoff": [
+     "SESSION-HANDOFF.md"
+    ],
+    "pass-manifest": [
+     "cycles/v0.1.0-greenfield/pass-122-manifest.md",
+     "cycles/v0.1.0-greenfield/pass-123-manifest.md"
+    ],
+    "adversarial-pass-manifest": [
+     "cycles/v0.1.0-greenfield/pass-108-manifest.md",
+     "cycles/v0.1.0-greenfield/pass-109-manifest.md",
+     "cycles/v0.1.0-greenfield/pass-110-manifest.md"
+    ],
+    "decisions-log-archive": [
+     "cycles/v0.1.0-greenfield/decisions-log-archive.md"
+    ],
+    "security-cosign-tracking": [
+     "cycles/v0.1.0-greenfield/security-cosign-tracking.md"
+    ],
+    "security-cosign-review": [
+     "cycles/v0.1.0-greenfield/security-cosign-ADR-039.md"
+    ],
+    "in-cycle-scan-report": [
+     "cycles/v0.1.0-greenfield/pass-119-reports/R119-in-cycle-scan.md"
+    ],
+    "adversary-in-cycle-scan-report": [
+     "cycles/v0.1.0-greenfield/pass-120-reports/R120-in-cycle-scan.md",
+     "cycles/v0.1.0-greenfield/pass-121-reports/R121-in-cycle-scan.md",
+     "cycles/v0.1.0-greenfield/pass-122-reports/R122-in-cycle-scan.md"
+    ],
+    "analysis": [
+     "analysis/count-citation-removal-manifest.md",
+     "analysis/pass-86-paydown-plan.md"
+    ],
+    "delta-archive": [
+     "design-system/DESIGN-SYSTEM.DELTA-ARCHIVE.md",
+     "design-system/components/component-registry.DELTA-ARCHIVE.md",
+     "design-system/constraints.DELTA-ARCHIVE.md"
+    ],
+    "traceability-path-convention": [
+     "specs/traceability-path-convention.md"
+    ],
+    "local-verification-label-convention": [
+     "specs/local-verification-label-convention.md"
+    ],
+    "brand-token-direction": [
+     "specs/brand/token-direction.md"
+    ],
+    "brandbook": [
+     "specs/brand/brandbook.md"
+    ],
+    "brand-decision-log": [
+     "specs/brand/founder-decisions.md"
+    ],
+    "verification-property-index": [
+     "specs/verification-properties/VP-INDEX.md"
+    ],
+    "prd-supplement-edge-case-catalog": [
+     "specs/prd-supplements/edge-case-catalog.md"
+    ],
+    "prd-supplement-feature-gap-audit": [
+     "specs/prd-supplements/feature-gap-audit.md"
+    ],
+    "prd-supplement-open-questions": [
+     "specs/prd-supplements/open-questions.md"
+    ],
+    "behavioral-contract-index": [
+     "specs/behavioral-contracts/BC-INDEX.md"
+    ],
+    "storyboard-narrative": [
+     "storyboard/v0.1.0-greenfield/frames/frame-01b-modernized-net-classification/frame-01b-narrative.md"
+    ],
+    "persona-journey-map": [
+     "storyboard/v0.1.0-greenfield/journeys/journey-EE-hardware-startup.md",
+     "storyboard/v0.1.0-greenfield/journeys/journey-byo-agent-integrator.md",
+     "storyboard/v0.1.0-greenfield/journeys/journey-certificate-recipient.md"
+    ],
+    "design-system-governance": [
+     "design-system/UX-MODERNIZATION-PRINCIPLES.md"
+    ],
+    "design-system-overview": [
+     "design-system/DESIGN-SYSTEM.md"
+    ]
+   }
+  }
+ }
+}

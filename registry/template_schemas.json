@@ -1,0 +1,1373 @@
+{
+ "burst-log": {
+  "templates": [
+   "burst-log-template.md"
+  ],
+  "keys": [
+   "cycle",
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "performance-report": {
+  "templates": [
+   "performance-report-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "tech-debt-register": {
+  "templates": [
+   "tech-debt-register-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "last_updated",
+   "producer",
+   "version"
+  ]
+ },
+ "implementation-readiness": {
+  "templates": [
+   "implementation-readiness-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "pr-review-findings": {
+  "templates": [
+   "review-findings-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "pr_number",
+   "producer",
+   "status",
+   "story_id",
+   "timestamp"
+  ]
+ },
+ "dtu-fidelity-report": {
+  "templates": [
+   "dtu-fidelity-report-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "fidelity_level",
+   "fidelity_score",
+   "phase",
+   "producer",
+   "service_name",
+   "status",
+   "timestamp"
+  ]
+ },
+ "behavioral-contract": {
+  "templates": [
+   "behavioral-contract-template.md"
+  ],
+  "keys": [
+   "capability",
+   "deprecated",
+   "deprecated_by",
+   "document_type",
+   "extracted_from",
+   "input-hash",
+   "inputs",
+   "introduced",
+   "level",
+   "lifecycle_status",
+   "modified",
+   "origin",
+   "phase",
+   "producer",
+   "removal_reason",
+   "removed",
+   "replacement",
+   "retired",
+   "status",
+   "subsystem",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "fuzz-report": {
+  "templates": [
+   "fuzz-report-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "spec-changelog": {
+  "templates": [
+   "spec-changelog-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "project"
+  ]
+ },
+ "idea-brief": {
+  "templates": [
+   "idea-brief-template.md"
+  ],
+  "keys": [
+   "composite_score",
+   "created",
+   "discovery_run",
+   "document_type",
+   "idea_title",
+   "idea_type",
+   "product_name",
+   "source",
+   "status"
+  ]
+ },
+ "story-index": {
+  "templates": [
+   "story-index-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "gene-transfusion-assessment": {
+  "templates": [
+   "gene-transfusion-assessment-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "ux-spec-flow": {
+  "templates": [
+   "ux-spec-flow-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "flow_diagram",
+   "flow_diagram_source",
+   "flow_id",
+   "flow_name",
+   "phase",
+   "prd_requirements",
+   "producer",
+   "screens",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "convergence-trajectory": {
+  "templates": [
+   "convergence-trajectory-template.md"
+  ],
+  "keys": [
+   "cycle",
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "security-scan-report": {
+  "templates": [
+   "security-scan-report-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "evaluation-index": {
+  "templates": [
+   "evaluation-index-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "story": {
+  "templates": [
+   "story-template.md"
+  ],
+  "keys": [
+   "assumption_validations",
+   "behavioral_contracts",
+   "blocks",
+   "cycle",
+   "depends_on",
+   "document_type",
+   "epic_id",
+   "estimated_days",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "points",
+   "priority",
+   "producer",
+   "risk_mitigations",
+   "status",
+   "story_id",
+   "subsystems",
+   "target_module",
+   "tdd_mode",
+   "timestamp",
+   "traces_to",
+   "verification_properties",
+   "version",
+   "wave"
+  ]
+ },
+ "agent-file-review": {
+  "templates": [
+   "agent-file-review-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "blocking-issues-resolved": {
+  "templates": [
+   "blocking-issues-resolved-template.md"
+  ],
+  "keys": [
+   "cycle",
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "architecture-section": {
+  "templates": [
+   "architecture-section-template.md",
+   "verification-coverage-matrix-template.md",
+   "verification-architecture-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "section",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "prd-supplement-test-vectors": {
+  "templates": [
+   "prd-supplement-test-vectors-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "holdout-scenario-index": {
+  "templates": [
+   "holdout-scenario-index-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "lessons-learned": {
+  "templates": [
+   "lessons-template.md"
+  ],
+  "keys": [
+   "cycle",
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "consistency-validation-report": {
+  "templates": [
+   "consistency-validation-report-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "domain-spec-section": {
+  "templates": [
+   "L2-domain-spec-section-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "section",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "epic": {
+  "templates": [
+   "epic-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "epic_id",
+   "prd_capabilities",
+   "status",
+   "story_count",
+   "version"
+  ]
+ },
+ "evaluation-summary": {
+  "templates": [
+   "evaluation-summary-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "delta-analysis-report": {
+  "templates": [
+   "delta-analysis-report-template.md"
+  ],
+  "keys": [
+   "created",
+   "document_type",
+   "feature_name",
+   "feature_type",
+   "intent",
+   "scope",
+   "severity",
+   "spec_version_at_analysis",
+   "status"
+  ]
+ },
+ "pipeline-state": {
+  "templates": [
+   "state-template.md"
+  ],
+  "keys": [
+   "current_cycle",
+   "current_step",
+   "document_type",
+   "dtu_required",
+   "input-hash",
+   "inputs",
+   "level",
+   "mode",
+   "phase",
+   "producer",
+   "project",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "research-index": {
+  "templates": [
+   "research-index-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "prd": {
+  "templates": [
+   "prd-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "supplements",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "design-drift-report": {
+  "templates": [
+   "design-drift-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "ux-spec-screen": {
+  "templates": [
+   "ux-spec-screen-template.md"
+  ],
+  "keys": [
+   "complexity",
+   "document_type",
+   "phase",
+   "prd_requirements",
+   "producer",
+   "screen_id",
+   "screen_name",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version",
+   "wireframe",
+   "wireframe_source"
+  ]
+ },
+ "wave-schedule": {
+  "templates": [
+   "wave-schedule-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "extraction-validation": {
+  "templates": [
+   "extraction-validation-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "dtu-clone-spec": {
+  "templates": [
+   "dtu-clone-spec-template.md"
+  ],
+  "keys": [
+   "api_docs_url",
+   "api_spec_url",
+   "created",
+   "document_type",
+   "fidelity_level",
+   "service_name"
+  ]
+ },
+ "architecture-index": {
+  "templates": [
+   "architecture-index-template.md"
+  ],
+  "keys": [
+   "deployment_topology",
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "module-criticality": {
+  "templates": [
+   "module-criticality-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "holdout-scenario": {
+  "templates": [
+   "holdout-scenario-template.md"
+  ],
+  "keys": [
+   "assumption_source",
+   "behavioral_contracts",
+   "category",
+   "document_type",
+   "epic_id",
+   "id",
+   "input-hash",
+   "inputs",
+   "introduced",
+   "last_evaluated",
+   "level",
+   "lifecycle_status",
+   "must_pass",
+   "phase",
+   "priority",
+   "producer",
+   "retired",
+   "risk_source",
+   "stale_reason",
+   "staleness_check",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "code-review": {
+  "templates": [
+   "code-review-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "pass",
+   "phase",
+   "previous_review",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "vp-withdrawal": {
+  "templates": [
+   "vp-withdrawal-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "architecture": {
+  "templates": [
+   "architecture-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "prd_version",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "traceability-matrices": {
+  "templates": [
+   "traceability-matrices-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "domain-research": {
+  "templates": [
+   "domain-research-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "output_dir",
+   "phase",
+   "producer",
+   "research_type",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "spec-drift-report": {
+  "templates": [
+   "spec-drift-report-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "security-review": {
+  "templates": [
+   "security-review-template.md"
+  ],
+  "keys": [
+   "critical",
+   "document_type",
+   "files_reviewed",
+   "high",
+   "input-hash",
+   "inputs",
+   "level",
+   "low",
+   "medium",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "total_findings",
+   "traces_to",
+   "version"
+  ]
+ },
+ "maintenance-sweep-report": {
+  "templates": [
+   "sweep-report-template.md"
+  ],
+  "keys": [
+   "date",
+   "document_type",
+   "trigger"
+  ]
+ },
+ "holdout-evaluation-report": {
+  "templates": [
+   "holdout-evaluation-report-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "mean_satisfaction",
+   "must_pass_rate",
+   "must_pass_scenarios",
+   "phase",
+   "producer",
+   "satisfaction_std_dev",
+   "status",
+   "timestamp",
+   "total_scenarios",
+   "traces_to",
+   "version"
+  ]
+ },
+ "demo-evidence-report": {
+  "templates": [
+   "demo-evidence-report-template.md"
+  ],
+  "keys": [
+   "demo_type",
+   "document_type",
+   "pipeline_run",
+   "product",
+   "recording_tool",
+   "status"
+  ]
+ },
+ "holdout-evaluation": {
+  "templates": [
+   "evaluation-per-scenario-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "must_pass",
+   "pass",
+   "phase",
+   "producer",
+   "satisfaction_score",
+   "scenario_id",
+   "source_scenario",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "session-checkpoints": {
+  "templates": [
+   "session-checkpoints-template.md"
+  ],
+  "keys": [
+   "cycle",
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "brief-validation": {
+  "templates": [
+   "brief-validation-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "adversarial-finding": {
+  "templates": [
+   "adversarial-finding-template.md"
+  ],
+  "keys": [
+   "blocks",
+   "category",
+   "depends_on",
+   "document_type",
+   "finding_id",
+   "level",
+   "pass",
+   "phase",
+   "producer",
+   "resolution_evidence",
+   "resolution_pass",
+   "severity",
+   "source_artifacts",
+   "status",
+   "timestamp",
+   "traces_to"
+  ]
+ },
+ "prd-supplement-error-taxonomy": {
+  "templates": [
+   "prd-supplement-error-taxonomy-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "domain-spec-index": {
+  "templates": [
+   "L2-domain-spec-index-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "sections",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "red-gate-log": {
+  "templates": [
+   "red-gate-log-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "red_gate_verified",
+   "status",
+   "stub_architect_agent",
+   "stub_compile_verified",
+   "test_writer_agent",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "prd-supplement-interface-definitions": {
+  "templates": [
+   "prd-supplement-interface-definitions-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "dtu-assessment": {
+  "templates": [
+   "dtu-assessment-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "traceability-matrix": {
+  "templates": [
+   "traceability-matrix-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "ux-spec-index": {
+  "templates": [
+   "ux-spec-index-template.md"
+  ],
+  "keys": [
+   "design_system_version",
+   "document_type",
+   "flows",
+   "input-hash",
+   "inputs",
+   "phase",
+   "prd_version",
+   "producer",
+   "screens",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "release-notes": {
+  "templates": [
+   "release-notes-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "producer",
+   "timestamp",
+   "version"
+  ]
+ },
+ "formal-verification-report": {
+  "templates": [
+   "formal-verification-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "discovery-report": {
+  "templates": [
+   "discovery-report-template.md"
+  ],
+  "keys": [
+   "date",
+   "document_type",
+   "mode",
+   "trigger"
+  ]
+ },
+ "adversarial-review-index": {
+  "templates": [
+   "adversarial-review-index-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "pass",
+   "phase",
+   "producer",
+   "severity_distribution",
+   "status",
+   "timestamp",
+   "total_findings",
+   "traces_to",
+   "version"
+  ]
+ },
+ "session-review": {
+  "templates": [
+   "session-review-template.md"
+  ],
+  "keys": [
+   "date",
+   "document_type",
+   "duration",
+   "path",
+   "path_name",
+   "product",
+   "run_id",
+   "stories_delivered",
+   "total_cost"
+  ]
+ },
+ "consistency-report": {
+  "templates": [
+   "consistency-report-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "adr": {
+  "templates": [
+   "adr-template.md"
+  ],
+  "keys": [
+   "adr_id",
+   "date",
+   "document_type",
+   "status",
+   "subsystems_affected",
+   "superseded_by",
+   "supersedes"
+  ]
+ },
+ "verification-property": {
+  "templates": [
+   "L4-verification-property-template.md"
+  ],
+  "keys": [
+   "deprecated",
+   "deprecated_by",
+   "document_type",
+   "feasibility",
+   "input-hash",
+   "inputs",
+   "introduced",
+   "level",
+   "lifecycle_status",
+   "modified",
+   "module",
+   "phase",
+   "producer",
+   "proof_completed_date",
+   "proof_file_hash",
+   "proof_method",
+   "removal_reason",
+   "removed",
+   "replacement",
+   "retired",
+   "source_bc",
+   "status",
+   "timestamp",
+   "traces_to",
+   "verification_lock",
+   "version",
+   "withdrawal_reason",
+   "withdrawn"
+  ]
+ },
+ "convergence-report": {
+  "templates": [
+   "convergence-report-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "findings-tracker": {
+  "templates": [
+   "findings-tracker-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "cycle-manifest": {
+  "templates": [
+   "cycle-manifest-template.md"
+  ],
+  "keys": [
+   "completed",
+   "cycle_id",
+   "cycle_type",
+   "document_type",
+   "producer",
+   "started",
+   "status",
+   "version"
+  ]
+ },
+ "prd-supplement-nfr-catalog": {
+  "templates": [
+   "prd-supplement-nfr-catalog-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "fix": {
+  "templates": [
+   "fix-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "fix_id",
+   "level",
+   "phase",
+   "producer",
+   "severity",
+   "source_finding",
+   "source_phase",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "adversarial-review": {
+  "templates": [
+   "adversarial-review-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "pass",
+   "phase",
+   "previous_review",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "feature-request": {
+  "templates": [
+   "feature-request-template.md"
+  ],
+  "keys": [
+   "date",
+   "document_type",
+   "priority",
+   "requested_by",
+   "title"
+  ]
+ },
+ "epic-index": {
+  "templates": [
+   "epic-index-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "product-brief": {
+  "templates": [
+   "product-brief-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "architecture-feasibility-report": {
+  "templates": [
+   "architecture-feasibility-report-template.md"
+  ],
+  "keys": [
+   "document_type",
+   "input-hash",
+   "inputs",
+   "level",
+   "phase",
+   "prd_version",
+   "producer",
+   "status",
+   "timestamp",
+   "traces_to",
+   "version"
+  ]
+ },
+ "adversary-prompt-template": {
+  "templates": [
+   "adversary-prompt-templates/phase-1d-spec-review.md",
+   "adversary-prompt-templates/phase-5-code-review.md",
+   "adversary-prompt-templates/phase-2-story-review.md"
+  ],
+  "keys": [
+   "document_type",
+   "focus",
+   "phase"
+  ]
+ }
+}
