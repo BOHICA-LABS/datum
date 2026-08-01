@@ -1,273 +1,115 @@
 # HANDOFF — dolt-artifact-spike
 
-## ⭐⭐⭐ SESSION SNAPSHOT — 2026-07-31 (wrap at `03e6631`; work through `b96a668`) — READ THIS FIRST
+## ⭐⭐⭐ SESSION SNAPSHOT — 2026-07-31 (wrap at `6341ab2`) — READ THIS FIRST
 
-Two things happened this session, and the SECOND one redirects the work:
+**Seven commits. The type registry was BUILT, ported into `fa`, and the knowledge graph got a
+real projection engine.** Everything below is measured; every claim has a repro command.
+`~/Dev/vsdd-factory`, `prism` and `rivetry` were **READ-ONLY the whole session** (verified: 0
+files modified after 21:00).
 
-1. **PHASE 1 SHIPPED** (`e4db2ad`) — `fa` is a Go binary at `fa/`, first product code
-   in the repo. Details in the block below; it all still stands.
-2. **THE VISION CHANGED (user, 2026-07-31).** `fa` is to be the source of truth for
-   **EVERYTHING** that has traditionally gone into the `factory-artifacts` branch —
-   *"all the prose and everything, from product brief, to the discrete tasks inside
-   story executions and everything in between."* Markdown becomes a rendered export
-   for humans only. **That reverses [SPEC](research/SPEC.md) §6 non-goal 1 and the 12
-   prose non-goals in [GAP-MATRIX](research/GAP-MATRIX.md) §2.7.**
+| commit | what |
+|---|---|
+| `902da9d` | **THE REGISTRY** — 103 canonical types + 16 gap + 4 retired, 14 closed enums, 180 aliases, change-management package, validator (exit 0) |
+| `30f7057` | **#671's exit criterion RUN** — prose extraction worth 21.8%, derived-data 25.3%, 37.9% beyond any parser |
+| `d58b77c` | **`fa validate --registry`** — registry embedded in the binary, **67/67 rule parity** with the Python validator |
+| `e62665b` | **Namespace reconciliation (story 1)** — the disagreement is **2**, not 17 |
+| `6cc25cc` | **All four things taken from #671** folded in + machine-checked |
+| `8713636` | **Knowledge-graph projection** (gonum) + `waves`/`graph metrics|dot|diff` + benchmarks |
+| `c4d59d0` | **Centrality hypothesis TESTED** — betweenness loses to free degree; comes off the plan |
+| `6341ab2` | **CSR engine** for 250k+ — 96× less memory, ~100× faster, parity-verified |
 
-Then the user added two requirements and one question, which drove the rest of the
-session: *standardize where it makes sense and migrate projects to the standard*,
-while *accounting for how variation depends on product type ("a local CLI based todo
-app is much different than building a SaaS based IDAM and remote access tool")* — and
-*"would it be helpful to look at another project that uses vsdd-factory (..prism)"*.
-It was. See §NEW FINDINGS below.
-
-**⚠ Consequence for the phase-1 NEXT list: it is SUPERSEDED.** Deploying the gate is
-still valuable but is no longer the top priority — the artifact SCHEMA has to be
-settled first, because the vision changes what `fa` stores.
-
-### ⭐ NEW FINDINGS THIS SESSION (the reason the plan moved)
-
-Two probes, both committed with full evidence:
-
-**`research/PROBE-CYCLES.md` (`3ce3aa1`)** — probed `cycles/`, the worst-case prose
-class (621 files, 15.8 MB), to test the whole-corpus vision against the hardest input:
-- **GAP-MATRIX §2.7's rationale is OVERTURNED.** It excluded 12 prose types for having
-  "no keys, no counts, nothing to derive." Measured: **481 of 611 files carry
-  frontmatter** with keys (`pass`, `cycle`, `document_type`), links (`previous_review`
-  244, `traces_to` 267) and **counts** (`finding_count` 123). The doc now carries a
-  correction banner.
-- The class is **three shapes, not one**: ~568 files touched by exactly ONE commit
-  (immutable → cannot conflict); the churn is **nine append-only ledgers**
-  (`burst-log` 133/105/63 commits, `lessons` 106/85/35, `decision-log` 97/60) holding
-  enumerable `D-NNN` / `LESSON-*` entries that a ROW model strictly improves; plus
-  `INDEX.md` (98/42 commits) which is DERIVED and should never have been stored.
-  **The worst-case class is the easiest to model correctly.**
-- Three general blockers, not prose-specific: **composite keys** (18 basenames collide
-  across paths and ALL 18 hold DIFFERENT content; `adversary-pass-1.md` exists 7×);
-  **as-of resolution** (12,526 prose id mentions, 24 dangling — but `BC-1.12.008` was
-  legitimately RENUMBERED to `BC-3.05.004` and `ADR-099` is an example CLI arg in a
-  code span, so a flat check manufactures false findings — this argues FOR the
-  versioned store); **section-scoped semantics** (`finding_count: 0` is CORRECT in a
-  doc whose `### O-001` headings sit under "Part B — Observations (non-finding)").
-- **Dolt does FULLTEXT.** `MATCH … AGAINST` with relevance ranking, **0.15 s over
-  1,959 bodies** ⇒ prose retrieval needs NO new query language. Quirk: 24 rows for 22
-  distinct ids, callers need `DISTINCT`.
-- NOT established, recorded as such: `finding_count` drift is **not** demonstrated
-  (all 6 comparable docs agree; a first run reported 5 mismatches that were artefacts
-  of comparing a dict to a Counter that omits zeros — caught before publishing).
-
-**`research/CROSS-CORPUS.md` (`b96a668`)** — the answer to "look at prism". **12
-projects under `~/Dev` carry a `.factory`; 10 have a populated contract set**
-(vsdd-factory 3,140 · prism 3,053 · rivetry 1,111 · monocle 884 · slideforge 697 ·
-drift-lab 609 · pregolya 528 · game-factory 331 · brain-factory 302 · forge-mcp 290):
-- **THE DRIFT IS GENERATED BY THE METHOD, NOT BY A PROJECT.** vsdd-factory vs prism,
-  same factory: `document_type` for "an adversary review" has 6 spellings each and
-  only **2 of 12 are shared**; `verdict` has **ZERO** shared values (vsdd:
-  `NITPICK_ONLY`/`HIGH`/`SUBSTANTIVE`/`FINDINGS_REMAIN`/`CONVERGENCE_REACHED`/
-  `CLOCK_RESET`; prism: `BLOCKED`/`CLEAN`/`BLOCKED-soft`/`FINDINGS_OPEN`/
-  `BLOCKED-hard`/`PASS`/`APPROVE`). No per-project tidying fixes that.
-- **The spine is SMALL** (non-empty dirs, 10 corpora): `cycles` 10/10, `specs` 10/10,
-  `logs` 9/10, `planning` 8/10, `code-delivery` 7/10, `stories` 7/10 — then it
-  fragments. IDs: `BC-S.SS.NNN` 11/12, `ADR-NNN` 8/12, `VP-NNN` 6/12, **`S-N.NN` only
-  2/12** (7 corpora have `stories/`, 2 name files that way).
-- **28 singleton top-level dirs, and they track PRODUCT TYPE** — rivetry (CAD/PCB SaaS
-  w/ UI): `design-system`, `ui-evidence`, `storyboard`, specs `brand`/`ux`; prism
-  (security MCP server): `test-strategy`, `day2-*`, `tech-debt`, `objectives`, doc
-  types `security-review`/`pr-level-security-review`/`remediation-manifest`.
-- **vsdd-factory is an OUTLIER and must not be the template**: 1,961 BCs = **7.2× the
-  next largest**; 4 singleton dirs; its `holdout-evaluations/` is uniquely named AND
-  EMPTY while 7 corpora declare `holdout-scenarios/`. prism names BCs flat-with-slug
-  (`BC-2.01.001-single-client-sensor-query.md`) — **precisely the identity violation
-  vsdd flags in its own corpus** — and **151 prism files sit in 4 `specs/` subdirs
-  `artifact-path-registry.yaml` does not declare**, though that file claims to block
-  writes to any unregistered path.
-
-**⭐ THE DECISIVE FINDING — now written up in full in
-[`research/STANDARDIZATION.md`](research/STANDARDIZATION.md), which is THE INPUT to the
-next session's task:** **the standard ALREADY EXISTS.**
-`plugins/vsdd-factory/templates/` declares **81 distinct `document_type` values**
-(incl. `adversarial-review`, `holdout-scenario`, `security-review`, `burst-log`,
-`red-gate-log`, `ux-spec-flow/index/screen`). **Every drifted value measured is ABSENT
-from that set**, and the plugin's own usage is overwhelmingly canonical:
-`holdout-scenarios` in **48** plugin files vs `holdout-evaluations` in **1**;
-`adversarial-review` in **64** vs `adversary-review` in **1**.
-⇒ **This is an ENFORCEMENT gap, not a design gap.** Migration = make the corpora match
-what the plugin already says, vsdd-factory's own corpus included (it is the deviant).
-It also collapses the "product variation" worry: rivetry's `ux-spec-*` and prism's
-`security-review` are ALREADY in the canonical 81 — products differ in WHICH SUBSET
-they use, not in vocabulary.
-
-**Root cause of the one case that looked like genuine variation:** the factory ships
-**two conflicting verdict vocabularies** — `templates/state-manager-checklist-template.md`
-declares `verdict: BLOCKED|CLEAN` (prism's) while `workflows/phases/per-story-delivery.md`
-and `agents/code-reviewer.md` use `NITPICK_ONLY`/`CONVERGENCE_REACHED`/`FINDINGS_REMAIN`
-(vsdd's). Each project inherited whichever surface it touched. **And the field is
-OVERLOADED** — which explains vsdd's `verdict` mixing `HIGH` with `SUBSTANTIVE` with
-`CLOCK_RESET`. Fix = split into three closed fields: `gate` (BLOCKED|CLEAN) ·
-`convergence` (CONVERGENCE_REACHED|CLOCK_RESET|SUBSTANTIVE|NITPICK_ONLY) ·
-`severity_max` (CRITICAL|HIGH|MED|LOW|NIT|NONE).
-
-**Also harvested: `research/BEADS-PROSE.md` (`3ce3aa1`)** — beads @`35ccd0d`. It DOES
-store prose in the DB (4 typed columns `description`/`design`/`acceptance_criteria`/
-`notes` + a `comments` table) but has **no document table**, **no markdown rendering**
-(passive JSONL only, explicitly lossy), **gitignores the DB** (syncing via a Dolt
-remote that may be `refs/dolt/data` on the same git remote — confirming our topology),
-and controls prose growth by **LOSSY DECAY** (`bd admin compact` Tier 1: 30 days
-closed, 70% reduction, *"original content is discarded"*) — **a mitigation an
-authoritative spec corpus cannot use**. Its transferable pattern: core logic queries
-CATEGORIES, never project vocabulary (`custom_statuses WHERE category='active'`), and
-`custom_types`/`custom_statuses` are per-project extension tables. Plus the rule
-*"prefer the `metadata` JSON field before proposing new first-class columns."*
-
-### Corrections I made to my OWN work this session (carry these forward)
-
-- **`corverax` is NOT the largest corpus.** A first pass ranked it first (9,291 files)
-  and flagged it as the sole exception to `BC-S.SS.NNN`. It is neither: **9,274 of
-  those files are `semport/` ingestion scratch** and `specs/behavioral-contracts` holds
-  ONE file. The "exception" was an empty directory. **Counting files is not counting
-  artifacts.**
-- **"Dolt loses you diffs" was too pessimistic** (user pushed back, correctly). Dolt
-  diffs are semantic and queryable: a 1-word change at byte 1,280 of a 4.6 KB body
-  showed as ONE modified row of 1,959, `dolt_diff_bc` exposes `from_body`/`to_body`,
-  and `--diff-mode in-place` does SUB-CELL diffing. Real limits, narrower: the in-place
-  presentation is **terminal-only** (redirected with `--color always` → **zero ESC
-  bytes**, leaving `theTHE` ambiguous), so it does not survive into CI/PR. But the DATA
-  is complete — a line diff computed from `from_body`/`to_body` works, so `fa diff` is
-  ~50 lines. ⇒ **`render` is no longer the sole critical path**; `fa diff` + a PR
-  surface is an equal route, and it plays to Dolt's strengths.
-- **"Categories not names" was wrong as a STANDARDIZATION answer** (user pushed back).
-  It is a tolerance mechanism, and tolerating accidental drift ≠ accommodating genuine
-  variation. Correct answer is three-way: **(1) canonical + enforced + migrate** for
-  everything with a template-declared value; **(2) profile = PRESENCE not naming** (a
-  project declares which canonical types it uses); **(3) new types enter by ADDING A
-  TEMPLATE**, never by inventing a value inline. Aliases survive only as a MIGRATION +
-  HISTORY device (old docs must stay valid — see as-of, above) with a retirement path.
-
-**`fa` exists.** It is a Go binary at `fa/`, built on the embedded
-`dolthub/driver/v2`, and it is the first product code in this repo. The "CURRENT
-SNAPSHOT" further below describes the SPIKE that preceded it and is still accurate as
-the evidence base.
-
-**Read `fa/README.md`** for the implementation, the measured numbers, and the two
-corrections it forced. In one screen:
+### The state in one screen
 
 | | |
 |---|---|
-| Build | `cd fa && CGO_ENABLED=1 go build -tags gms_pure_go -o fa .` (both flags mandatory; 39.5 s cold, 148 MB) |
-| `fa import` | live corpus in **1.1–1.4 s**, one transaction, idempotent |
-| `fa validate` | **0.15 s**, every gate a query |
-| Findings today | **153** (type 44 · direction 58 · dangling 39 · count 7 · integrity 5) |
-| Baseline | `fa/baseline.json` — 153 itemised, dated 2026-07-31, corpus `82163b7f` |
-| Gate behaviour | live corpus → exit 0 · planted dangling ref → exit 1 naming exactly it · `--strict` → exit 1 |
-| Tests | 24, ~3.3 s, no network, no `dolt` binary |
-| CI | `fa/workflows/fa-validate.yml` (deploy to vsdd-factory `.github/workflows/`) |
+| Registry | `fa/registry/{artifact-type-registry,enums,aliases}.yaml` — the ONE canonical copy, `go:embed`'d into `fa` AND read by the Python tooling |
+| `fa` | **62 tests · 9 benchmarks**, ~3.5 s, no network, no `dolt` binary |
+| Gate on live corpus | **6,864 findings** (153 store-side + 6,711 registry-side), all baselined; ratchet proven (planted violation → exit 1 naming it) |
+| Graph | **2,421 nodes · 4,060 edges**, CSR at **0.1 MB**; 148 stories in **16 waves**; **0 dependency cycles**; 50 articulation points |
+| Repo | local-only, **NO remote**, clean at `6341ab2` |
 
-**Parity was proven, not assumed:** identical records and universes to the Python
-prototype, the 82 import-path findings match **rule for rule**, and the edge sets
-were diffed row by row.
+### ⚠ FIVE CORRECTIONS TO MY OWN CLAIMS THIS SESSION — carry these forward
 
-**Two corrections this build forced** (both now in `research/LESSONS.md`):
-1. **The corpus graph has 1,509 edges, not 1,490.** The prototype's frontmatter
-   parser treated a prose value with an unbalanced `[` as an unterminated inline
-   list, swallowing every key after `BC-INDEX.md`'s `last_amended` — which hid
-   `total_bcs: 1955` from the count gate and 19 real edges across six S-15.x
-   stories. `SPEC.md`, `ASSESSMENT.md` and `GAP-MATRIX.md` are updated.
-2. **"1962 distinct BC ids in BC-INDEX rows" needs its extraction rule stated.**
-   Restricted to the enumeration table's first column it is 1,959, agreeing with
-   disk; 1962 counts BC ids anywhere in the file, changelog prose included.
+1. **"The standard already exists / ~12 legacy spellings."** True by mass, false by vocabulary.
+   **Two** declared standards (path registry 46 `artifact_type` vs templates 81
+   `document_type`, overlapping on **11**), and **181** non-canonical values over 1,138 files —
+   but **108 appear exactly once**, so alias the head and gate the tail.
+2. **"Split `verdict` into `gate`."** `gate:` is ALREADY a prism identifier
+   (`gate: wave-3-integration-gate`). Field is **`gate_result`**. Same trap hit again with
+   **`scope`** (prism already uses PR-LEVEL/LOCAL/spec) — measure a field name before claiming it.
+3. **"17 namespace defects."** One boolean stood for THREE defects. Real:
+   name_disagreement **2** · path_missing 4 · template_missing 11.
+4. **"Betweenness is single-digit ms / fine at 10×."** 236 ms at 2.4k, **52 s at 24k**. Then the
+   hypothesis test showed it is the **WORST** predictor (AUC 0.725) vs free **degree** (0.871).
+   Measuring the alternative deleted the planned work rather than sizing it.
+5. **"`topo.BiconnectedComponents` exists in gonum."** It does not. Articulation points are
+   hand-rolled Hopcroft–Tarjan, pinned by 7 hand-worked cases + CSR parity.
 
-### ▶▶▶ TOP PRIORITY NEXT — the session ended EXACTLY here
+### ▶▶▶ TOP PRIORITY NEXT — the session ended cleanly here; NOTHING is in flight
 
-**THE NEXT ACTION, agreed and not yet started: BUILD THE TYPE REGISTRY (the standard).**
-The user's last words were *"should we wrap first and start a new session before we kick
-off?"* — so this wrap exists to start that cleanly. Nothing is in progress; no WIP.
+**Session task list: all 8 tasks ✓ COMPLETED. No WIP, no uncommitted work, nothing running.**
 
-**READ [`research/STANDARDIZATION.md`](research/STANDARDIZATION.md) FIRST** — it carries the
-full design position with its evidence: the standard-already-exists proof, the three-way
-classification (canonical+migrate / profile=PRESENCE-not-naming / new-types-by-template),
-the three layers, the query-surface decision, the measured cost of "fa owns everything",
-the migration mechanics, and the three one-way doors still open.
+**NEXT ACTION, in this order (the F-\* measurement set it):**
 
-**Deliverable:** a canonical artifact-type registry, seeded from the **81
-template-declared `document_type` values** in `plugins/vsdd-factory/templates/`,
-cross-checked against ACTUAL usage in **vsdd-factory, prism AND rivetry** (a schema
-validated against one corpus just re-encodes that corpus — and vsdd-factory is the
-outlier). Per type it must declare what the existing path registry does NOT: **key ·
-required fields · enums · link types · section schema · shape (record | document |
-append-only event | config | blob-with-path) · authority · gate severity**.
+1. **STORY 7 — make the indexes derived, via `shadow → proven → retired`.**
+   **The highest-value single change: 25.3% ±9.1 of the adversary's findings**, eliminated
+   rather than detected. All 23 derived types already ship at `derivation_stage: shadow`.
+   Do NOT flip them: generate alongside the authored form, every disagreement a finding, and
+   advance only on evidence. Targets by churn: `BC-INDEX` (218 commits), `STORY-INDEX` (381),
+   `ARCH-INDEX` (151), `VP-INDEX` (140), `cycles/INDEX` (98), `epic.story_count`.
+   Expect the first shadow diffs to be INFORMATIVE, not clean — the corpus asserts four
+   different BC totals.
+2. **STORY 4 — mint `adversarial-finding` as rows.** A template exists and **nothing uses it**;
+   findings are prose tables inside review bodies. This is the enabler for `finding_count`,
+   `severity_distribution` and `total_findings` becoming derived.
+3. **STORY 12 — prose-reference extraction.** 21.8% ±8.7. Everything it needs is now declared:
+   9 `prose_ref_kinds`, 7 `prose_ref_rules`, `pin_policy` on all 23 link types, and CSR to hold
+   the section nodes. **Three rules are load-bearing or it manufactures false findings:**
+   exclude code spans (`ADR-099` is an example CLI arg), resolve as-of through `id_alias`
+   (`BC-1.12.008` was legitimately renumbered to `BC-3.05.004`), and report
+   `unresolvable`-owner refs separately from `dangling`.
+   ⚠ **This is also the 250k-node driver** — sections + sub-artifact ids is ~100k nodes from
+   the existing 6,537 md files. CSR landed first deliberately.
 
-Must include, all evidence-backed above:
-- **A dedup pass on the 81 first** — the template set has its OWN drift: it declares
-  both `traceability-matrix` AND `traceability-matrices`.
-- **The three-way verdict split** (`gate` / `convergence` / `severity_max`), because
-  the field is overloaded and the factory ships two conflicting vocabularies.
-- **An alias map** for the ~12 legacy spellings (`adversary-review`,
-  `adversarial-review-report`, `adversary-pass-report`, `local-adversary-review`,
-  `per-story-adversary-review`, …) → canonical, so history stays valid.
-- **Composite keys** — filenames collide with different content, at document level.
-- **`enforcement_level: advisory → warn → block` per type**, which already exists in
-  `artifact-path-registry.yaml` and composes with `fa`'s dated finding baseline: land
-  advisory, graduate to block when that type's baseline hits zero.
+**Smaller, known, not urgent:**
+- Store loaders use `s.Strings()`/`s.Pairs()`, which materialise whole result sets — **stream
+  them before 250k**.
+- `graph dot` is meaningless above a few thousand nodes → make `--scope` mandatory past a bound.
+- Precompute+store metrics per commit (`graph_metric(commit,node,measure,score)`) — now much
+  less urgent, since the shipped measures are milliseconds.
 
-**Migration cost, measured (do not re-derive):** `document_type` is referenced as a KEY
-in **275** plugin files — but the key is stable, only VALUES change, which is a
-mechanical frontmatter rewrite with a reviewable diff. Directory renames are `git mv` +
-a registry entry. The real coupling to watch is **`cycles/` (189 plugin files)** and
-`tech-debt-register` (12), where paths are embedded in prompts.
+**⛔ BLOCKED ON USER AUTHORIZATION (all need write access to vsdd-factory / GitHub):**
+- The **2 namespace renames** (`story-spec`→`story`, `state`→`pipeline-state`) that close story 1.
+  `validate_registry.py` prints **EXIT CRITERION NOT MET: 2** until they land.
+- **Opening the ADR** and registering the policy.
+- **Answering #671** on the issue. It is an open, unbuilt proposal by another author that the
+  chosen direction now contradicts; leaving it silently contradicted is the worse outcome.
 
-**Constraint that must carry over:** this is a change to a RUNNING factory across ~10
-projects. Per #671's own warning about its later phases, it should flow through vsdd's
-change management (an ADR, stories, a policy with `enforced_by`) — not a unilateral
-rewrite. And `~/Dev/vsdd-factory` + the 9 sibling corpora were **READ-ONLY** all
-session; keep it that way until the standard is agreed.
+### The four settled one-way doors (user, 2026-07-31) — do not relitigate
 
-### Then, after the standard (all still valid, just no longer first)
+- **D-A** prose = verbatim `body` bytes **+ a derived ordinal-keyed section partition**, gated
+  byte-exact (`concat(sections)==body`, measured 0 mismatches / 6,537 files). Ordinal keys, never
+  headings: 110 docs carry 1,968 duplicate `##`+ headings.
+- **D-B** store **gitignored**, synced via `refs/dolt/data`; rendered markdown **committed** as
+  the review surface AND offline backup ⇒ **NEW INVARIANT 15: `import(render(store)) == store`**, gated.
+- **D-C** per-type declared natural key; `path` is a **UNIQUE DERIVED** column, never identity
+  (1,852 BC renames, 0 deletes); plus an **`id_alias` ledger** so renumbering keeps history valid.
+- **D-D** `verdict` **RETIRED** → `gate_result` / `convergence` / `severity_max`; `status`
+  narrowed to **lifecycle only**.
 
-1. **Resume the class-by-class pass, emitting PROFILE ENTRIES rather than prose.**
-   Sequence by file mass: `stories/` (170) and `code-delivery/` (148) next, then
-   `logs/` (34 `.jsonl` — the only class with a genuinely different, high-volume
-   append-only shape). `cycles/` is DONE (`PROBE-CYCLES.md`).
-2. **`fa diff` / `fa history` / `fa asof`** — ~50 lines each against
-   `dolt_diff_*` / `dolt_history_*`, and the cheapest way to make the store earn its
-   keep TODAY (nothing in phase 1 uses Dolt's differentiators; see the diff correction
-   above). Was agreed as "for sure do 1" before the schema question took over.
-3. **Deploy the phase-1 gate** — `fa/` → `tools/fa/`, `fa/workflows/fa-validate.yml`
-   → `.github/workflows/` in vsdd-factory, open a PR. **D3's exit criterion into phase
-   2 cannot be met inside this repo:** it needs the baseline at zero (or each item
-   waived with a reason) AND the gate catching a real regression in a REAL PR.
-4. **Ratchet the baseline down.** Cheapest first: the 7 `count` findings, three of
-   which locate the BC-total drift in **SS-03 (states 53, actual 56), SS-05 (656 vs
-   655), SS-08 (214 vs 218)**. The 58 `direction` findings are ONE class — fix by
-   storing a single dependency direction, not by editing 58 entries.
-5. **Run #671's unmet exit criterion** (cheap, decides item 6's scope): check `fa`'s 153
-   findings against the **F-\* findings from recent adversarial passes**. `fa` reproduced
-   the prototype's 82 rule-for-rule and found 71 more, but has NEVER been compared to the
-   F-\* findings — which is #671's own phase-1 gate (*"reproduces known F-* findings
-   without hand-tuning"*). It answers whether a frontmatter-only parser suffices or whether
-   prose-reference extraction is where the real drift lives. See
-   [`research/STANDARDIZATION.md`](research/STANDARDIZATION.md) §8 for the full disposition
-   of #671 — an OPEN, UNBUILT alternative design by another author that the new vision now
-   makes a fork in the road rather than a complement.
-6. **Extract prose-embedded references** — now much better priced: needs code-span
-   exclusion, as-of (or alias) resolution, and per-id adjudication, or it manufactures
-   false findings. The 41 legacy stories under `stories/v1.0-legacy/` have **no
-   frontmatter at all** (prose `**Blocks:** S-2.8`), which is why the dangling count is
-   a floor.
-7. **Phase 2 per SPEC §7**: the lease to `fa lease`, delete the `STATE.md` YAML lock.
-   That is where `fa aggregate`'s network plumbing lands, on top of the quarantine
-   policy already implemented and tested in `fa/quarantine.go`.
+### Operating principles that earned their place THIS session
 
-**Open question worth settling early (one-way doors):** the **unit of change for
-prose** (one `body` cell vs typed sections — beads chose 4 typed columns) and whether
-the store is **committed or gitignored** (beads gitignores + pushes to `refs/dolt/data`
-on the same git remote; those are NOT in conflict, they are the same design). Both
-constrain every profile row.
-
-### Session task tracker (ephemeral — mirrored here)
-
-The 9 phase-1 build tasks were all **✓ completed** (ground-truth capture · Go module ·
-import · validate · baseline · doctor · quarantine policy · CI · parity+writeup). The
-two probes ran without tracker entries. **The tracker is now EMPTY and nothing is in
-flight.** The next session starts fresh on the type registry above.
+- **Measure the alternatives to a lever before pulling it.** It deleted sampled+parallel
+  Brandes entirely (degree predicts better, for free).
+- **Never report a number a test could contradict.** Two benchmarks measured NOTHING and said
+  so plausibly: the F-\* extractor found 11 findings from 1 file (v1 knew 1 of 3 formats), and
+  `BenchmarkCSRWavesReal` timed an early return (1.1 µs at 240k). Both now pinned by tests.
+- **Never collapse exit 1 and exit 2.** Caught twice: a bad `--registry` path, and a bad
+  `--as-of` ref that produced an EMPTY graph reported as "+2,421 nodes added".
+- **A regex must not cross block boundaries.** A non-greedy match assigned 17 of 17
+  `namespace_status` values to the WRONG types while parsing cleanly.
+- **Parity, not inspection.** 67/67 rules Go-vs-Python; CSR-vs-gonum on hand-worked answers AND
+  generated graphs.
 
 ---
 
@@ -553,6 +395,14 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-07-31 | `6341ab2` | **CSR ENGINE for 250k+ nodes.** Two int32 arrays + keys interned in ONE byte slab, ids in SORTED key order so `Lookup` is a binary search and NO `map[string]int32` is retained (~80 MB at 1M nodes saved). **MEASURED 96× less memory** (240k nodes: gonum 756.5 MB → CSR **7.9 MB**; live corpus **0.1 MB**; ~33 MB vs ~3.1 GB at 1M) **and ~100× faster** (articulation 240k: 980 ms → **8.1 ms**; SCC 240k 4.6 ms; waves 240k 710 → 121 ms). Parallel edges preserved. **NO Brandes ported** — betweenness was measured off the critical path. gonum retained for Louvain only. **Correctness by PARITY**: 7 hand-worked articulation cases + generated graphs at 50/500/2400 (node/edge counts, per-node degree, articulation set, SCC count), waves layering, dangling, parallel-edge survival. **A benchmark that measured NOTHING, caught:** waves reported 1.1 µs at 240k because `synthProjection` makes no `story` nodes, so `Waves()` returned immediately — now pinned by `TestSynthStoriesActuallyProducesWaves`. `fa graph build` + `fa waves` run on CSR. 62 tests, 9 benchmarks |
+| 2026-07-31 | `c4d59d0` | **CENTRALITY HYPOTHESIS TESTED — AND BETWEENNESS LOST.** Betweenness existed for the claim that propagation misses cluster on high-betweenness nodes. Measured against 2,138 extracted findings, AUC = P(flagged outranks unflagged), 231 flagged vs 2,190 unflagged: **degree 0.871 (O(E), FREE) · pagerank 0.843 (16 ms@24k) · betweenness 0.725 (~52 s@24k)**. The cheapest measure predicts BEST and betweenness is ~3,000× the cost. ⇒ sampled Brandes, parallel Brandes and Brandes-over-CSR all came **OFF the critical path**; `degree` promoted into default metrics; CSR's scope shrank to memory. New `fa graph centrality` (CSV) + `Degrees()`. **Caveat recorded:** the proxy is "id mentioned in a finding" and well-connected artifacts get discussed more, so degree's edge is partly tautological — that weakens "centrality predicts risk" but NOT "betweenness isn't worth 52 s" |
+| 2026-07-31 | `8713636` | **KNOWLEDGE-GRAPH PROJECTION** over gonum (pure Go — no CGO fight) + `fa waves` and `fa graph build|metrics|dot|diff`. Node identity from the REGISTRY's declared key; `multi.DirectedGraph` NOT `simple` (simple permits one edge per (u,v) and would have silently collapsed story→BC via behavioral_contracts AND traces_to); dangling = an edge whose head is undeclared. Live: 2,421 nodes/4,060 edges, 148 stories in 16 waves, 0 SCCs>1, 50 articulation points, 11 Louvain communities. **TWO OF MY THREE SPEED CLAIMS REFUTED:** betweenness is 236 ms at 2.4k (not "single-digit ms") and **52.2 s at 24k** (not "probably fine at 10×") ⇒ opt-in + bounded, REFUSED not silently skipped. **REAL BUG FOUND BY BENCHMARKING:** gonum's dense `PageRank` allocates 47 MB/call on a sparse graph; `PageRankSparse` is **197× faster, 43× less memory** ⇒ default `graph metrics` 577 ms → 73 ms. **`topo.BiconnectedComponents` DOES NOT EXIST** — articulation points hand-rolled Hopcroft–Tarjan, iterative, 7 hand-worked tests. **Third silent failure caught:** a bad `--as-of` ref produced an EMPTY projection reported as "+2,421 nodes added", exit 0 → now a ref probe, exit 2. `research/GRAPH-PERF.md` |
+| 2026-07-31 | `6cc25cc` | **ALL FOUR THINGS TAKEN FROM #671**, each machine-checked (validator 1j–1m + 3 Go tests). (1) **`generate → prove equal → retire`** — new `derivation_stage` on all **23** derived types, all at `shadow`; story 7 was a one-way flip on BC-INDEX/STORY-INDEX and is now a ratchet. (2) **WRITE-TIME enforcement** — new `enforcement_point`, and `block` enforced only in CI is now a rejected CONTRADICTION. (3) **VERSION-PINNED citations** — new `pin_policy` on all 23 link types + `index_cite` (floating ⇒ lag IS a finding) and `reviewed_version` (pinned ⇒ lag is CORRECT); same syntax, opposite verdicts, which is why it had to land BEFORE prose extraction. (4) **`impact`** the reverse closure + a `query_verbs` catalogue with a declared growth path. NOT taken (with reasons): the Rust crate/no-DB architecture, in-memory petgraph, "not git-diffable". Already held stronger: #671's cannot-be-stale virtue IS invariant 15. **Defect caught:** `link_types` held a rules LIST beside entry MAPS → untypeable in Go, a test discarded the error, and a parse failure surfaced as a nil deref. Hoisted to `link_rules` |
+| 2026-07-31 | `e62665b` | **NAMESPACE RECONCILIATION (story 1) — the disagreement is 2, not 17.** One boolean stood for THREE unrelated defects: `name_disagreement` **2** (`story`/`story-spec`, `pipeline-state`/`state`) · `path_missing` 4 · `template_missing` 11. Only the first two are namespace defects. **A full file merge would be WRONG** — the path registry is deliberately COARSER (`cycle-document` serves 8+ types), so requiring a unique path per type would force 8 invented subdirectories ⇒ `shared_path_patterns`, and story 1 shrinks to TWO renames. `namespace_reconciliation` declares resolution_rule (the `document_type` name WINS) + all 4 categories + the 4 path-registry-only entries + a validator-CHECKED exit criterion. **Second self-caught defect:** a non-greedy regex matched flag lines belonging to LATER type blocks and mis-assigned 17 of 17 values while parsing cleanly — caught by PRINTING the groups, fixed with block-scoped editing |
+| 2026-07-31 | `d58b77c` | **`fa validate --registry` — ONE GATE, NOT TWO.** `fa/registry/*.yaml` is the ONE canonical copy: `go:embed`'d into the binary AND read by the Python tooling. **67/67 rules agree EXACTLY** with the Python validator on vsdd-factory (6,711 registry findings each). Getting there fixed THREE defects: (1) **three states not two** — `blocks: []` is a DECLARATION of none vs an absent key; Go called empty lists missing, Python called BLOCK-STYLE lists missing (it never parsed `key:\n  - item`); (2) **inline YAML comments** — `verification_properties: []  # ...` read as non-empty, found by a parity diff off by EXACTLY ONE FILE; (3) **exit 1 vs 2 collapse** — a bad `--registry` path validated ZERO files while exiting non-zero from the store gates. Ratchet proven end-to-end (baselined → 0, planted invented type → 1 naming it, `--strict` → 1, bad path → 2). `baseline write --registry` was ALSO required or every registry finding reads as new next run. Tests 24 → 43 |
+| 2026-07-31 | `30f7057` | **#671's EXIT CRITERION RUN AT LAST.** Hand-classified random sample (n=100 of 1,894 cleaned findings, seed 2026; 87 real after 13 turned out to be closure rows): **registry+fa already address 40.2% ±10.3** (derived-data 25.3% + frontmatter 14.9%) · **prose extraction 21.8% ±8.7** · **beyond ANY parser 37.9% ±10.2** (external 13.8 + process 12.6 + semantic 11.5). ⇒ #671 is PARTLY RIGHT: registry GAINS `prose_ref_kinds` (9 kinds) + 5 rules, an ADDITION not a redesign; and **story 7 goes BEFORE story 12** since derived-data elimination is worth more AND eliminates rather than detects. The 37.9% belongs in the ADR: nothing here replaces adversarial review. **4th parser-lost-input caught:** v1 of the extractor knew 1 of 3 finding formats and ran on 8 docs/cycle → **11 findings, all from ONE file**, 0.3% of the data. v2 covers all three forms over 390 docs. Keyword rules classified only 33%, so the headline is HAND-classified and committed for audit. `research/FSTAR-COMPARISON.md` |
+| 2026-07-31 | `902da9d` | **THE TYPE REGISTRY BUILT** (the session's headline deliverable). 103 canonical types + 16 gap types + 4 retired, each declaring key · required fields · enums · link types · section schema · shape · authority · gate severity · enforcement_level · profile; 14 closed vocabularies; 180 aliases carrying `set:` FIELD DEFAULTS (a rename-only map would destroy the scope/reviewer_role the 12 adversarial-review spellings encoded); a change-management package (ADR + policy + stories + graduation ladder + 7 hazards); a validator that exits 0. **FIVE FINDINGS:** two declared standards overlapping on 11 · enforcement gap by MASS but design gap by VOCABULARY (181 values/1,138 files; 22/71, 32/150, 27/51 distinct) · the tail is 108 SINGLETONS · the 12 review spellings encode real dimensions · **`delta-archive` (211 rivetry files, created by rivetry's own POLICY-22) and `input-hash` (3,890 files, admits "spurious DRIFT") exist ONLY because there is no versioned store ⇒ RETIRED**. **SEVEN defects the validator caught in my own registry**, incl. `bc_id`/`vp_id` required → 2,577 FALSE findings (ids live only in filenames) and `priority` bound to `severity_max` → 391 false findings on legitimate `P1` |
 | 2026-07-31 | `b96a668` | **CROSS-CORPUS: ten `.factory` corpora compared** — prompted by "look at prism". **THE DRIFT IS METHOD-GENERATED:** vsdd-factory vs prism, same factory, `document_type` 6 spellings each with only **2 of 12 shared**, `verdict` with **ZERO** shared values. **The spine is SMALL** (`cycles` 10/10, `specs` 10/10, `logs` 9/10, `planning` 8/10, `code-delivery`+`stories` 7/10; `BC-S.SS.NNN` 11/12 but `S-N.NN` only 2/12). **28 singleton dirs track PRODUCT TYPE** (rivetry UI/SaaS: `design-system`/`ui-evidence`/`brand`/`ux`; prism security: `test-strategy`/`security-review`). **vsdd-factory is an OUTLIER** — 1,961 BCs = 7.2× the next, its `holdout-evaluations/` uniquely named AND empty vs `holdout-scenarios/` in 7, prism's flat-with-slug BC names are vsdd's own identity violation, and 151 prism files sit in 4 `specs/` dirs the path registry never declares. **METHOD CORRECTION: corverax is NOT the biggest corpus** — 9,274 of 9,291 files are `semport/` scratch and its BC dir holds ONE file; counting files ≠ counting artifacts. `research/CROSS-CORPUS.md` |
 | 2026-07-31 | `3ce3aa1` | **PROBE `cycles/` + harvest beads.** **GAP-MATRIX §2.7 OVERTURNED** (banner added): 481/611 prose files carry frontmatter with keys, links AND counts. The class is **three shapes** — ~568 write-once immutable docs, nine append-only ledgers (`burst-log`/`decision-log`/`lessons`, 600+ append commits) that a ROW model strictly improves, and a DERIVED `INDEX.md`. **The worst case is the easiest to model.** Real blockers are general: composite keys (18 basenames collide, ALL with different content), **as-of resolution** (`BC-1.12.008` was legitimately renumbered; `ADR-099` is an example CLI arg — a flat check manufactures false findings), section-scoped semantics. **Dolt does FULLTEXT** (0.15 s / 1,959 bodies) ⇒ no new query language. NOT established: `finding_count` drift (all 6 comparable docs agree; 5 first-run 'mismatches' were dict-vs-Counter artefacts, caught pre-publish). `research/PROBE-CYCLES.md` + `research/BEADS-PROSE.md` (beads stores prose in 4 typed columns, has NO document table, NO markdown rendering, gitignores the DB, and decays prose LOSSILY — unusable for an authoritative corpus) |
 | 2026-07-31 | `e4db2ad` | **PHASE 1 BUILT — first product code.** `fa` as a Go binary (`fa/`, embedded `dolthub/driver/v2`, CGO + `-tags gms_pure_go`, 148 MB, 39.5 s cold build): `import` (live corpus in **1.1-1.4 s**, ONE transaction, idempotent, FK rejections recorded as findings) · `validate` (**0.15 s**, every gate a query: W8's gates + a count-assertion gate + index enumeration + prefix agreement + scalar refs + dependency direction + **D2's mandatory cross-zone pass**, ids and counts only) · a **dated 153-finding baseline** that ratchets · `doctor` probing **WRITABILITY not openability** (verified against a real read-only second opener: `cannot update manifest: database is read only`, while the schema check passed on the same store) · the **`fa aggregate` quarantine policy** as pure tested code (bounded attempts, run-counted backoff, move to `refs/dolt/quarantine/*`, and an unmergeable lineage quarantined on the FIRST failure per invariant 14) · a CI workflow that fails on NEW findings only · 24 tests in 3.3 s with no network and no `dolt` binary. **PARITY PROVEN** against the Python prototype: identical records + universes, the 82 import-path findings match RULE FOR RULE, edge sets diffed row by row. **Gate proven to FAIL**: a dangling ref planted in a COPY of the corpus → exactly 1 new finding, exit 1; live corpus → exit 0. **CORRECTIONS #9-10:** the corpus graph has **1,509 edges, not 1,490** (the prototype's parser treated a prose value with an unbalanced `[` as an unterminated inline list, swallowing every key after `BC-INDEX`'s `last_amended` — hiding `total_bcs: 1955` from the count gate and 19 real edges across six S-15.x stories; THIRD instance of the parser-loses-input class, now pinned by a regression test), and **"1962 distinct BC ids" depends on its extraction rule** (first column of the enumeration table = 1,959, which agrees with disk). `fa/README.md` |
@@ -575,141 +425,90 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 ## KICK-START PROMPT (paste this cold)
 
 ```
-Resume the dolt-artifact-spike in ~/Dev/scrap/dolt-artifact-spike (local-only git, clean).
+Resume the dolt-artifact-spike in ~/Dev/scrap/dolt-artifact-spike (local-only git, NO remote,
+clean at 6341ab2).
 
-READ FIRST — ONLY THESE FOUR to start the next task:
-  1. HANDOFF.md TOP BLOCK          (the vision change, both probes, 4 self-corrections)
-  2. research/STANDARDIZATION.md   (⭐ THE INPUT to the next task: the standard already
-                                    exists; three-way classification; three layers; the
-                                    query-surface call; what "fa owns everything" costs;
-                                    migration mechanics; #671's disposition; open doors)
-  3. fa/README.md                  (what fa does today + how to build/run it)
-  4. research/CROSS-CORPUS.md      (10 corpora: the spine, the drift, why vsdd is an outlier)
+READ FIRST — ONLY THESE FOUR:
+  1. HANDOFF.md TOP BLOCK              (7 commits, the 4 settled doors, 5 self-corrections)
+  2. registry/README.md                (the standard: what it declares + what running it says)
+  3. research/FSTAR-COMPARISON.md      (#671's exit criterion RUN: 40% / 22% / 38% split —
+                                        this is what ORDERS the remaining stories)
+  4. research/GRAPH-PERF.md            (the graph engine, every number measured, incl. the
+                                        two speed claims it refuted and the CSR tables)
 
-  Then, as needed:
-  research/PROBE-CYCLES.md  (the worst-case prose class, decomposed)
-  research/BEADS-PROSE.md   (the only shipped Dolt product: what it does with prose)
-  research/DECISIONS.md     (the 3 settled calls — D3's "no Go" note is SUPERSEDED)
-  research/SPEC.md          (14 invariants, CLI surface, phasing)
-  research/LESSONS.md       (every Dolt gotcha + every harness bug that faked a clean result)
-  research/GAP-MATRIX.md    (46 artifact types; §2.7 now carries a CORRECTION banner)
-  research/ACCESS-PATH.md · REMOTE.md · SCALE.md · CI-AGGREGATOR.md · ACCESS-CONTROL.md ·
-  ASSESSMENT.md   (the spike's measured evidence base — unchanged, read on demand)
+  Then as needed: registry/CHANGE-MANAGEMENT.md (ADR + policy + 16 stories + hazards) ·
+  research/STANDARDIZATION.md · CROSS-CORPUS.md · PROBE-CYCLES.md · SPEC.md · DECISIONS.md ·
+  LESSONS.md · BEADS-PROSE.md · GAP-MATRIX.md · fa/README.md
 
-REFERENCE MATERIAL — vsdd-factory and its 23 sibling corpora are LOCAL and READ-ONLY.
-DO NOT WRITE TO ANY OF THEM until the standard is agreed:
-  ls ~/Dev/vsdd-factory/.factory        # the live corpus, branch factory-artifacts
-  ls ~/Dev/prism/.factory               # the 2nd corpus (security MCP server)
-  ls ~/Dev/rivetry/.factory             # the UI/SaaS corpus the standard MUST cover
-  ls ~/Dev/vsdd-factory/plugins/vsdd-factory/templates/   # ⭐ THE 81 CANONICAL document_types
-  cat ~/Dev/vsdd-factory/plugins/vsdd-factory/config/artifact-path-registry.yaml
-  # ^ declares path + enforcement_level only; the registry stops one level short of SHAPE
-  gh issue view 671 -R drbothen/vsdd-factory    # the OPEN alternative design (see STANDARDIZATION §8)
-  # beads, only if the prose/schema patterns are needed again:
-  gh repo clone gastownhall/beads /tmp/_bd/b -- --depth=1
-  # ⚠ the old b1694a5 pin is NOT reachable in a --depth=1 clone; last seen at 35ccd0d
-
-THE PYTHON POC BELOW IS THE SPIKE'S OLD HARNESS — the next task does NOT need it.
-`fa` (Go) has superseded poc/fa.py and poc/graph_import.py. Only bootstrap this to
-re-verify the 24 historical spike suites.
-
-BOOTSTRAP THE OLD SPIKE HARNESS (.venv and poc/*/ are gitignored and disposable):
-  brew install dolt && dolt version                          # 2.2.3; NO --user flag in 2.2.x
-  python3 -m venv .venv && .venv/bin/pip -q install pymysql  # pymysql is the ONLY dep
-  mkdir -p poc/db && (cd poc/db && dolt init --name spike --email spike@local)
-
-RESTART THE TEST SERVER (7 suites need it; the rest self-provision):
-  (cd poc/db && dolt sql-server --host 127.0.0.1 --port 3308 &) && sleep 7
-  .venv/bin/python poc/fa.py init
-  .venv/bin/python poc/fa.py import ~/Dev/vsdd-factory/.factory      # ~13s, 1,959 BCs
-  .venv/bin/python poc/graph_import.py ~/Dev/vsdd-factory/.factory   # 1,490 edges (UNDERCOUNT —
-  #   fa measures 1,509; the prototype's parser swallowed keys after a prose '['. See LESSONS)
-  # verify the 16 original suites (137/137 expected, ~15 min):
-  for s in test_spike test_graph test_multimachine test_locking test_serverless_lock \
-           test_mutex test_two_devs test_write_api test_render test_schema_evolution \
-           test_lifecycle test_asymmetry test_factory_ops test_multi_instance \
-           test_zones test_identity; do
-    printf "%-24s " $s; .venv/bin/python -u poc/$s.py >/tmp/$s.log 2>&1 \
-      && echo "$(grep -cE '^PASS' /tmp/$s.log) passed" || echo FAILED; done
-  SCALE_RECORDS=20000 SCALE_COMMITS=150 .venv/bin/python -u poc/test_scale.py
-
-PASS-11/12 SUITES (scale, contention, CI aggregator — all self-provisioning, all
-create per-run refs/dolt/* on the test remote and delete them in a finally block):
-  .venv/bin/python -u poc/test_stress_fleet.py     # 5/6, ~45 min, 200 agents / 20 clones
-  .venv/bin/python -u poc/test_stress_opt.py       # 3/3, ~15 min (O1 lock-ref, O2 spawns, O3 push cost)
-  .venv/bin/python -u poc/test_decentral.py        # 5/5, ~45 min (D1 retry shapes .. D5 peer pull)
-  gh workflow enable fa-aggregate -R drbothen/dolt-artifact-spike-remote   # cron is OFF
-  .venv/bin/python -u poc/test_ci_aggregator.py    # 4/4, ~6 min
-  FA_CI_WRITERS=20 FA_CI_BATCH=10 FA_CI_STRESS=1 .venv/bin/python -u poc/test_ci_aggregator.py
-  FA_CI_ONLY=c5 FA_CI_LAT_N=3 .venv/bin/python -u poc/test_ci_aggregator.py   # latency
-  # knobs: FA_ST_MACHINES/AGENTS/S3_AGENTS · FA_OPT_ONLY=o1 · FA_DC_ONLY=d5 · FA_GT_ONLY=h3,h6
-  # the CI workflow lives at poc/workflows/fa-aggregate.yml and is deployed to the
-  # test remote's .github/workflows/ — edit BOTH, and lint the YAML locally first
-
-PASS-10 SUITES (embedded driver + the real remote; both self-provision):
-  brew install go                                            # 1.26.5; needs Xcode clang for CGO
-  cd poc/bench && CGO_ENABLED=1 go build -tags gms_pure_go -o bench . && codesign -s - -f bench
-  # -tags gms_pure_go is MANDATORY: without it the cgo build dies on ICU headers
-  cd ../.. && .venv/bin/python -u poc/test_embedded.py       # 13/13, ~4 min, own server on 3399
-  .venv/bin/python -u poc/test_github_remote.py              # 10/10, ~9 min  (remote mechanics)
-  .venv/bin/python -u poc/test_github_topology.py            # 11/11, ~12 min (every file:// scenario, re-run on GitHub)
-  # the remote is private: github.com/drbothen/dolt-artifact-spike-remote; needs gh auth
-  # each run uses per-run refs/dolt/<run>/* and deletes them in a finally block
-  # G10 needs poc/eb/a/fa_cli, so run test_embedded.py first
-  # FA_GT_ONLY=h3,h6 re-runs single topology tests while iterating (partial != a result)
-
-OPERATING PRINCIPLES (these earned their place — the spike corrected its own claims
-EIGHT times):
-  - Measure, don't assume.
-  - NEVER infer a consequence from a structural fact. Five of this session's errors were
-    exactly that shape: "one git ref => global contention" (it is per-BRANCH), "slow
-    pushes => commit churn" (push cost is FLAT in payload), "ticket ordering ~ a queue"
-    (it was the WORST arm), "runner startup dominates latency" (it is ~0), "the Go binary
-    saves 20-30 s of install" (2 s). Measure the consequence too.
-  - Before recommending a lever, measure the ALTERNATIVES to that lever.
-  - Never write a verdict into report text that the same test could contradict; derive
-    it from the numbers at print time.
-  - Never swallow a command's exit code. One `| tail -1` hid a total failure and caused
-    an infinite CI re-dispatch livelock (five SUCCESSFUL runs in a row).
-  - Report unreproduced anomalies as unreproduced; build node universes only from
-    authoritative declaring documents.
-
-STATE: spike complete · **PHASE 1 BUILT** (e4db2ad) · **THE VISION THEN CHANGED** and two
-probes redirected the plan (3ce3aa1, b96a668). `fa` is a Go binary at fa/ on the embedded
-dolthub/driver/v2: import + validate + a dated 153-finding baseline + a CI gate + 24
-tests, parity-verified against the Python prototype RULE FOR RULE. Verdict GO (phased).
-READ, IN THIS ORDER: (1) the TOP BLOCK of HANDOFF.md — the vision change, both probes, and
-four corrections I made to my own claims; (2) research/STANDARDIZATION.md — the design
-position for the next task, with all of its evidence; (3) fa/README.md — what fa does today.
-
-Rebuild and re-verify (the 148 MB binary is gitignored):
+REBUILD AND RE-VERIFY (the 148 MB binary is gitignored):
   cd fa && CGO_ENABLED=1 go build -tags gms_pure_go -o fa .   # BOTH flags mandatory
-  CGO_ENABLED=1 go test -tags gms_pure_go ./...               # 24 tests, ~3.3s
-  ./fa init --db /tmp/fadb && ./fa import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
-  ./fa validate --db /tmp/fadb --baseline baseline.json       # exit 0 today
+  CGO_ENABLED=1 go test -tags gms_pure_go ./...               # 62 tests, ~3.5s
+  cd .. && python3 registry/validate_registry.py              # exit 0; prints the 3-way
+                                                              # namespace split + all checks
+  ./fa/fa init --db /tmp/fadb && ./fa/fa import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
+  ./fa/fa validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 6,864 findings
+  ./fa/fa graph build --db /tmp/fadb      # CSR: 2,421 nodes / 4,060 edges / 0.1 MB
+  ./fa/fa waves --db /tmp/fadb            # 148 stories, 16 waves, 0 cycles
 
-TASK: BUILD THE TYPE REGISTRY (the standard). The user settled the direction: fa becomes
-the source of truth for EVERYTHING in factory-artifacts including prose; standardize
-where it makes sense and MIGRATE projects to the standard; account for product-type
-variation as SUBSET, not dialect. The decisive finding is that THE STANDARD ALREADY
-EXISTS — plugins/vsdd-factory/templates/ declares 81 document_type values and every
-drifted value measured is absent from that set, so this is an ENFORCEMENT gap, not a
-design gap.
+REFERENCE CORPORA — LOCAL and READ-ONLY. DO NOT WRITE until the standard is agreed:
+  ~/Dev/vsdd-factory/.factory   (pin 0aaba144)   ~/Dev/prism/.factory   (95b90d003)
+  ~/Dev/rivetry/.factory        (2aea395)
+  ~/Dev/vsdd-factory/plugins/vsdd-factory/templates/            # the 81 document_types
+  ~/Dev/vsdd-factory/plugins/vsdd-factory/config/artifact-path-registry.yaml   # the OTHER 46
+  gh issue view 671 -R drbothen/vsdd-factory                    # unanswered; see below
 
-Seed the registry from those 81 (DEDUP FIRST — it declares both traceability-matrix and
-traceability-matrices), cross-check against ACTUAL usage in vsdd-factory AND prism AND
-rivetry (never vsdd alone: it is the outlier — 7.2x the BCs of the next corpus, and its
-holdout-evaluations/ is uniquely named and empty). Per type declare what the path
-registry does NOT: key · required fields · enums · link types · section schema · shape
-(record|document|append-only event|config|blob-with-path) · authority · gate severity.
-Include the three-way verdict split (gate / convergence / severity_max — the field is
-overloaded AND the factory ships two conflicting vocabularies), an ALIAS MAP for the ~12
-legacy spellings so history stays valid, COMPOSITE keys (18 basenames collide with
-DIFFERENT content), and per-type enforcement_level advisory -> warn -> block composing
-with fa's dated baseline ratchet.
+TASK — in this order, because the F-* measurement set it:
+  1. STORY 7: make the indexes DERIVED via shadow -> prove equal -> retire. Worth 25.3% +/-9.1
+     of the adversary's findings, ELIMINATED not detected. All 23 derived types already sit at
+     derivation_stage: shadow. DO NOT FLIP THEM — generate alongside, every disagreement a
+     finding, advance only on evidence. Expect the first diffs to be informative, not clean:
+     the corpus asserts FOUR different BC totals.
+  2. STORY 4: mint `adversarial-finding` as ROWS. A template exists and NOTHING uses it;
+     findings are prose tables inside review bodies. Enabler for finding_count /
+     severity_distribution / total_findings becoming derived.
+  3. STORY 12: prose-reference extraction, 21.8% +/-8.7. Everything needed is declared
+     (9 prose_ref_kinds, 7 prose_ref_rules, pin_policy on all 23 link types, CSR for the
+     section nodes). THREE rules are load-bearing or it manufactures false findings: exclude
+     code spans, resolve as-of through id_alias, and report unresolvable-owner refs separately
+     from dangling. This is ALSO the 250k-node driver (~100k section nodes).
 
-DO NOT WRITE to ~/Dev/vsdd-factory or the 9 sibling corpora — read-only all session, keep
-it that way until the standard is agreed. This is a change to a RUNNING factory across
-~10 projects: it should flow through vsdd's own change management (ADR + stories +
-a policy with enforced_by), not a unilateral rewrite.
+  Known and not urgent: stream the store loaders (Strings/Pairs materialise whole result sets)
+  before 250k; make `graph dot --scope` mandatory past a bound; precompute+store metrics per
+  commit (now cheap, so low priority).
+
+BLOCKED ON THE USER (all need write access to vsdd-factory / GitHub — ASK, do not assume):
+  - the 2 namespace renames (story-spec->story, state->pipeline-state) that close story 1;
+    validate_registry.py prints "EXIT CRITERION NOT MET: 2" until they land
+  - opening the ADR + registering the policy
+  - answering #671 (an open, unbuilt proposal by another author that this direction contradicts)
+
+DO NOT RELITIGATE the four settled one-way doors (D-A prose = body bytes + derived ordinal
+section partition, gated byte-exact; D-B gitignored store + committed render + invariant 15
+import(render(store))==store; D-C declared natural keys, path is derived and never identity,
+plus an id_alias ledger; D-D verdict retired -> gate_result/convergence/severity_max and
+status = lifecycle only).
+
+OPERATING PRINCIPLES (each one earned by a real error in this repo):
+  - Measure, don't assume. NEVER infer a consequence from a structural fact.
+  - MEASURE THE ALTERNATIVES TO A LEVER BEFORE PULLING IT. This deleted sampled+parallel
+    Brandes outright: free `degree` predicts adversary findings BETTER (AUC 0.871) than
+    betweenness (0.725) at ~1/3000 the cost.
+  - Never report a number a test could contradict. TWO benchmarks measured NOTHING and said so
+    plausibly this session (an extractor that knew 1 of 3 formats -> 11 findings from 1 file;
+    a waves benchmark timing an early return -> 1.1us at 240k nodes). Both now pinned by tests.
+  - Never collapse exit 1 (gate failed) and exit 2 (fa failed). Caught twice more this session.
+  - Before claiming a field name, MEASURE whether it is already in use with another meaning
+    (`gate` and `scope` both were).
+  - A regex must not cross block boundaries: one mis-assigned 17 of 17 values while parsing
+    cleanly. Print the resulting groups; don't trust the edit.
+  - Parity, not inspection: 67/67 rules Go-vs-Python, CSR-vs-gonum on hand-worked answers AND
+    generated graphs.
+  - When a derived number is off by a little, CHASE it (an off-by-ONE-file diff exposed an
+    inline-YAML-comment parsing bug).
+  - Counting files is not counting artifacts. State the extraction rule with any count.
+
+STATE: registry BUILT + embedded in fa + validated against 3 corpora (67/67 parity) ·
+#671's exit criterion RUN · all four #671 borrowings folded in and machine-checked ·
+knowledge-graph projection + CSR engine (96x less memory, ~100x faster) shipped ·
+62 tests / 9 benchmarks green · corpora untouched · nothing in flight, no WIP, nothing running.
 ```
