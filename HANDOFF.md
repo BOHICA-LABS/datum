@@ -1,6 +1,6 @@
 # HANDOFF — dolt-artifact-spike
 
-## ⭐⭐⭐ SESSION SNAPSHOT — 2026-07-31 (wrap at `b96a668`) — READ THIS FIRST
+## ⭐⭐⭐ SESSION SNAPSHOT — 2026-07-31 (wrap at `03e6631`; work through `b96a668`) — READ THIS FIRST
 
 Two things happened this session, and the SECOND one redirects the work:
 
