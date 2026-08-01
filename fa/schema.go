@@ -15,7 +15,7 @@ package main
 // the MARKDOWN claims, precisely so a gate can compare those claims against
 // COUNT(*). Recording a wrong number is the point of that table.
 
-const schemaVersion = 1
+const schemaVersion = 2
 
 // openDDL is the `open` zone: specs, stories, waves, state — what most agents read.
 var openDDL = []string{
@@ -148,10 +148,15 @@ var openDDL = []string{
 
 	// What the markdown CLAIMS about itself. The only table that stores a count,
 	// and it exists so `fa validate` can catch the claim disagreeing with reality.
+	// source/subject widened at schema v2: story 4's review claims are keyed by the review's
+	// corpus-relative PATH (reviews carry no declared id yet), which does not fit 64 chars.
+	// The PK is (source, kind, subject) = 664 chars = 2,656 bytes at utf8mb4, inside the
+	// 3,072-byte index limit — checked rather than assumed, because an over-long PK fails at
+	// CREATE time and would look like a schema bug rather than a sizing one.
 	`CREATE TABLE IF NOT EXISTS corpus_assertion (
-	  source    VARCHAR(200) NOT NULL,
+	  source    VARCHAR(300) NOT NULL,
 	  kind      VARCHAR(64)  NOT NULL,
-	  subject   VARCHAR(64)  NOT NULL,
+	  subject   VARCHAR(300) NOT NULL,
 	  claimed   BIGINT       NOT NULL,
 	  src_path  VARCHAR(512) NULL,
 	  PRIMARY KEY (source, kind, subject)
@@ -177,6 +182,47 @@ var openDDL = []string{
 	  detail      TEXT         NULL,
 	  occurrences INT          NOT NULL DEFAULT 1,
 	  PRIMARY KEY (rule, subject)
+	)`,
+
+	// STORY 4. A review document, and its findings AS ROWS.
+	//
+	// The `adversarial-finding` template exists and NOTHING uses it (measured: 0 files carry
+	// that document_type), so finding_count / findings_total / severity_distribution are
+	// authored numbers over prose. As rows they become COUNT(*) and GROUP BY, which is what
+	// design rule 1 already requires of every other count in this schema.
+	`CREATE TABLE IF NOT EXISTS review (
+	  review_key VARCHAR(200) NOT NULL,
+	  cycle      VARCHAR(120) NULL,
+	  pass       INT          NULL,
+	  target     TEXT         NULL,
+	  src_path   VARCHAR(512) NULL,
+	  PRIMARY KEY (review_key),
+	  KEY idx_review_cycle (cycle)
+	)`,
+
+	// The natural key is COMPOSITE and scoped to the owning review, exactly as the template
+	// declares — a finding id is not globally unique, the same discipline AC-NNN needs.
+	//
+	// `owned` distinguishes a finding this pass INTRODUCED from one it re-states to audit a
+	// prior pass's fix. Without it a derived count counts mentions: measured 412
+	// mentioned-not-owned rows, and counting them put adv-s8.08-p2 at 21 against a claimed 9.
+	//
+	// `sev_source` records WHICH of the six severity sources resolved the value, so an
+	// unresolved severity is a measured fact rather than a silent parser default.
+	`CREATE TABLE IF NOT EXISTS adversarial_finding (
+	  review_key VARCHAR(200) NOT NULL,
+	  finding_id VARCHAR(64)  NOT NULL,
+	  severity   VARCHAR(8)   NULL,
+	  sev_source VARCHAR(24)  NULL,
+	  category   TEXT         NULL,   -- TEXT, not an enum: see the type finding in findings.go
+	  statement  TEXT         NULL,
+	  location   TEXT         NULL,
+	  form       VARCHAR(16)  NOT NULL,
+	  owned      TINYINT      NOT NULL DEFAULT 1,
+	  src_line   INT          NULL,
+	  PRIMARY KEY (review_key, finding_id),
+	  KEY idx_af_sev (severity),
+	  CONSTRAINT fk_af_review FOREIGN KEY (review_key) REFERENCES review (review_key) ON DELETE CASCADE
 	)`,
 
 	`CREATE TABLE IF NOT EXISTS schema_migrations (

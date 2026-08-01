@@ -99,6 +99,11 @@ type Corpus struct {
 	Edges      []Edge
 	Findings   []Finding
 	Assertions []Assertion
+	// STORY 4: review documents and their findings AS ROWS.
+	Reviews  []ReviewRow
+	FindingRows []FindingRow
+	// Extraction accounting the caller must REPORT, never swallow.
+	FindingDupes, FindingMalformed int
 	// Enumerated is the set of BC ids the index ENUMERATES in its own table's
 	// first column — the index's claim about which BCs exist, checked separately
 	// from its claim about how many.
@@ -147,6 +152,7 @@ func ScanCorpus(root string) (*Corpus, error) {
 	c.loadBCs()
 	c.loadStories()
 	c.loadAssertions()
+	c.loadReviews()
 	return c, nil
 }
 

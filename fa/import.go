@@ -31,6 +31,7 @@ const faVersion = "0.1.0"
 var deleteOrder = []string{
 	"vp_bc", "vp_di", "vp_nfr", "vp_subsystem",
 	"story_bc", "story_vp", "story_fr", "story_subsystem", "story_dep", "bc_trace",
+	"adversarial_finding", "review",
 	"bc", "vp", "story",
 	"capability", "domain_invariant", "nfr", "fr", "adr", "epic", "subsystem",
 	"finding", "corpus_assertion", "index_entry", "import_run",
@@ -46,6 +47,8 @@ type ImportStats struct {
 	Edges       map[string]int
 	Findings    int
 	Assertions  int
+	Reviews     int
+	FindingRows int
 	Changed     bool
 	Elapsed     time.Duration
 }
@@ -252,6 +255,42 @@ func Import(ctx context.Context, s *Store, root string, out io.Writer) (*ImportS
 		st.Edges[e.Table]++
 	}
 
+	// ---- STORY 4: reviews and their findings AS ROWS
+	for _, r := range c.Reviews {
+		var pass any
+		if r.Pass != nil {
+			pass = *r.Pass
+		}
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO review (review_key, cycle, pass, target, src_path) VALUES (?,?,?,?,?)`,
+			r.Key, nullIf(r.Cycle), pass, nullIf(r.Target), r.SrcPath); err != nil {
+			return nil, fmt.Errorf("review %s: %w", r.Key, err)
+		}
+		st.Reviews++
+	}
+	afStmt, err := tx.PrepareContext(ctx, `INSERT INTO adversarial_finding
+	  (review_key, finding_id, severity, sev_source, category, statement, location, form, owned, src_line)
+	  VALUES (?,?,?,?,?,?,?,?,?,?)`)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range c.FindingRows {
+		if _, err := afStmt.ExecContext(ctx, f.ReviewKey, f.FindingID, nullIf(f.Severity),
+			nullIf(f.SevSource), nullIf(f.Category), nullIf(truncRunes(f.Statement, 2000)),
+			nullIf(truncRunes(f.Location, 500)), f.Form, boolInt(f.Owned), f.Line); err != nil {
+			if isDuplicateKey(err) {
+				// The composite key already collapses mentions; a survivor here means two
+				// DIFFERENT findings share an id within one review, which is a corpus defect.
+				c.find("two findings in one review claim the same finding id",
+					f.ReviewKey+" -> "+f.FindingID, ClassIntegrity, "")
+				continue
+			}
+			return nil, fmt.Errorf("adversarial_finding %s/%s: %w", f.ReviewKey, f.FindingID, err)
+		}
+		st.FindingRows++
+	}
+	_ = afStmt.Close()
+
 	// ---- what the markdown claims about itself
 	for _, a := range c.Assertions {
 		if _, err := tx.ExecContext(ctx,
@@ -307,6 +346,10 @@ func Import(ctx context.Context, s *Store, root string, out io.Writer) (*ImportS
 	if out != nil {
 		fmt.Fprintf(out, "imported in %.1fs  bc=%d vp=%d story=%d subsystem=%d edges=%d findings=%d assertions=%d\n",
 			st.Elapsed.Seconds(), st.BCs, st.VPs, st.Stories, st.Subsystems, st.EdgeTotal(), st.Findings, st.Assertions)
+		// Reported, never swallowed: an extractor that prints only its successes has
+		// silently lost input five times in this spike.
+		fmt.Fprintf(out, "reviews    %d · finding rows %d (duplicate mentions collapsed %d · malformed %d)\n",
+			st.Reviews, st.FindingRows, c.FindingDupes, c.FindingMalformed)
 		if !changed {
 			fmt.Fprintln(out, "no change since the last import (idempotent re-run)")
 		}

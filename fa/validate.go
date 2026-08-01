@@ -16,6 +16,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 )
 
 type Report struct {
@@ -54,6 +55,7 @@ func Validate(ctx context.Context, s *Store, walled *Store) (*Report, error) {
 		v.gatePrefixAgreement,
 		v.gateScalarRefs,
 		v.gateDependencyDirection,
+		v.gateReviewFindingCounts,
 		v.metrics,
 	} {
 		if err := gate(); err != nil {
@@ -347,6 +349,100 @@ func (v *validator) gateDependencyDirection() error {
 			ClassDirection, "the reverse edge is absent")
 	}
 	return rows.Err()
+}
+
+// gateReviewFindingCounts is STORY 4's exit criterion, as a query.
+//
+// `finding_count` / `findings_total` / `severity_distribution` become DERIVED here: the claim
+// each review makes about itself is compared against COUNT(*) and GROUP BY over the rows
+// minted from its own body. Once findings ARE rows, these three fields have no reason to exist
+// as stored numbers — which is the point of story 4, and this gate is what proves it per review
+// rather than asserting it.
+//
+// OWNED rows only. A pass-2 review re-states pass-1's findings in its fix-verification
+// section, and `findings_total` counts what the pass INTRODUCES: counting mentions put one
+// review at 21 against a claimed 9. The scope is declared, not inferred.
+func (v *validator) gateReviewFindingCounts() error {
+	n, err := v.s.Int(v.ctx, `SELECT COUNT(*) FROM review`)
+	if err != nil || n == 0 {
+		return err // no reviews imported: nothing to compare, and nothing to claim either
+	}
+
+	rows, err := v.s.Query(v.ctx,
+		`SELECT source, kind, subject, claimed FROM corpus_assertion
+		 WHERE kind IN ('review_finding_count','review_severity_count')
+		 ORDER BY kind, subject, source`)
+	if err != nil {
+		return err
+	}
+	type as struct {
+		source, kind, subject string
+		claimed               int64
+	}
+	var all []as
+	for rows.Next() {
+		var a as
+		if err := rows.Scan(&a.source, &a.kind, &a.subject, &a.claimed); err != nil {
+			rows.Close()
+			return err
+		}
+		all = append(all, a)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	for _, a := range all {
+		var actual int64
+		switch a.kind {
+		case "review_finding_count":
+			actual, err = v.s.Int(v.ctx,
+				`SELECT COUNT(*) FROM adversarial_finding WHERE review_key = ? AND owned = 1`, a.subject)
+		case "review_severity_count":
+			key, sev, ok := cutLast(a.subject, "|")
+			if !ok {
+				continue
+			}
+			actual, err = v.s.Int(v.ctx,
+				`SELECT COUNT(*) FROM adversarial_finding
+				 WHERE review_key = ? AND owned = 1 AND severity = ?`, key, sev)
+		default:
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if a.claimed != actual {
+			v.find("a review's stated finding count disagrees with its own findings", a.source, ClassCount,
+				fmt.Sprintf("states %d, rows give %d", a.claimed, actual))
+		}
+	}
+
+	// A finding whose severity resolved from NO source is reported. 499 of 2,212 rows: with
+	// findings as rows and a declared enum, severity is a required field rather than something
+	// recovered from six competing prose conventions.
+	unresolved, err := v.s.Int(v.ctx,
+		`SELECT COUNT(*) FROM adversarial_finding WHERE severity IS NULL OR severity = ''`)
+	if err != nil {
+		return err
+	}
+	if unresolved > 0 {
+		v.find("findings whose severity no declared source resolves", fmt.Sprintf("%d row(s)", unresolved),
+			ClassType, "severity is recovered from prose today; as rows it is a required closed-enum field")
+	}
+	return nil
+}
+
+// cutLast splits on the LAST occurrence of sep. The severity subject is `<review-key>|<SEV>`
+// and a review key is a path, so splitting on the FIRST separator would break any key that
+// contained one.
+func cutLast(s, sep string) (before, after string, found bool) {
+	i := strings.LastIndex(s, sep)
+	if i < 0 {
+		return s, "", false
+	}
+	return s[:i], s[i+len(sep):], true
 }
 
 // gateCrossZone is the guarantee D2 gives up and this tool buys back.
