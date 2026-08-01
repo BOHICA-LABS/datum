@@ -577,31 +577,43 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 ```
 Resume the dolt-artifact-spike in ~/Dev/scrap/dolt-artifact-spike (local-only git, clean).
 
-READ FIRST, in this order:
-  1. HANDOFF.md                    (this file — snapshot + next actions)
-  2. research/DECISIONS.md         (the 3 blocking calls, SETTLED: conflict policy, zones, phase-1 scope)
-  3. research/SPEC.md              (the spec: architecture, capability surface, 14 invariants, CLI, phasing)
-  4. research/ACCESS-PATH.md       (embedded driver vs CLI vs server, measured — and why the headline changed)
-  5. research/REMOTE.md            (the real github.com remote: ~10 s per acquire, one data ref per remote)
-  5b. research/SCALE.md            (200 agents; EVERY decentralised contention fix, ranked)
-  5c. research/CI-AGGREGATOR.md    (CROSS-INTERNET answer: CI as aggregator; 20 writers; ~30s latency)
-  6. research/GAP-MATRIX.md        (coverage vs all 46 vsdd-factory artifact types; gaps 1/2/7 now closed)
-  7. research/ACCESS-CONTROL.md    (zones + agent identity; what is actually enforceable)
-  8. research/ASSESSMENT.md        (the feasibility argument + measured problems; §3g has the scale numbers)
-  9. research/LESSONS.md           (every Dolt gotcha + every harness bug that faked a clean result)
+READ FIRST — ONLY THESE FOUR to start the next task:
+  1. HANDOFF.md TOP BLOCK          (the vision change, both probes, 4 self-corrections)
+  2. research/STANDARDIZATION.md   (⭐ THE INPUT to the next task: the standard already
+                                    exists; three-way classification; three layers; the
+                                    query-surface call; what "fa owns everything" costs;
+                                    migration mechanics; #671's disposition; open doors)
+  3. fa/README.md                  (what fa does today + how to build/run it)
+  4. research/CROSS-CORPUS.md      (10 corpora: the spine, the drift, why vsdd is an outlier)
 
-RE-SCRAPE THE REFERENCE MATERIAL (beads was in /tmp and is gone):
-  gh repo clone gastownhall/beads /tmp/_bd/b -- --depth=1     # pin b1694a5
-  # the Dolt patterns worth re-reading in beads:
-  #   internal/storage/issueops/lease.go   -> freshRowLock() + the "zombie-merge bug"
-  #   PROPOSAL-cas-conditional-update.md   -> their CAS design
-  #   docs/architecture/dolt.md            -> embedded vs server, refs/dolt/data
-  # vsdd-factory is already local, DO NOT MODIFY:
-  ls ~/Dev/vsdd-factory                                       # branch develop @ 82163b7f
-  ls ~/Dev/vsdd-factory/.factory                              # the live corpus we tested against
-  cat ~/Dev/vsdd-factory/plugins/vsdd-factory/config/artifact-path-registry.yaml   # the 46 artifact types
+  Then, as needed:
+  research/PROBE-CYCLES.md  (the worst-case prose class, decomposed)
+  research/BEADS-PROSE.md   (the only shipped Dolt product: what it does with prose)
+  research/DECISIONS.md     (the 3 settled calls — D3's "no Go" note is SUPERSEDED)
+  research/SPEC.md          (14 invariants, CLI surface, phasing)
+  research/LESSONS.md       (every Dolt gotcha + every harness bug that faked a clean result)
+  research/GAP-MATRIX.md    (46 artifact types; §2.7 now carries a CORRECTION banner)
+  research/ACCESS-PATH.md · REMOTE.md · SCALE.md · CI-AGGREGATOR.md · ACCESS-CONTROL.md ·
+  ASSESSMENT.md   (the spike's measured evidence base — unchanged, read on demand)
 
-BOOTSTRAP THE ENVIRONMENT (.venv and poc/*/ are gitignored and disposable):
+REFERENCE MATERIAL — vsdd-factory and its 23 sibling corpora are LOCAL and READ-ONLY.
+DO NOT WRITE TO ANY OF THEM until the standard is agreed:
+  ls ~/Dev/vsdd-factory/.factory        # the live corpus, branch factory-artifacts
+  ls ~/Dev/prism/.factory               # the 2nd corpus (security MCP server)
+  ls ~/Dev/rivetry/.factory             # the UI/SaaS corpus the standard MUST cover
+  ls ~/Dev/vsdd-factory/plugins/vsdd-factory/templates/   # ⭐ THE 81 CANONICAL document_types
+  cat ~/Dev/vsdd-factory/plugins/vsdd-factory/config/artifact-path-registry.yaml
+  # ^ declares path + enforcement_level only; the registry stops one level short of SHAPE
+  gh issue view 671 -R drbothen/vsdd-factory    # the OPEN alternative design (see STANDARDIZATION §8)
+  # beads, only if the prose/schema patterns are needed again:
+  gh repo clone gastownhall/beads /tmp/_bd/b -- --depth=1
+  # ⚠ the old b1694a5 pin is NOT reachable in a --depth=1 clone; last seen at 35ccd0d
+
+THE PYTHON POC BELOW IS THE SPIKE'S OLD HARNESS — the next task does NOT need it.
+`fa` (Go) has superseded poc/fa.py and poc/graph_import.py. Only bootstrap this to
+re-verify the 24 historical spike suites.
+
+BOOTSTRAP THE OLD SPIKE HARNESS (.venv and poc/*/ are gitignored and disposable):
   brew install dolt && dolt version                          # 2.2.3; NO --user flag in 2.2.x
   python3 -m venv .venv && .venv/bin/pip -q install pymysql  # pymysql is the ONLY dep
   mkdir -p poc/db && (cd poc/db && dolt init --name spike --email spike@local)
@@ -610,7 +622,8 @@ RESTART THE TEST SERVER (7 suites need it; the rest self-provision):
   (cd poc/db && dolt sql-server --host 127.0.0.1 --port 3308 &) && sleep 7
   .venv/bin/python poc/fa.py init
   .venv/bin/python poc/fa.py import ~/Dev/vsdd-factory/.factory      # ~13s, 1,959 BCs
-  .venv/bin/python poc/graph_import.py ~/Dev/vsdd-factory/.factory   # 1,490 edges + findings
+  .venv/bin/python poc/graph_import.py ~/Dev/vsdd-factory/.factory   # 1,490 edges (UNDERCOUNT —
+  #   fa measures 1,509; the prototype's parser swallowed keys after a prose '['. See LESSONS)
   # verify the 16 original suites (137/137 expected, ~15 min):
   for s in test_spike test_graph test_multimachine test_locking test_serverless_lock \
            test_mutex test_two_devs test_write_api test_render test_schema_evolution \
