@@ -1,6 +1,101 @@
 # HANDOFF — dolt-artifact-spike
 
-## ⭐⭐⭐ SESSION SNAPSHOT — 2026-07-31 (wrap at `6341ab2`) — READ THIS FIRST
+## ⭐⭐⭐⭐ SESSION SNAPSHOT — 2026-08-01 (wrap at `9be0fcf`) — READ THIS FIRST
+
+**STORY 7's shadow stage and STORY 4's rows both LANDED. Story 12 is NOT started.**
+Corpora READ-ONLY throughout (verified: 0 md/yaml modified in all three).
+
+| commit | what |
+|---|---|
+| `2922740` | **STORY 7 — the SHADOW stage.** `fa shadow` derives BC-INDEX / VP-INDEX / STORY-INDEX from the store and adjudicates them cell by cell against the authored documents. Writes NOTHING (hash-verified). **658 findings.** |
+| `9be0fcf` | **STORY 4 — findings as ROWS.** `review` + `adversarial_finding` tables; 390 reviews, 2,211 finding rows; each review's claim about itself compared against `COUNT(*)`. |
+
+### Verified state (every number re-runnable, see the kick-start below)
+
+| | |
+|---|---|
+| `fa` | **106 tests**, ~6.8 s, no network, no `dolt` binary. Schema **v2**. |
+| registry validator | exit 0 · **18,826** conformance findings (was 18,418 — **stale**, reconciled exactly in registry/README.md: +408 is the registry's own tightening on identical input, +22 untracked prism files) |
+| `fa validate --registry` | **6,957** findings (was 6,864; +93 is story 4's new gate = 68 count + 24 category + 1 severity — fully accounted) |
+| `fa shadow` | **658** findings: 573 real drift · 44 editorial · 41 facts about derivation itself |
+| graph / waves | unchanged: 2,421 nodes · 148 stories in 16 waves · 0 cycles |
+| repo | local-only, NO remote, clean at `9be0fcf` |
+
+### ⭐ THE TWO RESULTS THAT MATTER MOST, because they change what comes next
+
+1. **A derived index needs a DECLARED SCOPE PREDICATE, or derivation silently changes the
+   document's meaning.** 41 of 148 stories live in `stories/v1.0-legacy/` and STORY-INDEX
+   deliberately omits them (verified as exact set equality, 41 == 41). Generating from every
+   record would have **resurrected 41 retired stories while every count still agreed** — a
+   defect no count check, id-set check or cell check would catch. Story 4 arrived at the SAME
+   class independently (a review's `findings_total` counts only the findings it OWNS, not the
+   pass-1 findings it re-states). **Scope currently lives in Go `shadowSpecs`; it belongs in
+   the registry beside `derivation_stage`.**
+2. **MEASURE THE COLUMNS BEFORE WRITING THE RULES.** `registry/probe_indexes.py` ran first and
+   the first cut reported **~2,768 findings that were artefacts of its own normalisation** —
+   4x the 658 that survive. Two named classes came out of it: a normalisation rule aimed at the
+   WRONG COLUMN manufactures exactly what it was added to prevent (252+40 self-inflicted
+   findings), and **rule ORDER is a correctness property** (emptiness-before-counting asserted
+   the opposite of the truth on 18 rows).
+
+### ▶▶▶ TOP PRIORITY NEXT — **STORY 12, prose-reference extraction.** Nothing in flight.
+
+Worth 21.8% ±8.7 of the adversary's findings. Everything it needs is declared (9
+`prose_ref_kinds`, 7 `prose_ref_rules`, `pin_policy` on all 23 link types, CSR for the section
+nodes). **Three rules are load-bearing or it manufactures false findings:** exclude code spans
+(`ADR-099` appears as an example CLI arg), resolve as-of through `id_alias` (`BC-1.12.008` was
+legitimately renumbered to `BC-3.05.004`), and report `unresolvable`-owner refs separately from
+`dangling`. Sub-artifact ids key on `(owning_artifact_key, ac_id)`. Also the 250k-node driver
+(~100k section nodes).
+
+**Apply this session's two results to it directly:** probe the reference classes and measure
+agreement BEFORE writing the resolution rules (`registry/probe_indexes.py` and
+`probe_findings.py` are the pattern), and expect a SCOPE question — which documents' prose
+references are in scope is the same class of declared predicate as the two above.
+
+**Then, to finish story 7 and 4 (each already has its open list written down):**
+- adjudicate the **330-row Capability block** (330 BC-5.\* files say `CAP-001`; BC-INDEX
+  distributes them across 11 capabilities `CAP-070`..`080`) — a PO call, not a tool call
+- move the scope predicate into the registry · settle the 38 planned STORY-INDEX rows · give
+  the store `vp.status` and a withdrawn-in-place representation
+- **reviews have NO declared natural key** (the key is the path, which D-C forbids as identity)
+- `cycles/INDEX` is now shadowable (story 4 unblocked it)
+
+### New findings this session that no gate reported before
+
+- **`status` and `lifecycle_status` DISAGREE on 1,949 of the 1,959 BC files carrying both.**
+  Two fields for one concept — D-D's territory, and nothing reports it today.
+- **The `adversarial-finding` template's own id convention was the ONE form the extractor did
+  not know.** `adv-s8.00-p1.md` claimed 14 findings and extracted 0 while documenting that
+  exact format in its own `## Finding ID Convention` section. Six id conventions live in the
+  corpus; that is the argument for rows, not a parser to fix once.
+- **Severity is unresolved on 23% of finding rows** (499 of 2,211) across six competing prose
+  conventions.
+
+### Read for story 12
+
+`research/SHADOW-INDEXES.md` (story 7, and the 2,768 false findings its rules prevent) ·
+`research/FINDINGS-AS-ROWS.md` (story 4) · then `research/FSTAR-COMPARISON.md` §4, which
+scopes story 12.
+
+### Kick-start
+
+```sh
+cd ~/Dev/scrap/dolt-artifact-spike/fa
+CGO_ENABLED=1 go build -tags gms_pure_go -o fa . && CGO_ENABLED=1 go test -tags gms_pure_go ./...
+cd .. && python3 registry/validate_registry.py                    # exit 0 · 18,826
+./fa/fa init --db /tmp/fadb && ./fa/fa import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
+./fa/fa validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 6,957
+./fa/fa shadow   --db /tmp/fadb ~/Dev/vsdd-factory/.factory             # 658
+python3 registry/probe_indexes.py && python3 registry/probe_findings.py  # the measurements
+```
+
+⚠ **prism's corpus advanced again** (`.factory` `95b90d003` → `9f3443d6f`; the other session
+committed its 24 stories). Re-measured across it: prism's total is **10,843 either way**.
+
+---
+
+## ⭐⭐⭐ SESSION SNAPSHOT — 2026-07-31 (wrap at `6341ab2`)
 
 **Seven commits. The type registry was BUILT, ported into `fa`, and the knowledge graph got a
 real projection engine.** Everything below is measured; every claim has a repro command.
