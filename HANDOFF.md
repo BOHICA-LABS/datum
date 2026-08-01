@@ -81,8 +81,9 @@ drift-lab 609 · pregolya 528 · game-factory 331 · brain-factory 302 · forge-
   `artifact-path-registry.yaml` does not declare**, though that file claims to block
   writes to any unregistered path.
 
-**⭐ THE DECISIVE FINDING (post-doc, from the user's "standardize" push — NOT yet
-written to a research doc, capture it):** **the standard ALREADY EXISTS.**
+**⭐ THE DECISIVE FINDING — now written up in full in
+[`research/STANDARDIZATION.md`](research/STANDARDIZATION.md), which is THE INPUT to the
+next session's task:** **the standard ALREADY EXISTS.**
 `plugins/vsdd-factory/templates/` declares **81 distinct `document_type` values**
 (incl. `adversarial-review`, `holdout-scenario`, `security-review`, `burst-log`,
 `red-gate-log`, `ux-spec-flow/index/screen`). **Every drifted value measured is ABSENT
@@ -179,6 +180,12 @@ were diffed row by row.
 **THE NEXT ACTION, agreed and not yet started: BUILD THE TYPE REGISTRY (the standard).**
 The user's last words were *"should we wrap first and start a new session before we kick
 off?"* — so this wrap exists to start that cleanly. Nothing is in progress; no WIP.
+
+**READ [`research/STANDARDIZATION.md`](research/STANDARDIZATION.md) FIRST** — it carries the
+full design position with its evidence: the standard-already-exists proof, the three-way
+classification (canonical+migrate / profile=PRESENCE-not-naming / new-types-by-template),
+the three layers, the query-surface decision, the measured cost of "fa owns everything",
+the migration mechanics, and the three one-way doors still open.
 
 **Deliverable:** a canonical artifact-type registry, seeded from the **81
 template-declared `document_type` values** in `plugins/vsdd-factory/templates/`,
@@ -649,8 +656,9 @@ STATE: spike complete · **PHASE 1 BUILT** (e4db2ad) · **THE VISION THEN CHANGE
 probes redirected the plan (3ce3aa1, b96a668). `fa` is a Go binary at fa/ on the embedded
 dolthub/driver/v2: import + validate + a dated 153-finding baseline + a CI gate + 24
 tests, parity-verified against the Python prototype RULE FOR RULE. Verdict GO (phased).
-READ THE TOP BLOCK OF HANDOFF.md FIRST — it carries the vision change, both probes, and
-four corrections I made to my own claims. Then fa/README.md.
+READ, IN THIS ORDER: (1) the TOP BLOCK of HANDOFF.md — the vision change, both probes, and
+four corrections I made to my own claims; (2) research/STANDARDIZATION.md — the design
+position for the next task, with all of its evidence; (3) fa/README.md — what fa does today.
 
 Rebuild and re-verify (the 148 MB binary is gitignored):
   cd fa && CGO_ENABLED=1 go build -tags gms_pure_go -o fa .   # BOTH flags mandatory
