@@ -176,11 +176,45 @@ def part1(reg, enums, al, observed):
         findings.append(("no-key", f"type '{t}' declares no key — identity is undefined"))
     print(f"[1g] types with no declared key          : {len(nokey)}   {'OK' if not nokey else 'BROKEN'}")
 
-    # 1h the two-namespace defect, quantified
-    defects = [t for t, s in (reg.get("types") or {}).items() if (s or {}).get("registry_namespace_defect")]
-    print(f"[1h] types flagged as path-registry/template namespace defects: {len(defects)}")
-    for t in sorted(defects):
-        print(f"       - {t}")
+    # 1h the two-namespace defect, quantified — THREE kinds, not one boolean.
+    # Collapsing them into one flag overstated the disagreement as 17; only
+    # name_disagreement is a namespace defect. See namespace_reconciliation.
+    kinds = collections.defaultdict(list)
+    allrows = {**(reg.get("types") or {}), **(reg.get("gap_types") or {})}
+    for t, sp in allrows.items():
+        st = (sp or {}).get("namespace_status")
+        if st:
+            kinds[st].append(t)
+    print(f"\n[1h] NAMESPACE RECONCILIATION (story 1)")
+    for k, label in (("name_disagreement", "two names for one concept  <- THE defect"),
+                     ("path_missing", "template declares it, path registry does not"),
+                     ("template_missing", "path registry declares it, no template does -> story 2")):
+        print(f"       {k:18s} {len(kinds[k]):3d}   {label}")
+        for t in sorted(kinds[k]):
+            print(f"           - {t}")
+    nr = reg.get("namespace_reconciliation") or {}
+    declared = {d["document_type"] for d in (nr.get("name_disagreements") or [])}
+    flagged = set(kinds["name_disagreement"])
+    if declared != flagged:
+        findings.append(("namespace-undeclared",
+                         f"name_disagreement flags {sorted(flagged)} but namespace_reconciliation "
+                         f"declares {sorted(declared)} — every disagreement needs a resolution"))
+    for d in (nr.get("name_disagreements") or []):
+        if d.get("winner") != d.get("document_type"):
+            findings.append(("namespace-resolution",
+                             f"{d['document_type']}: resolution_rule says the document_type name wins, "
+                             f"but winner is {d.get('winner')!r}"))
+    # every path_registry_only entry must have a disposition
+    for e in (nr.get("path_registry_only") or []):
+        if not e.get("disposition"):
+            findings.append(("namespace-undisposed",
+                             f"path-registry-only artifact_type {e.get('artifact_type')!r} has no disposition"))
+    # exit criterion, checked rather than aspirational
+    if kinds["name_disagreement"]:
+        print(f"       EXIT CRITERION NOT MET: {len(kinds['name_disagreement'])} name disagreement(s) "
+              f"remain — {nr.get('exit_criterion','')}")
+    else:
+        print(f"       EXIT CRITERION MET: zero name disagreements")
 
     # 1i mass accounting: is every observed FILE covered?
     tot = sum(sum(c.values()) for c in observed.values())

@@ -26,8 +26,12 @@
 #    (proposal, cycle-index, cycle-decision-log, code-delivery-artifact, po-obligations,
 #    verification-property-index, behavioral-contract-index, feature-delta-analysis), so
 #    a template-only gate would flag them as drift. Reconciling the two namespaces is
-#    THE precondition of enforcement; `path_registry_type:` below records the mapping and
-#    `registry_namespace_defect: true` marks each unreconciled pair.
+#    THE precondition of enforcement; `path_registry_type:` records the mapping and
+#    `namespace_status:` marks what KIND of disagreement each is. Measured, and note the
+#    correction: an earlier cut of this file used ONE boolean for three unrelated defects
+#    and so reported "17 namespace defects". The real split is
+#    name_disagreement 2 · path_missing 4 · template_missing 11, and only the first two
+#    are namespace defects at all. See `namespace_reconciliation` below.
 # 2. IT IS AN ENFORCEMENT GAP BY MASS AND A DESIGN GAP BY VOCABULARY. Canonical values
 #    cover 91% (vsdd) / 65% (prism) / 57% (rivetry) of typed files, but only 22 of 71 /
 #    32 of 150 / 27 of 51 DISTINCT values. 181 non-canonical values over 1,138 files.
@@ -187,6 +191,92 @@ link_types:
        `direction` findings in fa's baseline are one class with one fix: store a single
        dependency direction, not 58 corrected entries."
 
+# ── Namespace reconciliation (story 1) ───────────────────────────────────────
+# artifact-path-registry.yaml declares 46 `artifact_type` names; this file declares the
+# `document_type` names agents actually write. They overlap on ELEVEN. This section is the
+# single mapping a migration script reads, and it exists because a mapping kept in two
+# heads is the defect being fixed.
+#
+# ⚠ CORRECTION TO THIS REGISTRY'S OWN FIRST CUT. One boolean
+# `registry_namespace_defect: true` stood for THREE unrelated defects, which overstated the
+# disagreement as 17. Measured, they are:
+#     name_disagreement  2   genuinely two names for one concept
+#     path_missing       4   a template declares the type; the path registry does not
+#     template_missing  11   the path registry declares it; no template does
+# Only the FIRST two are namespace defects. `template_missing` is a template gap and folds
+# into story 2. Per-type this is now `namespace_status:` rather than a boolean.
+namespace_reconciliation:
+  resolution_rule: >
+    The `document_type` name WINS, because it is the value agents write into 3,000+ files
+    and the value every gate reads. The path-registry name becomes a recorded alias in the
+    PATH namespace, never a second spelling of the type.
+
+  name_disagreements:
+    - document_type: story
+      path_registry_type: story-spec
+      winner: story
+      why: >
+        `story` is what 369 files across two corpora actually declare, and what
+        story-template.md declares. `story-spec` appears in no file's frontmatter.
+      action: "rename the path-registry entry to `story`; keep `story-spec` as a path alias for one release"
+    - document_type: pipeline-state
+      path_registry_type: state
+      winner: pipeline-state
+      why: >
+        `pipeline-state` is template-declared (state-template.md) and present in all three
+        corpora. `state` is too generic to survive next to state-runtime-{wave,regression,adversary}.
+      action: "rename the path-registry entry to `pipeline-state`"
+
+  path_missing:            # a template declares the type; the path registry never did
+    - {document_type: product-brief,                  path: ".factory/specs/product-brief.md", evidence: "measured: specs/ (1 file)"}
+    - {document_type: architecture,                   path: ".factory/specs/architecture/{filename}.md", evidence: "measured: specs/architecture (3 rivetry files)"}
+    - {document_type: prd-supplement-error-taxonomy,  path: ".factory/specs/prd-supplements/{filename}.md", evidence: "measured: specs/prd-supplements/, non-empty in 9/12 candidates"}
+    - {document_type: holdout-scenario,               path: ".factory/holdout-scenarios/HS-{seq}-{slug}.md", evidence: "measured: holdout-scenarios/ (21 prism files, HS-N-{slug}.md)"}
+    # ^ THE DIRECTORY DEFECT. The path registry declares ONLY
+    #   .factory/holdout-evaluations/{filename}.md — the spelling that appears in 1 plugin
+    #   file, against `holdout-scenarios` in 48, and vsdd's own holdout-evaluations/ holds
+    #   nothing but a .gitkeep. The path registry codified the 1 over the 48.
+
+  template_missing:        # the path registry declares it; NO template does -> story 2
+    - behavioral-contract-index
+    - behavioral-contract-id-mapping
+    - verification-property-index
+    - cycle-index
+    - cycle-decision-log
+    - code-delivery-artifact
+    - po-obligations
+    - proposal              # and it is the ONE path-registry entry that already does schema
+    - spec-open-questions
+    - sprint-state
+    - story-id-mapping
+
+  shared_path_patterns:    # NOT a defect: the path registry is deliberately COARSER
+    - path_registry_type: cycle-document
+      pattern: ".factory/cycles/{cycle-id}/{filename}.md"
+      serves: [burst-log, lessons-learned, cycle-manifest, session-checkpoints, adversarial-review, consistency-report, security-review, code-review]
+      note: >
+        One pattern legitimately serves many types. So a merged registry must NOT require
+        a unique path per type — that was the naive reading of "merge the two files", and
+        it would have forced 8 invented sub-directories.
+    - path_registry_type: code-delivery-story-artifact
+      pattern: ".factory/code-delivery/{story-id}/{filename}.md"
+      serves: [pr-review-findings, pr-description, merge-result, red-gate-log]
+    - path_registry_type: domain-spec
+      pattern: ".factory/specs/domain-spec/{filename}.md"
+      serves: [domain-spec, domain-spec-section, domain-spec-index]
+
+  path_registry_only:      # declared paths with no type row; disposition each
+    - artifact_type: per-story-adversary-pass
+      disposition: "resolves to adversarial-review with scope: story — see aliases.yaml"
+    - artifact_type: state-runtime-adversary
+      disposition: "runtime state, shape config, authority derived; convergence is recomputable from adversarial-finding rows"
+    - artifact_type: plan-doc
+      disposition: "the `planning`/`plans` directory split (8 corpora vs 2, CROSS-CORPUS §4). Canonical dir: planning/. Serves dispatch-package."
+    - artifact_type: feature-delta-analysis
+      disposition: "aliases to delta-analysis-report — the template and the path registry chose different names for one artifact"
+
+  exit_criterion: "zero types with namespace_status: name_disagreement after the two renames land"
+
 # ── Prose references: sub-artifact ids that live in document BODIES ──────────
 # ADDED after running #671's exit criterion (research/FSTAR-COMPARISON.md). Measured on a
 # hand-classified random sample of the adversary's own findings: 21.8% (+/-8.7) require
@@ -264,13 +354,13 @@ types:
 
   # ───────────────────────────── L1/L2: brief and domain ─────────────────────
   product-brief:
+    namespace_status: path_missing
     family: spec
     profile: core
     shape: document
     authority: authored
     key: [project]
     path_registry_type: null
-    registry_namespace_defect: true   # declared by a template, absent from the path registry
     required+: []
     enums: {status: status, level: level, producer: producer}
     links: {inputs: inputs}
@@ -357,13 +447,13 @@ types:
     evidence: "1 file in each of vsdd, prism, rivetry"
 
   prd-supplement-error-taxonomy:
+    namespace_status: path_missing
     family: spec
     profile: core
     shape: document
     authority: authored
     key: [project]
     path_registry_type: null
-    registry_namespace_defect: true
     required+: [section]
     enums: {status: status, level: level, producer: producer}
     links: {traces_to: traces_to, inputs: inputs}
@@ -449,13 +539,13 @@ types:
       totals, both of which are consequences of hand-maintained derived data.
 
   behavioral-contract-index:
+    namespace_status: template_missing
     family: spec
     profile: core
     shape: document
     authority: derived
     key: [project]
     path_registry_type: behavioral-contract-index
-    registry_namespace_defect: true   # in the path registry, NO template declares it
     required+: []
     enums: {status: status}
     links: {}
@@ -473,13 +563,13 @@ types:
       derived artifact it simply stops existing.
 
   behavioral-contract-id-mapping:
+    namespace_status: template_missing
     family: spec
     profile: core
     shape: record
     authority: derived
     key: [old_id]
     path_registry_type: behavioral-contract-id-mapping
-    registry_namespace_defect: true
     required+: []
     section_policy: free
     gate_severity: error
@@ -516,13 +606,13 @@ types:
       those 33 findings mechanically detectable rather than a matter of taste.
 
   verification-property-index:
+    namespace_status: template_missing
     family: spec
     profile: core
     shape: document
     authority: derived
     key: [project]
     path_registry_type: verification-property-index
-    registry_namespace_defect: true
     required+: []
     section_policy: free
     gate_severity: error
@@ -572,13 +662,13 @@ types:
       the changelog is the store's history.
 
   architecture:
+    namespace_status: path_missing
     family: architecture
     profile: core
     shape: document
     authority: authored
     key: [project]
     path_registry_type: null
-    registry_namespace_defect: true
     required+: []
     enums: {status: status, level: level, producer: producer}
     links: {traces_to: traces_to, inputs: inputs}
@@ -655,6 +745,7 @@ types:
 
   # ───────────────────────────── Stories and epics ───────────────────────────
   story:
+    namespace_status: name_disagreement
     family: delivery
     profile: core
     shape: record
@@ -662,7 +753,6 @@ types:
     key: [story_id]
     key_format: "S-{epic}.{seq}"
     path_registry_type: story-spec
-    registry_namespace_defect: true    # template says `story`, path registry says `story-spec`
     required+: [story_id, epic_id, wave, points, priority, subsystems, behavioral_contracts, verification_properties, depends_on, blocks, target_module]
     optional+: [estimated_days, risk_mitigations, assumption_validations, tdd_mode, cycle]
     enums: {status: status, priority: priority, producer: producer}
@@ -706,13 +796,13 @@ types:
     notes: "THE most-churned file in the corpus after STATE.md: 381 commits. Derived."
 
   story-id-mapping:
+    namespace_status: template_missing
     family: delivery
     profile: core
     shape: record
     authority: derived
     key: [old_id]
     path_registry_type: story-id-mapping
-    registry_namespace_defect: true
     required+: []
     section_policy: free
     gate_severity: warn
@@ -767,13 +857,13 @@ types:
     notes: "Derivable from story.wave + story.depends_on. Declared but never written — consistent with being derivable."
 
   sprint-state:
+    namespace_status: template_missing
     family: delivery
     profile: core
     shape: config
     authority: authored
     key: [project]
     path_registry_type: sprint-state
-    registry_namespace_defect: true
     required+: []
     section_policy: free
     gate_severity: error
@@ -1083,6 +1173,7 @@ types:
       whole-document rewrite that can conflict. As rows they cannot.
 
   cycle-decision-log:
+    namespace_status: template_missing
     family: ledger
     profile: core
     shape: append-only-event
@@ -1090,7 +1181,6 @@ types:
     key: [cycle, decision_id]
     key_format: "D-{seq}"
     path_registry_type: cycle-decision-log
-    registry_namespace_defect: true
     required+: [cycle, decision_id, entry_date]
     enums: {status: status, producer: producer}
     links: {traces_to: traces_to}
@@ -1200,13 +1290,13 @@ types:
     notes: "`cycle_id` is the anchor the whole cycles/ tree keys on — 189 plugin files embed cycles/ paths."
 
   cycle-index:
+    namespace_status: template_missing
     family: cycle
     profile: core
     shape: document
     authority: derived
     key: [cycle_id]
     path_registry_type: cycle-index
-    registry_namespace_defect: true
     required+: []
     section_policy: free
     gate_severity: error
@@ -1217,13 +1307,13 @@ types:
 
   # ───────────────────────────── Code delivery ───────────────────────────────
   code-delivery-artifact:
+    namespace_status: template_missing
     family: delivery
     profile: core
     shape: document
     authority: authored
     key: [story_id, kind]
     path_registry_type: code-delivery-artifact
-    registry_namespace_defect: true   # in the path registry AND in live use; no template
     required+: [story_id, kind]
     enums: {status: status, producer: producer}
     links: {story_id: story_id}
@@ -1264,6 +1354,7 @@ types:
 
   # ───────────────── Evaluation, convergence, verification ───────────────────
   holdout-scenario:
+    namespace_status: path_missing
     family: verification
     profile: core
     shape: record
@@ -1271,7 +1362,6 @@ types:
     key: [id]
     key_format: "HS-{seq}"
     path_registry_type: null
-    registry_namespace_defect: true
     required+: [id, category, must_pass, priority, lifecycle_status, behavioral_contracts, risk_source, assumption_source, introduced]
     optional+: [last_evaluated, staleness_check, stale_reason, retired, epic_id]
     enums: {status: status, lifecycle_status: lifecycle_status, priority: priority, producer: producer}
@@ -1641,13 +1731,13 @@ types:
     evidence: "0 typed canonical files; prism uses a bare `research` value on 54 files — see the research-note GAP"
 
   spec-open-questions:
+    namespace_status: template_missing
     family: spec
     profile: core
     shape: append-only-event
     authority: authored
     key: [question_id]
     path_registry_type: spec-open-questions
-    registry_namespace_defect: true
     required+: []
     optional+: [resolved_by, resolved_date]
     enums: {status: status, producer: producer}
@@ -1753,13 +1843,13 @@ types:
 
   # ───────────────────────────── Config and state ────────────────────────────
   pipeline-state:
+    namespace_status: name_disagreement
     family: state
     profile: core
     shape: record
     authority: authored
     key: [project]
     path_registry_type: state
-    registry_namespace_defect: true    # template says pipeline-state, path registry says state
     required+: [current_phase]
     optional+: [current_cycle]
     enums: {status: status, producer: producer}
@@ -1886,13 +1976,13 @@ types:
     evidence: "1 vsdd file, 43 commits — append-only by behaviour, document by storage"
 
   po-obligations:
+    namespace_status: template_missing
     family: state
     profile: core
     shape: append-only-event
     authority: authored
     key: [obligation_id]
     path_registry_type: po-obligations
-    registry_namespace_defect: true
     required+: []
     enums: {status: status, producer: producer}
     section_policy: free
@@ -1914,13 +2004,13 @@ types:
     evidence: "path registry only; vsdd's measurements/ is one of its 4 singleton directories"
 
   proposal:
+    namespace_status: template_missing
     family: architecture
     profile: core
     shape: document
     authority: authored
     key: [proposal_id]
     path_registry_type: proposal
-    registry_namespace_defect: true
     required+: [proposal_id, title, author, date]
     optional+: [target, priority, estimated_effort, empirical_basis, implementation_tiers]
     enums: {status: status, priority: priority}

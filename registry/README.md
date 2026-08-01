@@ -49,8 +49,10 @@ gate rather than a claim.
 1. **There are TWO declared standards, not one.** The path registry declares 46
    `artifact_type` names, the templates declare 81 `document_type` names, and they overlap
    on **11**. Eight path-registry-only names are in live use as `document_type` values, so a
-   template-only gate flags them as drift. **17 types are flagged
-   `registry_namespace_defect`; reconciling the namespaces is story 1.**
+   template-only gate flags them as drift. Reconciled in `namespace_reconciliation`:
+   **2 name disagreements** (`story`/`story-spec`, `pipeline-state`/`state`) ·
+   4 path-missing · 11 template-missing. Only the first 2 are namespace defects — an
+   earlier cut of this registry used one boolean for all three and so overstated it as 17.
 2. **Enforcement gap by mass, design gap by vocabulary.** Canonical values cover 91% / 65% /
    57% of typed files but only **22 of 71 · 32 of 150 · 27 of 51 distinct values**.
 3. **The drift tail is singletons.** Of 181 non-canonical values, **108 appear exactly
@@ -92,3 +94,5 @@ Kept as a record, because a registry that was never run is a wish list.
 | 2 rivetry `prd-supplement-*` values undispositioned | silent holes in the standard |
 | full spine required of `config`/`blob` shapes | `policies.yaml` correctly carries no `status`; now a `shape_override` |
 | `complexity` bound to an enum on no evidence | guessing dressed as a schema. Left unbound and marked unmeasured |
+| one `registry_namespace_defect` boolean for THREE defects | overstated the namespace disagreement as **17** when it is **2**. Now `namespace_status: name_disagreement \| path_missing \| template_missing`, and the validator checks each kind separately |
+| a regex that matched flag lines belonging to LATER type blocks | silently mis-assigned 17 of 17 `namespace_status` values while parsing cleanly. Fixed with block-scoped editing; caught by printing the resulting groups instead of trusting the edit |

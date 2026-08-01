@@ -32,8 +32,9 @@ truth for canonical `.factory/` locations and declares only `canonical_path_patt
 - `document_type` drifted to **181 non-canonical values over 1,138 files** across three
   corpora, none of them present in the 81 the templates declare.
 - Two projects on the same factory share **ZERO** `verdict` values.
-- **17 types** are declared in one of the two registries and not the other; the two
-  namespaces overlap on only **11 of 46 / 81** names.
+- The two namespaces overlap on only **11 of 46 / 81** names, and disagree on the name of
+  **2** concepts (`story`/`story-spec`, `pipeline-state`/`state`), with 4 types the path
+  registry never declared and 11 it declares that no template does.
 - 4 different BC totals coexist because indexes are authored rather than derived.
 
 **Decision.** Adopt `artifact-type-registry.yaml` as the declaration of artifact shape,
@@ -114,7 +115,7 @@ adopted" is not testable.
 
 | # | Story | Exit criterion |
 |---|---|---|
-| **1** | **Reconcile the two namespaces.** Merge `artifact-path-registry.yaml` into `artifact-type-registry.yaml`; one vocabulary for `artifact_type` and `document_type`. | `validate_registry.py` reports **0** `registry_namespace_defect` flags (17 today). |
+| **1** | **Reconcile the two namespaces.** SPECIFIED — see `namespace_reconciliation` in the registry. Two renames land in `artifact-path-registry.yaml`: `story-spec` -> `story`, `state` -> `pipeline-state`. A full file merge is NOT required and would be wrong: the path registry is deliberately coarser (`cycle-document` serves 8+ types), so requiring a unique path per type would force 8 invented subdirectories. | `validate_registry.py` prints **EXIT CRITERION MET: zero name disagreements** (2 today). Blocked only on write access to vsdd-factory. |
 | **2** | **Add the 16 missing templates** for the gap types, largest mass first: `fix-burst-closure` (79 files), `research-note` (66), `remediation-manifest` (31), `wave-gate-report` (30), `proposed-adr` (28), `architect-decision` (19), `uncertainty-map` (13). | Every `pending_template: true` is cleared; 344 files stop being un-typeable. |
 | **3** | **Fix the standard's own three collisions.** `traceability-matrix`/`-matrices`, `holdout-evaluation`/`-report`, `consistency-report`/`consistency-validation-report`, plus `ux_spec` — the single underscore in an 81-value kebab vocabulary. | 81 declared values contain no near-duplicate pair; `unresolved:` in aliases.yaml is empty. |
 | **4** | **Mint `adversarial-finding` as rows.** A template exists and **nothing uses it** — findings are prose tables inside review bodies. | `finding_count`, `severity_distribution` and `total_findings` become DERIVED on ≥1 real cycle and agree with the prose they replace. |

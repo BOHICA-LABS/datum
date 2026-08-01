@@ -38,7 +38,7 @@ type TypeSpec struct {
 	Key              []string          `yaml:"key"`
 	KeySource        string            `yaml:"key_source"`
 	PathRegistryType string            `yaml:"path_registry_type"`
-	NamespaceDefect  bool              `yaml:"registry_namespace_defect"`
+	NamespaceStatus  string            `yaml:"namespace_status"`  // name_disagreement | path_missing | template_missing
 	RequiredPlus     []string          `yaml:"required+"`
 	OptionalPlus     []string          `yaml:"optional+"`
 	Enums            map[string]string `yaml:"enums"`
