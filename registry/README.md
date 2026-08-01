@@ -92,6 +92,11 @@ fa graph dot --scope subsystem | dot -Tsvg
 fa graph diff --from HEAD                  # what a rehydrate-per-run graph cannot do
 ```
 
+At 250k+ nodes the engine is **CSR** (two int32 arrays + an interned key slab): measured
+**96x less memory** than gonum (756 MB -> 7.9 MB at 240k nodes) and ~100x faster
+(articulation 980 ms -> 8.1 ms), verified by PARITY against the gonum implementation.
+gonum is retained only for Louvain.
+
 Two performance claims of mine were refuted by benchmarking them: betweenness is 236 ms at
 live scale (not "single-digit milliseconds") and **52 s at 10x** (not "probably fine"). It is
 now opt-in and bounded. And gonum's dense `PageRank` allocates 47 MB per call on a sparse

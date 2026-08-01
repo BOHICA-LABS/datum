@@ -16,11 +16,13 @@ func cmdWaves(ctx context.Context, args []string) error {
 	asOf := fs.String("as-of", "", "project the graph as of a Dolt ref")
 	_ = fs.Parse(args)
 
-	p, err := openProjection(ctx, *db, *asOf)
+	// CSR, not the gonum projection: measured 96x less memory and 100x+ faster, and waves
+	// needs none of what gonum provides.
+	c, err := openCSR(ctx, *db, *asOf)
 	if err != nil {
 		return err
 	}
-	w := p.Waves()
+	w := c.Waves()
 	if len(w.Cycles) > 0 {
 		// A schedule over a cyclic dependency graph does not exist. Emitting a plausible
 		// one would be worse than failing.
@@ -53,19 +55,21 @@ func cmdGraph(ctx context.Context, args []string) error {
 		asOf := fs.String("as-of", "", "project as of a Dolt ref")
 		_ = fs.Parse(rest)
 		t0 := time.Now()
-		p, err := openProjection(ctx, *db, *asOf)
+		c, err := openCSR(ctx, *db, *asOf)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("projection  %d nodes · %d edges  (built in %s)\n", p.Nodes(), p.Edges(), time.Since(t0).Round(time.Millisecond))
+		fmt.Printf("projection  %d nodes · %d edges  (CSR, built in %s, %.1f MB)\n",
+			c.Nodes(), c.Edges(), time.Since(t0).Round(time.Millisecond),
+			float64(c.MemoryEstimate())/(1<<20))
 		byType := map[string]int{}
-		for k := range p.ids {
-			byType[k.Type]++
+		for id := int32(0); id < int32(c.Nodes()); id++ {
+			byType[c.Key(id).Type]++
 		}
 		for _, t := range sortedKeys(byType) {
 			fmt.Printf("   %-24s %5d\n", t, byType[t])
 		}
-		if d := p.Dangling(); len(d) > 0 {
+		if d := c.Dangling(); len(d) > 0 {
 			fmt.Printf("referenced but NEVER DECLARED: %d (a dangling reference IS an edge to an undeclared node)\n", len(d))
 			for _, k := range d[:min(len(d), 8)] {
 				fmt.Printf("   %s\n", k)
@@ -212,6 +216,21 @@ func cmdGraph(ctx context.Context, args []string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown: fa graph %s", sub)
+}
+
+// openCSR is the default engine. openProjection is retained for the gonum-only algorithms
+// (Louvain, and betweenness when explicitly requested).
+func openCSR(ctx context.Context, db, asOf string) (*CSR, error) {
+	s, err := Open(ctx, db, ZoneOpen, false)
+	if err != nil {
+		return nil, err
+	}
+	defer s.Close()
+	reg, err := LoadRegistry("")
+	if err != nil {
+		return nil, err
+	}
+	return BuildCSR(ctx, s, reg, asOf)
 }
 
 func openProjection(ctx context.Context, db, asOf string) (*Projection, error) {

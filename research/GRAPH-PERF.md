@@ -166,6 +166,57 @@ fa graph centrality --db <store> > /tmp/cent.csv    # every node, all three meas
 # then the AUC computation in the session log against registry/fstar_findings.json
 ```
 
+## CSR — the compact engine for 250k+ (built)
+
+Two int32 arrays instead of gonum's maps, with keys interned into one byte slab and ids
+assigned in **sorted key order** so `Lookup` is a binary search and no `map[string]int32`
+is retained (that map alone would be ~80 MB at 1M nodes).
+
+### Memory — measured, and better than the 30× I estimated
+
+| nodes | edges | gonum heap (incl. the `Simple()` every algorithm builds) | CSR | ratio |
+|---|---|---|---|---|
+| 2,410 | 3,199 | 7.2 MB | **0.1 MB** | **96×** |
+| 24,010 | 31,999 | 69.9 MB | **0.8 MB** | **91×** |
+| 240,010 | 319,999 | **756.5 MB** | **7.9 MB** | **96×** |
+
+Extrapolating the ratio to 1M nodes: ~3.1 GB → **~33 MB**. The live corpus projection is
+**0.1 MB**.
+
+### Speed — CSR is also ~100× faster
+
+| | gonum | CSR | speedup |
+|---|---|---|---|
+| articulation points, 2.4k | 5.36 ms | **51 µs** | 104× |
+| articulation points, 240k | 980 ms | **8.1 ms** | 121× |
+| SCC, 240k | — | **4.6 ms** | |
+| waves, 240k | 710 ms | **121 ms** | 5.9× |
+
+Cache-friendly array traversal, not a cleverer algorithm — same asymptotics, far better
+constants.
+
+### What still uses gonum
+
+Louvain only, plus betweenness when explicitly requested. Everything on the default path —
+build, degree, SCC, articulation, waves, dangling — is CSR.
+
+### Correctness by PARITY, not inspection
+
+CSR is verified against the gonum implementation on the same graphs: the 7 hand-worked
+articulation cases, generated graphs at 50/500/2,400 nodes (node count, edge count, per-node
+degree, articulation set, SCC count), waves layering, dangling, and parallel-edge survival.
+Two implementations agreeing on hand-worked answers *and* on generated graphs is the standard
+being met here; either alone would not be.
+
+### A benchmark that measured nothing, caught
+
+`BenchmarkCSRAlgorithms/Waves` first reported **1.1 µs at 240k nodes**. Implausible, and the
+cause was real: `synthProjection` creates only `behavioral-contract` and `subsystem` nodes, so
+`Waves()` found no `story` type and returned immediately. The benchmark was timing an early
+return. Fixed with a story-shaped generator, and pinned by
+`TestSynthStoriesActuallyProducesWaves` so it cannot silently regress to measuring nothing.
+Real figures are in the table above.
+
 ## Reproduce
 
 ```sh
@@ -176,4 +227,10 @@ CGO_ENABLED=1 go test -tags gms_pure_go -run XXX -bench 'BenchmarkWaves|Benchmar
 CGO_ENABLED=1 go test -tags gms_pure_go -run XXX -bench 'BenchmarkBetweenness' -benchtime 1x -timeout 60m ./...   # ~53 s
 ```
 
-54 tests · 7 benchmarks · no network · no `dolt` binary.
+```sh
+# CSR parity + the memory table
+CGO_ENABLED=1 go test -tags gms_pure_go -count=1 -run 'TestCSR' -v ./...
+CGO_ENABLED=1 go test -tags gms_pure_go -run XXX -bench 'BenchmarkCSR' -benchtime 3x ./...
+```
+
+62 tests · 9 benchmarks · no network · no `dolt` binary.
