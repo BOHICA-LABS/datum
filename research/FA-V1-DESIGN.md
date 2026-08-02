@@ -239,6 +239,57 @@ shadow  →  dual-write  →  authoritative  →  markdown retired
 stage 2 should be gated on, per type. Nothing flips wholesale; an in-flight project can move BCs
 before it moves burst logs.
 
+### Ratified consequences of the migration design (2026-08-02)
+
+**⚠ INSTANCE NINE OF THE SILENT-INPUT-LOSS DEFECT IS ALREADY LIVE — IN `fa` ITSELF.** Verified
+directly, not relayed: `reVPFile = ^(VP-\d+)` (`fa/corpus.go:138`) is **case-sensitive** and is used as
+the *filter* in `walkMD` (`:373`); prism names all **80** of its verification properties
+`vp-001-*.md`; non-matching files are skipped with no error. **prism's entire L4 layer imports as zero
+rows and nothing reports it.** The bar in §6 warned that a migration is the worst possible place for a
+ninth instance — it turns out #9 predates the migration and would have *been* the data-loss event.
+
+Two more importer defects, also verified: **prism cannot be imported at all** (hard abort on a
+`VARCHAR(220)` overflow in `prose_ref.target`), and **rivetry cannot** (duplicate `VP-001` from its 211
+`.DELTA-ARCHIVE` sidecars — 143 key collisions). So **`fa import` today ingests one of three corpora.**
+And duplicate keys are handled **three incompatible ways**: `bc` files a finding, `story` silently keeps
+the first file, `vp` crashes. Three behaviours for one condition is its own defect.
+
+**Per-project scale, measured (prism re-measured as instructed):**
+
+| | vsdd-factory | prism | rivetry |
+|---|---|---|---|
+| markdown files / bytes | 3,085 / 28.0 MB | 2,784 / **47.6 MB** | 668 / 19.4 MB |
+| distinct raw `document_type` | 71 | **150** | 51 |
+| types no other project uses | 46 | **116** (511 files) | 29 (290 files) |
+| conformance findings | 6,951 | 10,843 | 1,032 |
+| **cannot round-trip under schema v4** | 579 (21.3%) | **1,287 (67.8%)** | **401 (68.0%)** |
+
+prism advanced **5 commits / 75 md files** past the registry pin, and both its 10,843 total and its
+type census are **byte-identical** — so the concurrent session did not move the numbers. 13 raw types
+are shared by all three projects; **80 of 103 canonical types are in use**; and 940 typed files sit in
+75 types with no table.
+
+**Adopted decisions:**
+
+- **Two ladders share the word *shadow* and must be composed by rule, not conflated** — the
+  registry's *derivation* ladder (`shadow → proven → retired`) and the *migration* ladder
+  (`shadow → dual-write → authoritative → markdown retired`) are orthogonal.
+- **The unit of migration is the `(project, type)` PAIR**, not a type and not a project. That is what
+  makes V-F's "N independent migrations" real.
+- **Seven named stage-1 exit gates, with CONSERVATION as the explicit anti-#9 gate — zero tolerance,
+  no thresholds.** Given #9 is live, this is the single most important gate in the plan.
+- **Every transformation carries a mandatory `before`**, so revert is total rather than
+  best-effort.
+- **`fa migrate verify` refuses on a moved corpus pin** — you cannot verify a migration against a
+  corpus that changed underneath it.
+- **Order:** Cohort A (schema prerequisites: bodies, sections, verbatim frontmatter, `fa render`,
+  scope predicates out of Go, **the three importer defects**) → rivetry `delta-archive` retirement →
+  **B record spine** (bc/story/vp/adr/epic — 59.4% of mass) → **C review family** (23.5%, and the whole
+  convergence dependency) → **D ledgers** (58 files, 26,632 references) → **E tail** → **F derived**
+  (continuous) → **G live operational state, last**.
+- **Project order: rivetry (pilot) → vsdd-factory → prism.** rivetry is smallest; prism is both
+  concurrently edited and un-importable, so it goes last.
+
 ## 6. The production-grade bar
 
 "Production grade" is a measurable claim, so it gets acceptance criteria rather than adjectives:

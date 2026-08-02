@@ -3,7 +3,7 @@ title: FA-V1-MIGRATION — the per-type, per-project migration and cutover plan
 date: 2026-08-02
 purpose: move EVERY project using the vsdd-factory methodology into `fa`, staged per artifact type, with the evidence that advances each stage and the gate that proves nothing was lost
 status: DESIGN. No implementation. Corpora read-only throughout — 0 files modified in vsdd-factory, prism or rivetry.
-binds_to: research/FA-V1-DESIGN.md (8 settled decisions, 23 invariants) · registry/CHANGE-MANAGEMENT.md (ADR, policy, 16 stories, graduation ladder, 7 hazards)
+binds_to: research/FA-V1-DESIGN.md (8 settled decisions, 23 invariants — including the three 2026-08-02 per-shape ratifications of 16/17/21) · research/FA-V1-L1-L2-STORAGE-SCHEMA.md (whose `id_alias` / `reserved_key` ledgers and "16 binds at capture, 15 binds at cutover" rule this plan uses rather than redefines) · registry/CHANGE-MANAGEMENT.md (ADR, policy, 16 stories, graduation ladder, 7 hazards)
 companion: research/FA-V1-FACTORY-CHANGES.md (the vsdd-factory change spec this plan sequences against)
 ---
 
@@ -147,6 +147,23 @@ every unmodeled key is dropped. Measured distinct frontmatter keys versus the co
 So invariant 15 is not merely unbuilt; it is **currently unsatisfiable for 100% of the corpus**,
 including the 2,946 files the store nominally holds. That is the first thing §3 orders.
 
+**Two shape exemptions, taken from the spine's 2026-08-02 per-shape ratification of invariant 16 —
+they change the denominator, not the gate.** `blob-with-path` (4 types: `runtime-log`, `ui-asset`,
+`demo-asset`, `hooks-dim2-gate-template`) stores path + content hash and legitimately has no body;
+`append-only-event` (11 types — the whole of cohort D) stores *entries* and **derives** the file, so
+for a ledger the markdown is a render. Hence the rule this plan adopts verbatim from
+`FA-V1-L1-L2-STORAGE-SCHEMA.md`: **invariant 16 binds at capture, invariant 15 binds at cutover** —
+while a type sits at shadow or dual-write its captured body is stored verbatim and gated by 16; when
+it reaches authoritative the captured body is dropped and 15 takes over, and no type may advance to
+authoritative until 15 is green over 100% of its instances. An exemption must be **declared as a
+shape in the registry; silence is not an exemption.**
+
+**One more consequence of the invariant-17 ratification, which is a migration item and not a design
+one:** three columns in the *current* schema already store a derivable value and must be retired
+during cohort A — `bc.version` / `vp.version` (derivable from the version chain),
+`version_cite.verdict` (derivable from `pin_policy` + the cited vs current version), and
+`finding.occurrences` (a stored `COUNT(*)`, incremented at `fa/import.go:402-403`).
+
 **Three importer defects, found by running it against all three corpora rather than one:**
 
 ```
@@ -252,7 +269,7 @@ precise answers.** All seven, per cell, machine-produced, no adjectives:
 | # | exit gate | pass condition | why this one |
 |---|---|---|---|
 | **X1** | **Conservation** | `files_on_disk(project,type) == rows + declared_out_of_scope + rejected_with_reason`, and `skipped_without_reason == 0` | The anti-#9 gate. prism's 80 VPs are 80 files skipped without a reason and nothing failed. |
-| **X2** | **Byte-exact round trip, 100%** | for every file of the type: `render(import(file)) == file` byte for byte, **including frontmatter key order and every unmodeled key**; report `N compared / N equal`; one mismatch blocks | Invariants 15 + 16. Today 30–93 frontmatter keys per body type are dropped, so this fails on 100% of files and *should*. |
+| **X2** | **Invariant 16 at capture: the captured body is byte-exact and its partition is total** | for every file of the type: the stored body equals the file's bytes after the frontmatter, **the frontmatter bytes are stored verbatim including key order and every unmodeled key**, and `concat(sections) == body`; report `N compared / N equal`; one mismatch blocks. (The full `import(render(store)) == store` round trip is invariant **15** and gates stage 2 → 3, per the spine's capture/cutover split — see Y6.) | D-A + invariant 16. Today 30–93 frontmatter keys per body type are dropped, so this fails on 100% of files and *should*. `concat(sections) == body` already HOLDS on all 6,537 files, so the partition half is green and the capture half is the work. |
 | **X3** | **Count parity** | `fa count --project P --type T` equals the on-disk count, and every count the corpus *asserts* about T either agrees or is an adjudicated finding with a named owner | The six-BC-totals class. `corpus_assertion` already holds 217 such claims for vsdd. |
 | **X4** | **Baseline preservation** | the `(project, type)` slice of the 18,826 baseline is reproduced by `fa validate --registry` with delta **0**, or reconciled line by line to *registry evolution* vs *corpus drift* | Precedent: 18,418 → 18,826 was +408 of registry tightening on byte-identical input and +22 untracked files. A migration that cannot tell those apart cannot be trusted to report loss. |
 | **X5** | **Alias closure applied and recorded** | every raw spelling in this type's alias closure resolved, every non-empty `set:` clause applied, one `migration_event` row per application | 921 files carry an applied alias (vsdd 240 · prism 641 · rivetry 40); 22 aliases carry `set:` clauses over 87 files. A rename without the `set:` destroys `scope` and `reviewer_role`. |
@@ -278,6 +295,7 @@ failing for reasons that have nothing to do with `fa`.
 | **Y3** | `render --check` green on every commit for the whole window | not "mostly green" — a single failure resets Y1's counter |
 | **Y4** | **the gate has caught ≥1 real regression in real work** | DECISIONS D3's own rule for `advisory → block`, reused verbatim: a gate that has never fired is unproven |
 | **Y5** | every reader migrated | `fa doctor --readers` resolves every hook, skill and agent reference to this type's paths to either the committed render or an `fa` operation |
+| **Y6** | **invariant 15 green over 100% of the type's instances** | `import(render(store)) == store` at store-fingerprint level, per instance, with a census. This is the gate the spine and the L1–L2 design both place here: the captured body is only dropped once the render can reproduce it. For `append-only-event` types this is the *only* body gate there ever is. |
 
 ### 2.4 Stage 3 — AUTHORITATIVE: `fa` is the only writer
 
@@ -350,7 +368,10 @@ per D-A; (b) **verbatim frontmatter bytes** stored alongside the parsed projecti
 reachable at all; (c) `fa render`; (d) the scope predicate and the filename patterns moved out of Go
 into the registry; (e) the three importer defects D1/D2/D3 fixed, with one declared collision policy
 per type — **first-wins is banned**; (f) the conservation census promoted from a printed line
-(`fa/import.go:436-443`) to a hard assertion.
+(`fa/import.go:436-443`) to a hard assertion; (g) the three invariant-17 violations already in the
+schema retired — `bc.version`, `vp.version`, `version_cite.verdict`, `finding.occurrences`; (h) a
+declared `shape` on every type, because under the ratified invariant 16 an undeclared shape is gated
+by every body rule at once.
 
 **Cohort B — the record spine.** 3,097 files = **59.4% of typed mass**. Highest volume, declared
 keys, real templates, best conformance. All five already have tables; three already have bodies.
@@ -383,8 +404,12 @@ CHANGE-MANAGEMENT §4, because all 8 of its required fields are a tightening.
 `lesson` 5,844). The clearest case of mass-inside-files rather than mass-in-file-count:
 `burst-log` 7, `session-checkpoints` 14, `red-gate-log` 15, `lessons-learned` 8,
 `cycle-decision-log` 5, `tech-debt-register` 4, `blocking-issues-resolved` 2,
-`spec-open-questions` 2, `po-obligations` 1, `sidecar-learning` 1. Append-only shape, so the
-concurrency test is real work: two agents appending concurrently must produce no conflict.
+`spec-open-questions` 2, `po-obligations` 1, `sidecar-learning` 1. These are the **11
+`append-only-event` types**, so they are the cohort where the file is a render from the start and
+invariant 15 is the only body gate — and where the concurrency test is real work: two agents
+appending concurrently must produce no conflict. Measured motive: `burst-log.md` alone carries
+133/105/63 commits on three files, every one an append implemented as a whole-document rewrite that
+can conflict. As rows they cannot.
 
 **Cohort E — the long tail.** 940 files across **75 types with no table**, of which 16 are gap types
 carrying `pending_template: true` (72 alias entries over 325 files). Order within the cohort by
@@ -482,8 +507,8 @@ its own inverse cannot be applied at all.
 | **T2** | **`set:` clause application** — the fields a spelling was carrying in its characters | **22 aliases** over **87 files**; fields set: `scope` ×17, `reviewer_role` ×9, `status` ×3, `producer` ×2, `iteration` ×1 | one row **per field**, not per file, so a partially-applied alias is visible. A rename with no `set:` is refused for any alias whose entry declares one — `local-adversary-review` (`scope: story`, `reviewer_role: adversary`) is the canonical example, and it also carries the richest review frontmatter measured. |
 | **T3** | **enum coercion** via `migrated_from` | `verdict` 745 · `status` 220 migratable + 136 illegal · `scope` 170 · `level` 11 mappings · 17 closed enums total | one row per `(field, value)`, citing the `migrated_from` key. Table-driven — never inferred. Reverse = the recorded `before` token. |
 | **T4** | **split fields (D-D)** — one token → up to three fields plus an int | `verdict` → `gate_result` / `convergence` / `severity_max` (+ `streak`). E.g. `CLEAN_PASS_1_OF_3` → `{gate_result: CLEAN, convergence: CLEAN_STREAK, streak: 1}`; `HIGH` (vsdd's most common `verdict`, 106 uses) → `{severity_max: HIGH, gate_result: BLOCKED}` | **one `migration_event` with N outputs and one `before`**, not N independent events — otherwise the inverse is undefined. The legacy token lives in the audit row and **never** in the artifact (invariant 17: no stored value derivable from another). |
-| **T5** | **`id_alias` entries (D-C)** | the BC-1.12.008 → BC-3.05.004 corrigendum class | an `id_alias(old, new, type, reason, at_version)` row. Never a silent rewrite: the old key stays resolvable so historical documents citing it remain correct. |
-| **T6** | **tombstones** | retired / withdrawn / never-issued keys | `id_tombstone(key, type, reason, retired_at)`; the minter (F11) scans files ∪ index ∪ tombstones under lease, so a retired id is never reissued. |
+| **T5** | **`id_alias` entries (D-C)** | the BC-1.12.008 → BC-3.05.004 corrigendum class; seeded from the two hand-maintained mapping documents that already *are* an id_alias table (`behavioral-contract-id-mapping`, `story-id-mapping`) | the `id_alias(type, old_key_hash, old_key_json, new_key_hash, from_version, reason, retire_after)` ledger defined in `FA-V1-L1-L2-STORAGE-SCHEMA.md` — **used, not redefined here**. Never a silent rewrite: the old key stays resolvable **as of the current version**, so historical documents citing it remain correct. |
+| **T6** | **reserved keys** (the tombstone ledger) | retired / withdrawn / never-issued keys | the `reserved_key` ledger from the L1–L2 design. Minting scans `artifact ∪ reserved_key ∪ id_alias(old)` inside the type's lease and one transaction, so a retired id is never reissued. |
 | **T7** | **key materialisation** (story 10) | `bc_id` **2,362 files** + `vp_id` **215 files** exist only in filenames | `key_materialised(path, key, source: filename)`. `path` becomes derived and never identity (D-C); the observed path is retained as `observed_path` so the render targets the same location. Note the registry validator caught its own bug here: declaring `bc_id`/`vp_id` as required frontmatter produced **2,577 false findings** on correct files. |
 | **T8** | **retired-field capture** | `input-hash` **3,433** · `verdict` **745** · `delta` **188** · `changelog` | the value is captured in the `migration_event` row and **removed from the artifact**. Reversal restores it. `input-hash` is replaced by derived staleness from `inputs` + history (F8) — its own archive text already admits it reports "spurious DRIFT". |
 | **T9** | **archive → versions (story 8)** | rivetry `delta-archive` **211 files**, of which 143 collide on a keyed type (74 BC · 49 VP · 18 ADR · 17 SCR · 11 FLOW) | `version_backfill(source_key, n_archived_entries, n_versions_created)` plus a **count assertion before any deletion**: `versions(source) == archived_entries(source) + live(source)`. This is the only place some versions exist; a fill-then-delete with no assertion is how a migration silently loses history. |
@@ -509,7 +534,7 @@ honest.
 | # | check | pass condition | reported as |
 |---|---|---|---|
 | **V1** | **Conservation, in all three directions** | per `(project, type, form)`: `on_disk == migrated + declared_out_of_scope + rejected_with_reason`; `skipped_without_reason == 0`; and the reverse direction — every row resolves to a file or to a declared derivation | a census table, never a boolean |
-| **V2** | **Byte-exact round trip for 100% of bodies** | `N_files_compared`, `N_equal`, `N_differ`, and a tree fingerprint. `N_differ > 0` fails. Both directions: `render(store) == md` byte-exact **and** `import(render(store)) == store` at store-fingerprint level (invariant 15) | per-type table + the first 20 differing paths with a byte offset |
+| **V2** | **Byte-exact round trip for 100% of bodies** | `N_files_compared`, `N_equal`, `N_differ`, and a tree fingerprint. `N_differ > 0` fails. Both directions: `render(store) == md` byte-exact **and** `import(render(store)) == store` at store-fingerprint level (invariant 15). Evaluated **per shape**: `document`/`record` types are gated at capture by 16 and at cutover by 15; the 11 `append-only-event` types only by 15; the 4 `blob-with-path` types by path + content hash. **Any type not declaring a shape is gated by all of them** — silence is not an exemption. | per-type table + the first 20 differing paths with a byte offset |
 | **V3** | **Per-type count parity** | `fa count` == on-disk == every `corpus_assertion` about the type (217 such claims for vsdd today) or an adjudicated exception with an owner | per-type triple `(counted, on_disk, asserted)` |
 | **V4** | **Conformance-baseline preservation** | the 18,826 total and each project slice (6,951 / 10,843 / 1,032) reproduced with delta **0**, or reconciled to *registry evolution* vs *corpus drift* vs *untracked files* — the three causes the 18,418→18,826 reconciliation already established | a reconciliation table, and the `{registry_version, corpus_pin, dirty_file_list}` each number was taken at |
 | **V5** | **Zero unmodeled `document_type`** | `validate_registry.py` PART 1 exits 0 per project; every raw value canonical, aliased, gap-typed or explicitly retired **with a reason** | per-project value census |
@@ -572,8 +597,10 @@ Rollback is per `(project, type)` cell, never global, and every stage has a defi
 - the render is committed from stage 2 onward, so the markdown tree is never more than one commit
   behind the store;
 - the store is gitignored but its history is pushable, so rollback loses no history;
-- **invariant 21** — no force path, no auto-merge, no auto-rebase — so no rollback step can destroy
-  a concurrent writer's work (the `factory-cas-push.sh` failure mode is structurally absent);
+- **invariant 21** as ratified — no force path, no auto-merge, no auto-rebase **on artifact data** —
+  so no rollback step can destroy a concurrent writer's work (the `factory-cas-push.sh` failure mode
+  is structurally absent). A *lease* is not artifact data, so TTL expiry and human-authorized
+  revocation are permitted and audited; what is forbidden is a force that overwrites a version;
 - every transformation carries a mandatory `before`, so `fa migrate revert --txn` is total;
 - cells are independent, so an abandonment is scoped to one type in one project.
 

@@ -39,6 +39,7 @@ premises. An executor working from the review alone would spend time on files th
 | "~20 broken/nonexistent path references" | **47 distinct** broken references, because `PLG/docs/FACTORY.md:667-688` is a 20-row migration table that is unverifiable in *both* columns. |
 | "`hooks/validate-artifact-path.sh`" | there is no such bash hook. Path enforcement is **WASM**: `CRATES/hook-plugins/validate-artifact-path/src/lib.rs` (670 lines) → `PLG/hook-plugins/validate-artifact-path.wasm`. |
 | "pr-manager is denied `exec` so every `gh pr view` is a sub-agent dispatch" | **stale**: `AG/pr-manager.md:41` mandates delegation and all five `gh` sites (`:139,182,200,217,236`) are already wrapped in `Agent(subagent_type="vsdd-factory:github-ops", …)`. Do **not** "fix" this. Same for `AG/pr-reviewer.md:42`, `AG/session-reviewer.md:68`, `AG/research-agent.md:178`. |
+| "5 bash helpers" (FA-V1-DESIGN V-B) | **13 files in `PLG/bin/`** (§6). 7 are keepers (the observability set), 2 have data sources that do not exist, and 4 are direct retirement targets. "5" undercounts the surface by 8. |
 | `hooks/factory-lock-write.sh`, `hooks/resolve-worktree-identity.sh`, `hooks/factory-cas-push.sh`, `scripts/commit-to-artifacts.sh` | **none exist.** Zero occurrences of the string `factory-lock` under `PLG/`. `PLG/scripts/` does not exist. Skills `factory-lock`, `factory-unlock`, `wave-handoff`, `rehydrate-wave`, `wave-reset` have **no directory** under `PLG/skills/` — they are advertised commands with no implementation, living only in the operator cache at `~/.claude/plugins/cache/claude-mp/vsdd-factory/1.0.0-rc.23/`. **This is the review's own Area-4 caveat, confirmed: `develop` has no lock and no wave-handoff.** |
 | — (not in the review) | `PLG/templates/verify-sha-currency.sh` is a **template, not an installed hook**. `LIVE/hooks/` contains only `dim2-gates/`. `skills/state-burst/SKILL.md:136,165` invokes `bash .factory/hooks/verify-sha-currency.sh`, and `validate-wave-gate-prerequisite.sh:64-69` fail-opens when it is absent — so **every SHA-currency gate in the live factory is already a no-op.** |
 
@@ -53,12 +54,12 @@ larger. Net: fewer surgical fixes, more retirements.
 
 | | measured |
 |---|---|
-| template files | **120** (`PLG/templates/`, recursive) — 100 `.md`, 20 non-`.md` |
+| template files | **136** (`PLG/templates/`, recursive) — 100 `.md`, 25 `.yaml`, 7 `.json`, 1 each `.ts` / `.tape` / `.sh` / extensionless (`project-justfile-template`). *Re-counted: a first pass reported 120 by missing 16 non-`.md` files, so the non-`.md` retirement set in T-8 is 36, not 20.* |
 | `.md` templates carrying `document_type:` | **85 of 100 (85%)** |
 | distinct `document_type` values declared | **81** |
 | `.md` templates with **no** `document_type` | **15** — including `state-manager-checklist-template.md`, the *normative* burst checklist referenced by `skills/state-burst/SKILL.md:71` |
 | `artifact_type` entries in `PLG/config/artifact-path-registry.yaml` | **46**, every one `enforcement_level: block` |
-| **`template:` key in the path registry** | **does not exist.** There is *zero* declared linkage between the 46 artifact types and the 120 templates. |
+| **`template:` key in the path registry** | **does not exist.** There is *zero* declared linkage between the 46 artifact types and the 136 templates. |
 | artifact types with **no** template | **35 of 46** |
 | template `document_type` values with **no** registered artifact type | **70 of 81** |
 | the intersection | **11** |
@@ -91,7 +92,7 @@ Three templates, three incompatible ways of declaring what is mandatory:
 | **T-5** | `PLG/templates/architecture-index-template.md:12,27-34,38-40` | The 8 hardcoded architecture section filenames are deleted; the schema declares `architecture-section` keyed by subsystem. | The 8 files **do not exist**; disk uses `SS-NN-*.md` (11 of them, including a duplicate `SS-03` ordinal). `PLG/rules/spec-format.md:45` is the only doc that matches disk. | `AG/architect.md:39` and `WF/greenfield.lobster:372,386,396` keep instructing agents to load files that have never existed. |
 | **T-6** | `PLG/templates/adversarial-review-template.md:20-31` | The finding-ID grammar becomes a registry regex, and IDs are **minted by `fa`**, not typed. Remove the filesystem-conditional segment. | `:29` sanctions `ADV-P01-MED-003`, which `PLG/hooks/validate-finding-format.sh:60-62` **blocks as legacy**. The template and the hook disagree about the canonical form. | ~14 finding ID families persist; the dominant `F-*` family (>13,000 occurrences) stays uninspected while a prescribed form stays blocked. |
 | **T-7** | `PLG/templates/agents-md-template.md:19,124` | Fix the `../../FACTORY.md` pointer to `../docs/FACTORY.md`; delete `:124` ("Must exactly match this agent's configuration in openclaw.json") and replace it with a pointer to the role→operation manifest (§3.1). | `:124` is the **root cause** of 29 agents having prose profiles and no `tools:` key — the template pointed authors at an OpenClaw config as the source of truth and the migration to Claude Code frontmatter never happened. | Every new agent file reproduces the same two defects. |
-| **T-8** | `PLG/templates/` — the 20 non-`.md` files | `autonomy-config-template.yaml`, `merge-config-template.yaml`, `wave-state-template.yaml`, `policies-template.yaml`, `reference-manifest-template.yaml`, `project-manifest-template.yaml` become `fa` config schemas with `shape: config`. | None of their instantiations exists in `LIVE`: `merge-config.yaml`, `autonomy-config.yaml` and `wave-state.yaml` are all absent, so **autonomy is undefined at runtime** and three hooks target a file that was never created. | The five-tier budget response, both autonomy axes and every wave-state hook stay inert. |
+| **T-8** | `PLG/templates/` — the 36 non-`.md` files | `autonomy-config-template.yaml`, `merge-config-template.yaml`, `wave-state-template.yaml`, `policies-template.yaml`, `reference-manifest-template.yaml`, `project-manifest-template.yaml` become `fa` config schemas with `shape: config`. | None of their instantiations exists in `LIVE`: `merge-config.yaml`, `autonomy-config.yaml` and `wave-state.yaml` are all absent, so **autonomy is undefined at runtime** and three hooks target a file that was never created. | The five-tier budget response, both autonomy axes and every wave-state hook stay inert. |
 
 **Do not** delete `PLG/templates/adversary-prompt-templates/` in this pass: those are prompt inputs,
 not artifact schemas.
@@ -257,10 +258,15 @@ an agent for the majority of the largest artifact type. Separately, `codebase-an
 
 ## 4. Skills that write `.factory/**` directly
 
-**Measured: 72 of 121 skill directories** issue at least one direct filesystem write (Write / Edit /
-append / `tee` / `mkdir` / `git mv`) naming a `.factory/` target. **None routes through
-state-manager.** The full site list is in the inventory appendix of this spec's source measurement;
-the change is uniform, so it is specified by group.
+**Measured: 72 of 121 skill directories** issue at least one direct filesystem write naming a
+`.factory/` target. **None routes through state-manager.**
+
+*The extraction rule, stated because the count depends on it:* a skill counts if a `SKILL.md` or a
+referenced `steps/*.md` contains an instruction to **Write / Edit / append / `tee` / `mkdir` /
+`git mv` / shell-redirect** to a path beginning `.factory/`. It does **not** count a skill that
+merely *reads* such a path, names it in prose, or asserts it as a precondition — by the looser rule
+"mentions `.factory/` anywhere", the count is **105 of 121**, and that number would be useless for
+deciding what to change. The 72 are enumerated below by group; the change is uniform within a group.
 
 | # | group (skill count) | representative sites | change | what breaks if not done |
 |---|---|---|---|---|
@@ -288,10 +294,18 @@ S-1..S-10.
 **63 `[[hooks]]` blocks / 61 distinct names** in `PLG/hooks-registry.toml`; **35** route through
 `legacy-bash-adapter.wasm`, **28** are native WASM. Events: PostToolUse 34 · PreToolUse 16 ·
 SubagentStop 6 · Stop 2 · SessionStart/End 1 each · WorktreeCreate/Remove 1 each ·
-PostToolUseFailure 1. On disk: **43 `.sh` in `PLG/hooks/`** vs 35 legacy registrations → **~8 bash
-hooks are unregistered orphans** (including `check-factory-commit.sh` and `verify-git-push.sh`), and
-`PLG/hook-plugins/` carries **10 duplicate underscore/hyphen `.wasm` pairs** of which only the
-hyphen forms are referenced.
+PostToolUseFailure 1.
+
+On disk, re-counted directly (a first pass reported 43 `.sh` and "~8 unregistered orphans including
+`check-factory-commit.sh` and `verify-git-push.sh`" — **both of those are in fact registered**):
+**35 `.sh` at the top level of `PLG/hooks/`**, of which the registry references **34 distinct
+`script_path` values over 36 entries** (`hooks/protect-secrets.sh` is registered twice). So there is
+exactly **one unregistered top-level orphan — `hooks/update-cargo-audit-cache.sh`**. A further
+**12 `.sh` live in subdirectories** and are deliberately not registered: 11 in `hooks/dim2-gates/`
+(the only hook directory that also exists in `LIVE/hooks/`) plus `hooks/lib/block.sh`. `PLG/hooks/`
+holds 59 files in total, including the 5-platform `hooks/dispatcher/bin/*/factory-dispatcher`
+binaries. `PLG/hook-plugins/` holds 43 `.wasm` with **12 duplicate underscore/hyphen name pairs**, of
+which only the hyphen forms are referenced by the registry.
 
 ### 5.1 Retirement by cutover stage
 
@@ -304,7 +318,7 @@ hyphen forms are referenced.
 | **stage 3** | the 4 **branch/worktree** hooks: `factory-branch-guard`, `check-factory-commit`, `validate-factory-path-root`, `verify-git-push` | `fa`'s store-side leases + audit (F4 + F18) and scoped agent handles (F21). There is no orphan branch to guard. |
 | **stage 3** | the 5 **convergence/gate** hooks: `convergence-tracker`, `validate-novelty-assessment`, `validate-wave-gate-completeness`, `validate-wave-gate-prerequisite`, `warn-pending-wave-gate` | `fa converge` computed from finding rows + `fa gate record --evidence` (F13 + F14). |
 | **stage 3** | `update-wave-state-on-merge`, `regression-gate`, `red-gate`, `validate-red-ratio`, `validate-per-story-adversary-convergence`, `validate-dispatch-advance`, `validate-closes-completeness`, `validate-story-bc-sync`, `validate-subsystem-names`, `validate-vp-consistency`, `validate-anchor-capabilities-union`, `validate-trajectory-tail-cell-completeness`, `validate-policies-schema`, `validate-pr-description-completeness`, `validate-pr-merge-prerequisites`, `validate-pr-review-posted`, `pr-manager-completion-guard`, `handoff-validator`, `lint-registry-async-invariant` | `fa` gates as **queries** with mandatory evidence. Story↔BC sync (POLICY 8) is already **a JOIN** in `fa` producing 218 findings; subsystem names are an FK. |
-| **stage 4 — md retired** | `validate-artifact-path` entirely; the whole `legacy-bash-adapter.wasm` route and its 35 entries; the ~8 orphan `.sh` files; the 10 duplicate `.wasm` pairs | — |
+| **stage 4 — md retired** | `validate-artifact-path` entirely; the whole `legacy-bash-adapter.wasm` route and its 35 entries; the 1 unregistered orphan `.sh`; the 12 duplicate `.wasm` pairs | — |
 | **KEEP — never retire** | `session-start-telemetry`, `session-end-telemetry`, `session-learning`, `track-agent-start`, `track-agent-stop`, `tool-failure-hooks`, `capture-commit-activity`, `capture-pr-activity`, `worktree-hooks` (×2), `protect-secrets` (×2), `protect-bc`, `protect-vp`, `purity-check`, `brownfield-discipline`, `destructive-command-guard`, `block-ai-attribution` | These are **observability and guardrails**, not markdown policing. `track-agent-start` must gain the `agent_id` field its own crate currently forbids (`CRATES/hook-plugins/track-agent-start/src/lib.rs:19`). |
 | **NEW** | — | one `PreToolUse` hook: `validate-artifact-type` calling `fa validate --registry` on the single file being written (CHANGE-MANAGEMENT story 13), and a **deny** arm on `Edit|Write` for any type at stage ≥2 (M8). |
 
@@ -400,7 +414,7 @@ hyphen forms are referenced.
 |---|---|---|---|---|
 | **H-1** | the 6 hook scripts above + `PLG/hooks-registry.toml` | **Delete them at their stage in §5.1 — do not repair them.** Every one of these defects is a symptom of policing markdown with bash greps. | The review's central observation: "the intent expressed in the wrong substrate — prose where a schema was needed, a hook where a query was needed." | Repairing them costs the same as `fa`'s gate layer and leaves the substrate unchanged. |
 | **H-2** | `PLG/hooks-registry.toml:8-9` | Fix the stale header comment (claims 21 native + 35 legacy = 56; measured 28 + 35 = 63) and de-duplicate the `worktree-hooks` / `protect-secrets` double registrations. | a registry that miscounts itself. | Any tooling that trusts the header is wrong by 7. |
-| **H-3** | `PLG/hooks/` and `PLG/hook-plugins/` | Delete the ~8 unregistered `.sh` orphans and the 10 duplicate underscore `.wasm` pairs. `PLG/tests/check-bats-orphans.sh` detects only the inverse case — extend it. | dead code that reads as machinery. | Reviewers keep finding "the hook that does X" and it never runs. |
+| **H-3** | `PLG/hooks/` and `PLG/hook-plugins/` | Delete the unregistered orphan `hooks/update-cargo-audit-cache.sh` and the 12 duplicate underscore `.wasm` pairs. `PLG/tests/check-bats-orphans.sh` detects only the inverse case — extend it. | dead code that reads as machinery. | Reviewers keep finding "the hook that does X" and it never runs. |
 
 ---
 
@@ -561,7 +575,7 @@ The only two things worth landing early because they are one-line edits and unbl
 | must land | why |
 |---|---|
 | **H-1 stage-4**: delete `validate-artifact-path` and the entire `legacy-bash-adapter.wasm` route (35 entries) | — |
-| **H-2, H-3** | registry header, double registrations, ~8 orphan `.sh`, 10 duplicate `.wasm` pairs |
+| **H-2, H-3** | registry header, the two double registrations, 1 orphan `.sh`, 12 duplicate `.wasm` pairs |
 | **bin/ deletions**: `compute-input-hash`, `factory-dashboard`, `lobster-parse`, `multi-repo-scan`, `validate-template-compliance.sh`, `wave-state` | — |
 | **T-5, T-7, T-8** | template deletions, once no reader remains |
 | `sprint-state.yaml` and the never-instantiated `wave-state.yaml` are deleted | two incompatible representations of one thing, one of which was never created |
