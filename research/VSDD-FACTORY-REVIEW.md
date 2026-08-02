@@ -3,7 +3,7 @@ title: VSDD-FACTORY-REVIEW — how the factory is supposed to operate, and what 
 date: 2026-08-02
 purpose: a full operational review of ~/Dev/vsdd-factory — phases, agents, artifacts, state, gates, modes — compiled into a feature list for `fa`
 method: six parallel READ-ONLY reviews, each reading the skills/agents/workflows/hooks AND the live .factory corpus, every claim cited to file:line
-status: COMPLETE — all 6 areas landed, consolidated into 22 `fa` features across 4 tiers
+status: COMPLETE — all 6 areas landed, consolidated into 32 `fa` features across 5 tiers (Tier 0 = migration/cutover, the prerequisite)
 corpus_pin: vsdd-factory .factory @ 0aaba144 (read-only; 0 files modified)
 ---
 
@@ -765,13 +765,99 @@ against a live v2.65; and one epic documents its own template non-conformance in
 # ⭐ CONSOLIDATED `fa` FEATURE LIST
 
 Deduplicated across all six reviews. Ordered by leverage — how much of the measured failure mass each
-one removes. Every "eliminates" is a defect one of the reviews verified in this corpus.
+one removes. **Tier 0 comes first because it is the prerequisite: the goal is that `fa` is the SOLE HOME
+of every artifact — new projects start in `fa`, existing projects migrate in — and Tiers 1-4 all assume
+that has already happened.** Every "eliminates" is a defect one of the reviews verified in this corpus.
 
 The single most important observation: **the factory's design intent is consistently sharp, and
 almost every failure is that intent expressed in the wrong substrate** — prose where a schema was
 needed, a hook where a query was needed, bash-over-git where a transaction was needed, and an agent's
 self-report where a derivation was needed. `fa` should not reimplement the factory's judgment. It
 should give that judgment a substrate that can hold it.
+
+---
+
+## Tier 0 — getting the artifacts INTO `fa`, and keeping them there
+
+⚠ **Tiers 1–4 describe what `fa` must do once artifacts live in it. This tier is the prerequisite,
+and it is where the current build is thinnest.** The goal is that `fa` is the *sole home* of every
+artifact — new projects start in `fa` and never grow a markdown corpus; existing projects migrate in.
+Measured against that goal today:
+
+| | |
+|---|---|
+| markdown files under `.factory/` | 3,085 |
+| `document_type` has a table in the store | 2,624 (85%) |
+| **stores a VERBATIM BODY — the only ones renderable back** | **2,145 (69%)** |
+| no table at all | 461 (14%) |
+| distinct `document_type` values / modeled | 70 / **18** |
+
+Plus: only `bc`, `vp` and `story` carry a `body` column; there is **no `section` table** (D-A's
+ordinal partition is computed in memory and discarded); there is **no `fa render`**; invariant 15 is
+declared and unbuilt; and `fa` self-describes as *"phase 1: read-only shadow"* — **it has no write
+path at all.** So the store is currently lossy for ~31% of the corpus and has no way back out.
+
+### M1. Lossless capture for EVERY type — verbatim body + stored section partition
+Every artifact keeps its body bytes; D-A's ordinal section partition becomes a real table rather than
+an in-memory value. Acceptance: **100% of observed `document_type` values have a home**, and every
+one stores its body. *Today: 18 of 70 types modeled, 3 tables carry a body.* Until this holds,
+"move every artifact into `fa`" means losing 461 files outright and field-extracting 940 more.
+
+### M2. `fa render` and the round-trip gate — the settled decision that was never built
+D-B: store gitignored, **rendered markdown committed** as the review surface and the offline backup,
+with **invariant 15 `import(render(store)) == store` gated byte-exact**. This is what keeps humans,
+`gh pr diff`, GitHub review, and every existing reader working after the move — and it is the only
+honest proof the migration is lossless. `rendered/` currently holds one hand-made sample file.
+*This is the highest-priority missing piece in the whole list:* without it, migration is
+irreversible and unverifiable.
+
+### M3. The write path — `fa new|set|edit|retire`, schema-validated at write time
+`fa` can import, validate and shadow; it has never written an artifact. Every Tier 1–4 feature
+assumes this exists. Writes validate against F5's schema, mint ids via F11, take a lease via F4, land
+in a transaction via F2, and emit an audit row via F18.
+
+### M4. `fa init` as the greenfield entry point
+A new project starts with a store and a schema — no orphan branch, no worktree, no markdown corpus to
+migrate later. This replaces `repo-initialization`'s `factory-artifacts` orphan branch +
+`.factory/` worktree setup, and with it the whole class of "which `.factory` am I in" failures
+(F21), the two divergent worktree-health skills, and the nested `.factory/.factory/` bug.
+
+### M5. Staged, per-TYPE cutover — never big-bang
+Reuse the ladder the registry already declares for derived types, applied to *migration* per artifact
+type: **`shadow` → `dual-write` → `authoritative` → `markdown retired`**. `fa shadow` already
+implements stage 1 and reports 658 disagreements, which is exactly the evidence stage 2 should be
+gated on. A type advances only on evidence; nothing flips wholesale. This also means an in-flight
+project is never blocked on a full migration — it can move BCs before it moves burst logs.
+
+### M6. Migration acceptance gate — `fa migrate verify`
+Completeness is a measurement, not a declaration: every file accounted for (migrated / declared
+out-of-scope / rejected-with-reason), **byte-exact round trip for 100% of bodies**, count parity per
+type, the 18,826-finding conformance baseline preserved across the move, and **zero unmodeled
+`document_type` values**. Report per-form counts and never drop silently — the corpus has already
+demonstrated that a 6.75% sample can pass a 20% floor because nothing computed the ratio.
+
+### M7. Compatibility for everything that reads `.factory/**` today
+62 registered hooks, the `gh`/CI surface, and ~34 agent definitions read those paths. Each either
+reads the committed render (M2) or calls `fa`. `fa path resolve <type> <ids>` becomes the only way an
+agent learns where anything lives — which is also what closes F17's ~28 unregistered homes and the
+225 unmatched files, because the path stops being something an agent types.
+
+### M8. Write interception, or the store and the files silently diverge
+While both exist, `Edit`/`Write` on artifact paths must be denied and only `fa` permitted (D2 already
+anticipated "deny Bash, allow only `fa`"). Without this, dual-write drifts and the migration's own
+round-trip gate starts failing for reasons unrelated to `fa`.
+
+### M9. Multi-project hosting
+`fa` already imports three corpora (vsdd-factory, prism, rivetry) one at a time. "New projects start
+with `fa`" means it hosts many: one shared registry — the single canonical copy already `go:embed`'d
+and read by the Python tooling — with a store per project, and every query scoped by project (F7).
+
+### M10. A retirement ledger
+Name, per cutover stage, which of the 62 hooks / 5 bash helpers / 7 hand-maintained INDEX files /
+`sprint-state.yaml` / `wave-state.yaml` get **deleted**, and what replaces each. A migration that
+only adds `fa` while leaving the markdown machinery live doubles the number of sources of truth
+instead of collapsing them — and the review found the corpus already has 5 competing authorities on
+where artifacts live.
 
 ---
 
