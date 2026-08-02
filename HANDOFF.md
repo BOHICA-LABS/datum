@@ -38,7 +38,38 @@ Corpora READ-ONLY throughout (verified: 0 md/yaml modified in all three).
    findings), and **rule ORDER is a correctness property** (emptiness-before-counting asserted
    the opposite of the truth on 18 rows).
 
-### ▶▶▶ TOP PRIORITY NEXT — **STORY 12, prose-reference extraction.** Nothing in flight.
+### ✅ STORY 12 IS DONE — SPLIT INTO 12a + 12b, BOTH SHIPPED (2026-08-01, `632a6fa`)
+
+**It was split because the ALTERNATIVE was measured first.** 93.6% of prose-reference candidates
+point at something that should be a ROW, and 26% of what a permanent extractor finds is
+structurally unadjudicable (the prose never says whose `AC-005` it is). Then the DENOMINATOR GAP
+was closed and it overturned the priority: over corpus MASS it is 93.6/6.4, but over the
+ADVERSARY'S FINDINGS 12a and 12b are **equal at 36.8% of class C each**, with 26.3% beyond both.
+Inferring a value split from a mass split was the error. See `research/PROSE-REFS-OR-FIELDS.md`
+and `registry/class_c_decomposition.json`.
+
+| | shipped |
+|---|---|
+| **registry defects first** | patterns were UNANCHORED (over-match 9,947; `t_task` 73% noise) · kind list INCOMPLETE by ~22,750 refs (5 new kinds declared; head now flat at 649) · `version_cite` saw 2.4% of its subject. All three gated by check `[1n]` |
+| **12a** | 4,492 sub-artifact rows + 914 typed links. **POLICY 8 is now a JOIN** → 218 findings. Two new declared rules removed 105 false findings that blamed documents for correctly documenting gaps |
+| **12b** | 2,197 version cites judged by **pin_policy** (306 floating-lagging; pinned-lagging NOT reported, by design) + 3,570 section refs resolved THREE ways (854 resolved · 329 dangling · 2,387 unresolvable) |
+
+⚠ **Coverage of a CLASS is not reproduction of each INSTANCE.** Both instruments emit the right
+kinds of finding at scale; per-finding reproduction of all 19 class-C findings is a separate
+check and is **not** claimed.
+
+### ▶▶▶ TOP PRIORITY NEXT. Nothing in flight.
+
+1. **Sample the 329 dangling section refs.** `ownerNamedOn` takes the LAST id on the line —
+   right for `per ADR-019 §Consequences`, wrong for `per ADR-019 and BC-1.02.003 §Consequences`.
+   Reported in AGGREGATE only until that precision is measured; per-reference findings need it.
+2. **Adjudicate the 330-row Capability block** and the 218 POLICY-8 findings — PO calls.
+3. **Move the shadow SCOPE PREDICATE into the registry** beside `derivation_stage`.
+4. **Story 6** (ledgers → rows) now covers 26,632 of the reference mass; story 12's census says
+   it is the largest remaining row-shaped block.
+5. Reviews still have **no declared natural key** (the key is the path, which D-C forbids).
+
+### The superseded plan (kept for the reasoning, not the sequence)
 
 Worth 21.8% ±8.7 of the adversary's findings. Everything it needs is declared (9
 `prose_ref_kinds`, 7 `prose_ref_rules`, `pin_policy` on all 23 link types, CSR for the section
