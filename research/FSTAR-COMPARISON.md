@@ -47,6 +47,17 @@ That comparison decides whether `fa`'s frontmatter-only parser is sufficient or 
 Combined, **62% of what the adversary reports becomes mechanically detectable or structurally
 impossible** under the registry plus prose extraction. That is the honest ceiling.
 
+⚠ **CORRECTED 2026-08-01 — the 62% was too generous.** This table treats class C as fully
+addressable by prose extraction. Re-classifying all 19 class-C findings by which instrument
+would actually catch them ([PROSE-REFS-OR-FIELDS](PROSE-REFS-OR-FIELDS.md),
+`registry/class_c_decomposition.json`) shows **26.3% of class C is reachable by NEITHER**
+rows-with-typed-links NOR prose extraction — it is semantic even once the data is structured
+(`BC-7.05.001 vs BC-7.05.003 exit-code inconsistency`; `AC-005` anchored to the wrong BC, where
+the link resolves and is simply wrong; `D-413(b) misframing`). So the honest ceiling is
+**40.2% + 16.1% = 56.3%**, and the share beyond ANY parser is **43.6%**, not 37.9%. Class C also
+splits almost evenly: **36.8% needs rows + typed links, 36.8% needs prose extraction** (n=19,
+±22 pts, so the ordering is not established — only that neither half is a residual).
+
 ## Volume, for scale
 
 | | |
@@ -184,6 +195,9 @@ section it lives in rather than the 615 KB document.
 
 - **Story 12 (prose extraction) moves up**, and its scope is now known: 21.8% of findings,
   concentrated in sub-artifact ids and section references, not in free prose generally.
+  **SPLIT 2026-08-01** into 12a (mint `AC`/`EC`/`PC`/`T-task` as rows with typed links, 36.8% of
+  class C) and 12b (a minimal permanent extractor for `§section` refs and version cites, 36.8%),
+  with the remaining 26.3% out of reach of both. Equal priority.
 - **Story 7 (make indexes derived) is confirmed as the highest-value single change** — 25.3%
   of findings, eliminated rather than detected.
 - **#671's exit criterion is now MET as a measurement** (it has been run) but **not as a

@@ -3,7 +3,7 @@ title: PROSE-REFS-OR-FIELDS — should story 12 extract prose references, or sho
 date: 2026-08-01
 purpose: measure the ALTERNATIVE to story 12 before building it, and validate the answer against every error found in the measurement itself
 method: census every id-shaped token in 2,768 markdown bodies; classify by WHAT THE REFERENT IS; then attack the conclusion with an adversarial bound and close it by sampling
-status: ANSWERED. 93.6% of references point at something that should be a ROW. Story 12 should be SPLIT, not built as scoped.
+status: ANSWERED, then CORRECTED. Over corpus mass 93.6% of references should be rows; over the ADVERSARY'S FINDINGS 12a and 12b are EQUAL (37%/37%) and 26% is beyond both. Story 12 splits; the two halves are equal priority.
 corpus_pin: vsdd-factory .factory @ 0aaba144
 ---
 
@@ -53,6 +53,11 @@ made story 7 the highest-value change.
 This also removes the ~100k-section-node driver from the critical path: 12b is far smaller than
 full prose extraction.
 
+⚠ **The PRIORITY implied by this section is corrected below.** Measured over corpus mass, 12b
+looks like a 6.4% tail. Measured over the adversary's findings — the denominator the 21.8%
+value claim actually uses — 12a and 12b are **equal**. Read the closed-gap section before
+sequencing the work.
+
 ## Three defects IN THE DECLARED STANDARD, found by measuring it
 
 These block any story-12 work, because the declared `prose_ref_kinds` are what it would build on.
@@ -97,14 +102,56 @@ move the ~22,750 genuine-undeclared estimate. It would not move the direction �
 share is above 93% under all three non-adversarial readings and the referents' owner types are
 *declared*, not inferred.
 
-## What this does NOT establish
+## ⭐ THE DENOMINATOR GAP, CLOSED — and it overturns the PRIORITY above
 
-- **Denominators differ.** FSTAR measured prose-reference findings at **21.8% of the
-  adversary's findings**; everything above is over **id candidates in the corpus**. These shares
-  do not transfer. Spot-checking the four class-C examples FSTAR quotes, three become
-  row-and-link problems (AC↔BC traces vs `bcs:`; `AC-005` mis-anchoring; S-1.01 ACs citing
-  non-existent BC clauses) and one stays prose (`ADR-019 §Consequences` inlining a literal
-  `100ms`). Consistent, but that is n=4 and is not a re-measurement.
+Everything above is measured over **id candidates in the corpus**. Story 12's value claim is
+**21.8% of the adversary's findings**. Different denominators, so the 93.6/6.4 split cannot be
+read as a value split — and when the right denominator is measured, it is not.
+
+All **19** class-C findings in `registry/fstar_hand_sample.json` were hand-read and classified
+by which instrument would catch them (`registry/class_c_decomposition.json`, one recorded
+reason per finding):
+
+| instrument | share of class C | 95% CI | share of ALL adversary findings |
+|---|---|---|---|
+| **12a** — referent as rows + typed links | **36.8%** (7/19) | ±22 pts | **8.0%** |
+| **12b** — body-prose extraction | **36.8%** (7/19) | ±22 pts | **8.0%** |
+| **neither** — semantic even with rows | **26.3%** (5/19) | ±20 pts | **5.7%** |
+
+| | rows-shaped | prose |
+|---|---|---|
+| over ID CANDIDATES in the corpus | 93.6% | 6.4% |
+| **over the ADVERSARY'S FINDINGS** | **37%** | **37%** |
+
+**So 12b is not a 6.4% residual. It is half of class C, equal to 12a within any reading of the
+interval.** My earlier framing — 12a large, 12b small — was wrong, and it was wrong for a
+reason worth naming: **I inferred a value split from a mass split.** Thousands of `D-\d+`
+mentions collapse into a handful of findings, while a single inlined `100ms` literal is one
+finding on its own. Corpus mass and finding value are different measurements, and the mass one
+barely informs priority. This is the same shape as the registry's own headline result —
+*enforcement gap by mass, design gap by vocabulary*: 91% of files canonical but only 22 of 71
+distinct values.
+
+**Revised recommendation: 12a and 12b are EQUAL priority.** The split is still right — they
+need different machinery, and 12a eliminates where 12b detects — but 12b may not be deferred as
+a small tail.
+
+### A correction this forces on FSTAR-COMPARISON's headline
+
+That document states *"Combined, 62% of what the adversary reports becomes mechanically
+detectable or structurally impossible under the registry plus prose extraction"*, treating class
+C as fully addressable by prose extraction. **26% of class C is reachable by neither instrument**
+— `BC-7.05.001 vs BC-7.05.003 exit-code inconsistency`, `AC-005` anchored to the wrong BC (the
+link resolves; it is simply the wrong one), `D-413(b) misframing`. So the honest ceiling is
+**40.2% + 16.1% = 56.3%**, not 62%, and the unreachable share is **43.6%**, not 37.9%.
+
+## What this still does NOT establish
+
+- **n=19.** A 7/19 share carries ±22 points, so **the ordering between 12a and 12b is not
+  established** — only that both are substantial and neither is a residual. Separating them
+  would need a larger hand-classified sample.
+- The classification is one reader's judgement on 19 items, recorded reason-by-reason in
+  `class_c_decomposition.json` so it can be disputed per finding rather than in aggregate.
 - **The unclassified tail is real**, quantified above rather than hidden.
 - Nothing here says extraction is unnecessary. It says extraction is the **migration**
   instrument, not the permanent gate, for 93.6% of the mass.
