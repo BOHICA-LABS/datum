@@ -196,3 +196,121 @@ resolution schemes are pinned by `TestSectionRefsHaveTHREEAddressingSchemes`.
 `fa refs --kind section --status dangling` lists them, because sampling requires listing and
 re-deriving them in a script would have created a second source of truth for the extraction —
 the defect this repo has now fixed three times.
+
+---
+
+## Follow-up 2026-08-02: sampling the 214 — the residual was 86% the CHECKER's
+
+The gating item was to sample the 214 and earn per-reference reporting. Sampling it found **six
+resolver defects and a fourth addressing scheme**, and the honest verdict is still *not yet* — but
+for a measured reason, at a tenth of the volume.
+
+| | before | after |
+|---|---|---|
+| resolved | 1,408 | **2,035** (+45%) |
+| dangling | 214 | **30** (−86%) |
+| unresolvable | 1,915 | 1,550 |
+| total extracted | 3,537 | **3,615** |
+
+Every other gate is byte-identical across the change: `validate` 776, `validate --registry` 7,487,
+`shadow` 658, `validate_registry.py` 18,826, 16 waves, 0 cycles.
+
+### The measurement that had to come first: the reported line is BODY-relative
+
+**208 of the 214 reported line numbers do not point at the reference.** `prose_ref.src_line` is
+computed over the body (`ExtractProseRefs(…, d.body, …)`, `Line: i+1`), which is correct under D-A
+— prose *is* the body — but `fa refs` prints the column as `line`, and a reader lands in the wrong
+place. The offset is exactly the frontmatter length, deterministic and recoverable: the hypothesis
+`actual == reported + frontmatter_lines` held on **210 of 210** findable cases, 0 disagreements.
+Per-reference reporting is impossible until a reference can be opened, so this is a prerequisite
+rather than a detail. **Still open** — the column should be named `body_line`, or the offset added.
+
+### Six resolver defects, each measured before it was fixed
+
+| # | defect | measured |
+|---|---|---|
+| 1 | **owner taken from the whole LINE, not from before the `§`** | 93 of 214 (43%) stated a *different* owner in the prose. `Sweep across … PRD §FR-043, capabilities §CAP-016, … ARCH-INDEX` gave EVERY reference on that line the owner `ARCH-INDEX` |
+| 2 | **reaching further back is worse than giving up** | when the token before the `§` is not a document, the old scan kept walking left and found `per ADR-015:` — a *reason*, not a referent. 7 of 30 |
+| 3 | **`sectionsByDoc` keyed by basename only** | no file is *named* `ADR-019`; it is `ADR-019-plugin-async-…md`. 14 references resolved the owner correctly and then missed the lookup. 2,258 of 2,883 documents carry an id prefix |
+| 4 | **the `{2,60}` floor counted units that excluded `.`** | `§B.1` produced a ONE-unit capture, failed the floor, and was never extracted. **81 references were entirely invisible** — not misclassified, absent |
+| 5 | **punctuation the sentence attaches to the name** | `§Description:` matches no heading and `HasPrefix("description","description:")` is false. 15 of 26, the largest single cause. Leading quotes (`§"Audit Risk Items Carried Forward"`) were 10 of 11 more |
+| 6 | **an AMBIGUOUS name was reported as DANGLING** | `PRD §FR-043` asserted PRD has no such section while `#### FR-043` is a heading **four times**, one per subsystem slice. Undecidable is `unresolvable`; dangling claims absence. 73 references |
+
+Defect 4 is the **seventh** instance in this spike of a parser silently losing input, and defect 6
+inverts the meaning of a status — the same class as "a rule aimed at the wrong column manufactures
+what it was added to prevent".
+
+### ⭐ THE FOURTH ADDRESSING SCHEME: an item is named, and items are not headings
+
+`capabilities.md §CAP-009` is not a heading reference. **capabilities.md has five headings**
+(`# Capabilities`, three priority bands, `## CHANGELOG`); every capability is a bold list item
+`**CAP-009 — Author and publish WASM hook plugins using the Rust SDK**`. So the citation addresses
+a granularity finer than D-A's partition — exactly like `§Postcondition 5` — but identified by an
+**id**, which `itemInSectionRe` cannot match because it requires `Noun<space>N`.
+
+Measured over 592 dangling at that moment: **134** named an id sitting in exactly one section,
+**119** named an id that *is* a heading (blocked only by the two-word prefix floor), **86** named
+an id present in several sections, and **3** named an id the owner does not contain at all.
+
+Generalising it to the corpus's real convention — **a bold run opening a line defines an item** —
+took the remainder: `ADR-020`'s `### Budget class taxonomy` defines `**Class A — Cold-start
+dispatch (per-invocation binary spawn)**`, and 16 references to `ADR-020 §Class A` were dangling
+against it. Generic labels (`**Severity:**`, `**Location:**`) recur across many sections, so the
+ambiguity rule drops them without a stop-list to maintain.
+
+So the schemes are now **five**: heading NAME · section ORDINAL · `Noun N` item · **artifact-id
+item** · **bold-label item**. All five are pinned by tests.
+
+### A PREDICTION FAILED AGAIN, and reading the case was again what paid
+
+I predicted ~70 of the 93 mis-attributed references would resolve once the owner was read from the
+right place. **17 did.** Rather than tune, one case was read — `PRD §FR-043`, where PRD.md plainly
+carries `#### FR-043 …` headings — and it exposed defect 3 *and* the fact that `ownerNameRe`, a
+hardcoded list of id shapes, cannot name `PRD` or `capabilities.md` at all. That is the **fifth**
+time a hand-maintained vocabulary has been the defect here, so the owner vocabulary is now read
+from the documents the store holds.
+
+### A false positive I introduced, and how the registry killed it
+
+Accepting *any* markdown basename as an owner attributed `Pass-5 §Cure-Extension Parsimony Note` —
+adversary pass 5 of an S-15.17 review — to `cycles/…/adversarial-reviews/pass-5.md`, an unrelated
+document in another cycle. 55 references took that shape. **The registry already knew**:
+`adversarial-review` is keyed `[cycle, scope, target, pass]`, so `pass-5` is not a name, while
+`prd` is keyed `[project]` and `domain-spec-section` by `[section]` — whose own note reads
+"`section` is the key, not the filename". Name-addressability is now derived from that declaration.
+
+A second self-inflicted one: in `Sweep these sections: §Description, §Postconditions, §Invariants,
+§Edge Cases`, the token before each marker is the *previous section's name* — and `invariants.md`
+exists, so `§Edge Cases` acquired a confidently wrong owner rather than none.
+
+### Verdict: per-reference reporting is STILL NOT EARNED — at 37%
+
+All 30 survivors were hand-read and adjudicated individually: **11 REAL, 19 the checker's.** The
+11 are genuine corpus defects, the clearest being three BCs citing `ADR-015 §Negative consequences`
+when that ADR's heading is `### Negative / Trade-offs`; also `BC-5.39.009 §Architecture Compliance
+Rules`, `ADR-018 §Implementation Plan`, `ADR-019`/`S-15.01 §Implementation Modules`,
+`ARCH-INDEX.md §Verification Architecture`, `BC-3.08.001 §event-type-4`.
+
+**37% precision does not earn per-reference reporting**, and the number is reported rather than the
+batch: a hand-adjudicated set of 30 is not a mechanical property the next import reproduces. It is
+nonetheless a real change from the same method's earlier reading — a 30-row stride sample of the
+214 found **26 of 30 to be the checker's and 0 confirmed real**.
+
+The mirror-image error was checked too, because a fix that only shrinks the dangling set can be
+buying it with false *resolutions*: 15 of the 686 newly-resolved were hand-read and all 15 are
+sound (own-section refs, `§Decision 4` → `## Decision` per scheme 3, `capabilities.md §CAP-024` →
+its band). No false resolutions found.
+
+The 19 remaining decompose into named causes, so the next pass has a work-list rather than a count:
+**abbreviated** names (`§EC` for Edge Cases, `§Purity` for Purity Classification) · **compound**
+addresses (`§E-REG-003 §Postconditions` — two markers, one referent) · **placeholders** (`§FR-NNN`
+is a template slot) · **not a reference at all** (`§FR Rows vs Stories FR Traces` is a finding
+title) · **spacing** (`§Source/Origin` vs the heading `Source / Origin`) · bold items inside
+**code fences**, which are correctly not indexed.
+
+### Reproduce
+
+```sh
+./fa/fa refs --db /tmp/fadb --kind section --status dangling    # 30
+./fa/fa refs --db /tmp/fadb --kind section --status resolved    # 2035
+```
