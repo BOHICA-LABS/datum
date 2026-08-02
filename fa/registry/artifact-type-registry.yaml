@@ -500,6 +500,23 @@ prose_ref_rules:
       Regardless of pin_policy, a cite naming a version the target never had IS a finding.
       This check requires HISTORY, so it is one a markdown-only checker cannot make — the
       clearest case where the store earns its keep over #671's rehydrate-per-invocation graph.
+  - id: a-declared-gap-is-not-a-trace
+    rule: >
+      A trace cell that MARKS ITSELF as a gap is not asserting a reference to an existing
+      artifact. Markers measured in the corpus: `[process-gap]`, "v1.1 candidate", "uncontracted",
+      "BC candidate", "proposed".
+      MEASURED: S-0.02's AC-1 trace reads "[process-gap] (Release.yml prerelease:true flag
+      emission is uncontracted by SS-09 BCs; v1.1 candidate BC-10.13.012-...)". Treating that as
+      a trace produced 55 POLICY-8 findings and 50 dangling-trace findings that BLAME THE
+      DOCUMENT FOR CORRECTLY DOCUMENTING A GAP — 50 of 53 of the entire dangling class. Same
+      shape as section-scoped-counts: a count of 0 is correct under a "non-finding" heading.
+  - id: an-id-with-a-name-suffix-is-a-proposed-NAME
+    rule: >
+      `BC-10.13.012-release-yml-prerelease-flag-emission` is a PROPOSED NAME for a contract that
+      does not exist, not a reference to `BC-10.13.012`. prose_ref_boundary's `after` guard
+      permits a following hyphen (correctly — `D-426(a)` and `BC-7.03` need it), so a full id
+      followed by `-<word>` needs its own rule. Without it the suffix form was read as a
+      reference in every one of the 40 cells that carry both this and a gap marker.
   - id: report-unresolvable-separately
     rule: >
       An id that cannot be resolved because its OWNER is unstated is reported as

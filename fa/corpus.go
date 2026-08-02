@@ -104,6 +104,10 @@ type Corpus struct {
 	FindingRows []FindingRow
 	// Extraction accounting the caller must REPORT, never swallow.
 	FindingDupes, FindingMalformed int
+	// STORY 12a: AC/EC/PC/T-task as rows with typed links.
+	SubArtifacts     []SubArtifactRow
+	SubArtifactRefs  []SubArtifactRef
+	SubArtifactDupes int
 	// Enumerated is the set of BC ids the index ENUMERATES in its own table's
 	// first column — the index's claim about which BCs exist, checked separately
 	// from its claim about how many.
@@ -153,6 +157,7 @@ func ScanCorpus(root string) (*Corpus, error) {
 	c.loadStories()
 	c.loadAssertions()
 	c.loadReviews()
+	c.loadSubArtifacts()
 	return c, nil
 }
 

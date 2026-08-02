@@ -56,6 +56,8 @@ func Validate(ctx context.Context, s *Store, walled *Store) (*Report, error) {
 		v.gateScalarRefs,
 		v.gateDependencyDirection,
 		v.gateReviewFindingCounts,
+		v.gateACTracesAgainstStoryBCs,
+		v.gateSubArtifactRefsResolve,
 		v.metrics,
 	} {
 		if err := gate(); err != nil {

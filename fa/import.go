@@ -31,6 +31,7 @@ const faVersion = "0.1.0"
 var deleteOrder = []string{
 	"vp_bc", "vp_di", "vp_nfr", "vp_subsystem",
 	"story_bc", "story_vp", "story_fr", "story_subsystem", "story_dep", "bc_trace",
+	"sub_artifact_ref", "sub_artifact",
 	"adversarial_finding", "review",
 	"bc", "vp", "story",
 	"capability", "domain_invariant", "nfr", "fr", "adr", "epic", "subsystem",
@@ -49,6 +50,8 @@ type ImportStats struct {
 	Assertions  int
 	Reviews     int
 	FindingRows int
+	SubArtifacts    int
+	SubArtifactRefs int
 	Changed     bool
 	Elapsed     time.Duration
 }
@@ -291,6 +294,50 @@ func Import(ctx context.Context, s *Store, root string, out io.Writer) (*ImportS
 	}
 	_ = afStmt.Close()
 
+	// ---- STORY 12a: sub-artifacts as rows, then their typed links
+	saStmt, err := tx.PrepareContext(ctx, `INSERT INTO sub_artifact
+	  (owner_key, owner_type, kind, sub_id, statement, form, src_line) VALUES (?,?,?,?,?,?,?)`)
+	if err != nil {
+		return nil, err
+	}
+	haveSub := map[string]bool{}
+	for _, r := range c.SubArtifacts {
+		if _, err := saStmt.ExecContext(ctx, r.OwnerKey, r.OwnerType, r.Kind, r.SubID,
+			nullIf(r.Statement), r.Form, r.Line); err != nil {
+			if isDuplicateKey(err) {
+				c.find("two sub-artifacts in one owner claim the same id",
+					r.OwnerKey+" "+r.Kind+" "+r.SubID, ClassIntegrity, "")
+				continue
+			}
+			return nil, fmt.Errorf("sub_artifact %s/%s: %w", r.OwnerKey, r.SubID, err)
+		}
+		haveSub[r.OwnerKey+"\x00"+r.Kind+"\x00"+r.SubID] = true
+		st.SubArtifacts++
+	}
+	_ = saStmt.Close()
+
+	sarStmt, err := tx.PrepareContext(ctx, `INSERT INTO sub_artifact_ref
+	  (owner_key, kind, sub_id, target_kind, target_id, clause) VALUES (?,?,?,?,?,?)`)
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range c.SubArtifactRefs {
+		// The FK is on the SUB-ARTIFACT, not the target. A ref whose own sub-artifact row was
+		// refused would be orphaned, so skip it rather than let the FK abort the import.
+		if !haveSub[r.OwnerKey+"\x00"+r.Kind+"\x00"+r.SubID] {
+			continue
+		}
+		if _, err := sarStmt.ExecContext(ctx, r.OwnerKey, r.Kind, r.SubID,
+			r.TargetKind, r.TargetID, r.Clause); err != nil {
+			if isDuplicateKey(err) {
+				continue // the same trace stated twice is one link; the relation is a set
+			}
+			return nil, fmt.Errorf("sub_artifact_ref %s/%s: %w", r.OwnerKey, r.SubID, err)
+		}
+		st.SubArtifactRefs++
+	}
+	_ = sarStmt.Close()
+
 	// ---- what the markdown claims about itself
 	for _, a := range c.Assertions {
 		if _, err := tx.ExecContext(ctx,
@@ -350,6 +397,8 @@ func Import(ctx context.Context, s *Store, root string, out io.Writer) (*ImportS
 		// silently lost input five times in this spike.
 		fmt.Fprintf(out, "reviews    %d · finding rows %d (duplicate mentions collapsed %d · malformed %d)\n",
 			st.Reviews, st.FindingRows, c.FindingDupes, c.FindingMalformed)
+		fmt.Fprintf(out, "sub-artifacts %d · typed links %d (duplicate mentions collapsed %d)\n",
+			st.SubArtifacts, st.SubArtifactRefs, c.SubArtifactDupes)
 		if !changed {
 			fmt.Fprintln(out, "no change since the last import (idempotent re-run)")
 		}

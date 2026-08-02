@@ -15,7 +15,7 @@ package main
 // the MARKDOWN claims, precisely so a gate can compare those claims against
 // COUNT(*). Recording a wrong number is the point of that table.
 
-const schemaVersion = 2
+const schemaVersion = 3
 
 // openDDL is the `open` zone: specs, stories, waves, state — what most agents read.
 var openDDL = []string{
@@ -223,6 +223,43 @@ var openDDL = []string{
 	  PRIMARY KEY (review_key, finding_id),
 	  KEY idx_af_sev (severity),
 	  CONSTRAINT fk_af_review FOREIGN KEY (review_key) REFERENCES review (review_key) ON DELETE CASCADE
+	)`,
+
+	// STORY 12a. AC / EC / PC / T-task as rows, with TYPED links.
+	//
+	// The key is COMPOSITE and scoped to the owner, exactly as prose_ref_rules
+	// scope-sub-artifact-ids requires: AC-002 is not globally unique, so identity is
+	// (owner_key, kind, sub_id). The same discipline story 4 applied to finding ids.
+	`CREATE TABLE IF NOT EXISTS sub_artifact (
+	  owner_key  VARCHAR(64)  NOT NULL,
+	  owner_type VARCHAR(32)  NOT NULL,
+	  kind       VARCHAR(12)  NOT NULL,
+	  sub_id     VARCHAR(24)  NOT NULL,
+	  statement  TEXT         NULL,
+	  form       VARCHAR(12)  NOT NULL,
+	  src_line   INT          NULL,
+	  PRIMARY KEY (owner_key, kind, sub_id),
+	  KEY idx_sub_kind (kind)
+	)`,
+
+	// The typed link that turns a prose trace into a JOIN. `clause` keeps the sub-element the
+	// trace names ("postcondition 1"), because the mis-anchor class is about WHICH clause and
+	// not about whether the target exists.
+	//
+	// NO foreign key on target_id ON PURPOSE: the corpus traces to ids that do not exist, and
+	// an FK would refuse the import and DESTROY the finding. Same call import.go already makes
+	// for the reference-shaped scalar columns; gateSubArtifactRefsResolve reports them instead.
+	`CREATE TABLE IF NOT EXISTS sub_artifact_ref (
+	  owner_key   VARCHAR(64)  NOT NULL,
+	  kind        VARCHAR(12)  NOT NULL,
+	  sub_id      VARCHAR(24)  NOT NULL,
+	  target_kind VARCHAR(12)  NOT NULL,
+	  target_id   VARCHAR(64)  NOT NULL,
+	  clause      VARCHAR(64)  NOT NULL DEFAULT '',
+	  PRIMARY KEY (owner_key, kind, sub_id, target_kind, target_id, clause),
+	  KEY idx_sar_target (target_kind, target_id),
+	  CONSTRAINT fk_sar_sub FOREIGN KEY (owner_key, kind, sub_id)
+	    REFERENCES sub_artifact (owner_key, kind, sub_id) ON DELETE CASCADE
 	)`,
 
 	`CREATE TABLE IF NOT EXISTS schema_migrations (
