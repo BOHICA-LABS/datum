@@ -67,6 +67,41 @@ unmeasured assumption is exactly what "never report a number a test could contra
   which `store_version` — typed so queries can separate *attested* from *executed*. A refinement of
   22, not an exception to it.
 
+### Ratified consequences of the L3–L4 design (2026-08-02)
+
+- **The op vocabulary is GENERATED from the registry**, not authored — 103 types × ~8 verbs ≈ 800
+  names. Hand-writing them would guarantee a sixth instance of this repo's
+  vocabulary-drifts-from-vocabulary defect. And the enforcement of invariant 17 is beautifully cheap:
+  **ops for `authority: derived` types are simply not emitted.** You cannot author a derived value
+  because no verb exists to do it.
+- **No op accepts a path, an id, or a count.** That one rule retires the ~28 unregistered homes, the
+  SHA-transcription class, and the six-BC-totals class *by construction* rather than by check.
+- **Validation is an ORDERED 14-step ladder, and the order is TESTED** (role → type → authority → key
+  → enum → ref → required → placeholder …). Directly earned: this repo measured a rule that put
+  emptiness before counting and thereby asserted **the opposite of the truth on 18 rows**. Rule order
+  is a correctness property, so it gets a test.
+- **A wall is a `read_deny` predicate returning `DENIED-ASYMMETRY` (exit 3), evaluated BEFORE the op
+  learns whether the artifact exists.** The reasoning is the sharpest security point in any of the
+  four designs: *a refusal that distinguishes forbidden from absent is an oracle.*
+- **No write escape hatch** — four cases, four answers: prose goes through D-A, a missing field goes
+  through `fa propose field` (exit 4), some requests are impossible by construction, and read-only
+  curiosity gets `sql --read-only`. Never raw write SQL.
+- **`fa render` is four renderers keyed on `(authority, shape)`** — ledger / authored / derived / blob.
+  **Authored bodies are never regenerated**, which removes the 214,554-table-line round-trip hazard by
+  decision rather than by code.
+- **Invariant 15 is three gates (byte / store / hash), compared per-artifact per-field, never as a
+  corpus digest** — because a corpus digest tells you only *that* something broke. Taken literally,
+  byte-exactness is unachievable anyway: **1,189 distinct frontmatter key orders** and **169 keys
+  written both quoted and bare**, so the legal normalizations must be declared and tested.
+- **The scope predicate must be a FIELD predicate, not a path prefix.** The existing
+  `ExcludeSrcPrefix` approach would promote path-as-identity into the standard, which D-C forbids.
+
+⚠ **`fa render` is blocked on schemas, not on an engine.** **All 22 derived types declare zero
+sections**, and the three highest-churn indexes (BC-INDEX 218 commits, VP-INDEX 140, cycle-index 140)
+have no template either. Authoring those 22 render schemas is a discrete, assignable work item and it
+is on the critical path — no renderer can be written against a type that does not say what it looks
+like.
+
 **`status` vs `lifecycle_status` — measured, and a resolution recommended (pending ratification).**
 The L1 design asked for a PO call on the 1,949-of-1,959 disagreement. Measured over all 1,959 BCs:
 
@@ -208,9 +243,21 @@ before it moves burst logs.
 
 "Production grade" is a measurable claim, so it gets acceptance criteria rather than adjectives:
 
-- **Lossless:** invariant 15 and 16 green over 100% of the corpus; per-form counts reported; nothing
-  dropped silently. A parser that loses input is the single most repeated defect class in this
-  spike — **eight instances** — and the migration is the worst possible place for a ninth.
+- **Lossless — and the bar is split in two, because a single 100% claim is unachievable.**
+  The L3–L4 design measured that **1,338 files (20.5% of 6,537 across the three corpora) carry no
+  `document_type` at all**, so a typed round trip caps at **76.3%**. A bar that cannot be met is worse
+  than no bar, so:
+  - **Round trip (invariant 15) must be 100%** of what `fa` holds. An untyped file is held as a
+    `blob-with-path` shape and round-trips byte-exact *without* schema validation — or it is declared
+    out of scope with a recorded reason. Silence is not an option.
+  - **Schema validation (invariant 20) applies to typed artifacts**, and its coverage is reported as a
+    number, not asserted. Assigning types to the untyped 20.5% is a migration work item with an
+    owner, not a rounding error.
+  - Per-form counts reported; nothing dropped silently. A parser that loses input is the single most
+    repeated defect class in this spike — **eight instances** — and the migration is the worst
+    possible place for a ninth.
+  - ⚠ Sizing correction: bodies reach **1.57 MB** (8 files above 600 KB), not the 211 KB this document
+    first stated. The render and diff paths must be designed for that, not for the SPEC.md figure.
 - **Reversible:** `fa render` reproduces a committed markdown tree that re-imports byte-identically.
   Migration is abandonable at any stage.
 - **Attributable:** every write traceable to a role, lease and transaction.

@@ -5,7 +5,7 @@ purpose: specify L3 (the only write surface) and L4 (everything derived, incl. `
 status: DESIGN. Nothing implemented (design-only by direction). The 8 settled decisions and 23 invariants of FA-V1-DESIGN.md are treated as BINDING.
 spine: research/FA-V1-DESIGN.md
 corpus_pin: vsdd-factory .factory @ 0aaba144 · prism .factory (CONCURRENT session — re-measure before trusting any prism count) · rivetry .factory
-measurements_reproduced_here: 6,537 md files · 5,405 with frontmatter · 1,189 distinct frontmatter key orders · 110 docs / 1,970 duplicate `##`+ headings · 4,861 authored / 54 derived / 73 ingested / 1,325 untyped · 21 of 103 types declare sections · 0 of 22 derived types do
+measurements_reproduced_here: 6,537 md files · 5,405 with frontmatter · 1,189 distinct frontmatter key orders · 110 docs / 1,970 duplicate `##`+ headings · 4,861 authored / 54 derived / 73 ingested / 1,338 untyped · 21 of 103 types declare sections · 0 of 22 derived types do
 reproduction: every number introduced here is emitted by probe P1–P4 in §25, and all four were RUN as written. Four draft numbers came from ad-hoc variants and were corrected to the probes' output; they are marked ⟲ below.
 ---
 
@@ -28,6 +28,41 @@ canonical types — 68 authored / 22 derived / 13 ingested — plus 16 `gap_type
 `retired_types`, 23 `link_types`, 17 closed enums and 180 aliases. Everything below is
 *generated from* or *validated against* that file. Re-deriving it would create the second
 hand-maintained vocabulary this repo has now been bitten by five times (HANDOFF result 4).
+
+### 0.1 ⚠ Two sibling designs landed while this was being drafted, and they change it
+
+`FA-V1-L1-L2-STORAGE-SCHEMA.md` (commit `157917e`) and `FA-V1-L5-L6-POLICY-ENGINE.md`
+(`bc4f6cd`) were written concurrently and **ratified decisions into the spine**. Both commits
+also swept this file into themselves as collateral, so its history is not its own — recorded
+because a reader tracing this document's provenance will otherwise find it under two unrelated
+commit messages.
+
+Six of their ratifications reach into L3–L4. Each is folded in at the named section rather than
+appended, and each is marked ⚠ in place:
+
+| ratified elsewhere | what it changes here |
+|---|---|
+| **One store per project, no `project` column** — the predicate is discharged by store *selection* | §3.4: `--project` is a **store selector**, not a field or a `WHERE` clause. **Resolves my Q11** — and it is the stronger answer, because invariant 19's real failure mode is an *omittable* predicate and a store handle cannot be omitted |
+| **The registry GENERATES the schema** (one uniform `artifact`/`artifact_field`/`artifact_ref`/body model with per-type views) | Independent convergence with **L3-1** (§1.1): the op vocabulary is generated from the same registry that generates the schema, so ops and columns cannot drift apart. Two agents reached "generate it" from different directions |
+| **Invariant 16 binds PER SHAPE** — 4 `blob-with-path` types store no body; **11 `append-only-event` types store entries and DERIVE the file**; a shape exemption must be *declared* | §11: **render is FOUR renderers, not three.** My authority-only split would have rendered `burst-log.md` as a verbatim authored body — precisely what the ledger shape exists to prevent. §15: the exemption must be declared. §24-Q14: §1.2's census is mis-keyed as a result |
+| **Invariant 17 read through `authority`** — materialised views are legal as *declared* derived caches; three current columns (`bc/vp.version`, `version_cite.verdict`, `finding.occurrences`) are already violations | §12.1: those three are **excluded from the identity digest**. §21.1: the projection cache is legal *because declared* |
+| **Evidence exists only if `fa` produced it**; `fa gate exec` is the sole writer of the evidence table; **`deferred` abolished** | §4.7: `gate record` → **`gate exec`**; `--evidence` survives only as a reference to a row `fa` wrote; `--defer` removed from `wave gate` |
+| **Invariant 21 refined** — lease revocation is legal as TTL expiry or human-authorised revocation that **writes no artifact** | §4.7: `fa lease` gets a revocation path without a force path |
+
+Two further corrections they forced on *my own* numbers, both recorded in place rather than
+patched away:
+
+- **"44 agent files, not 34."** Correct, and so is 35 roles — they measure different things.
+  Reconciled in §8.2 with the command for each; my brief's 34 was wrong in both directions at once.
+- **`status` vs `lifecycle_status` are NOT two fields for one concept.** My §16.3 example said they
+  were. Measured, they are *authoring maturity* vs *lifecycle state*; what is true is that `status`
+  has degenerated to a constant (1951 of 1959 `draft`). Corrected in §16.3 — and it is the same
+  wrong-column error this session already made once, when a probe read `lifecycle_status` and
+  reported BC `Status` agreement as 0.8% when it is 99.4%.
+
+**One thing they independently confirm:** reviews still have no natural key, and the L5–L6 design
+reports that *every convergence table FKs to it*. That raises my Q3 from "render is undefined for
+390 documents" to a cutover blocker.
 
 ---
 
@@ -208,8 +243,14 @@ with a composite key `(owner_key, kind, sub_id)` and a typed `sub_artifact_ref`
 - **Blobs come from stdin, never from a path argument.** `--from-stdin` is the only body
   channel. A path argument would be a path in the write surface (rule 1) *and* would make the
   op non-reproducible from the audit.
-- `--project <name>` is mandatory on every op under V-F. There is no default project.
-  A default is how a two-tenant store gets a cross-tenant write.
+- ⚠ **`--project` is a STORE SELECTOR, not a field.** The L1–L2 design was ratified into the
+  spine after this section was drafted: **one store per project, and no `project` column** — the
+  scope predicate is discharged by *store selection*, not by a `WHERE` clause, because push
+  contention is per-branch and untunable (10 clones on one branch = 54 attempts *with disjoint
+  rows*, vs 1 each on distinct refs, and backoff made it worse). That is a **stronger** form of
+  what this section wanted: invariant 19's real failure mode is an *omittable* predicate, and a
+  store handle cannot be omitted. There is still no default: `--project` (or `FA_PROJECT`)
+  selects the store, and an unset one is `NO-PROJECT` (exit 2), never an implicit pick.
 
 ## 4. The op families
 
@@ -339,11 +380,11 @@ gets its own test, its own audit shape, and an entry here because it cannot be g
 
 | op | drives | refuses when |
 |---|---|---|
-| `fa gate record <gate> --result … --evidence <run-id>` | gate ledger | no evidence row (invariant 22) |
+| `fa gate exec <gate>` | gate ledger + **the evidence table** | ⚠ renamed from my draft's `gate record` per the ratified L5–L6 decision: **evidence exists only if `fa` produced it**, `fa gate exec` is the *sole* writer of the evidence table, and **no flag accepts evidence bytes**. My draft's `--evidence <run-id>` survives only as a *reference* to a row `fa` itself wrote. Also ratified: **`deferred` is abolished** as a gate status, replaced by deferral rows with owner and expiry — so there is no `--defer` on this op |
 | `fa gate present <gate>` | gate presentation protocol (spine §7 keep-list) | — |
-| `fa lease acquire\|release\|status --scope S` | store-side leases | scope unset (invariant 11: never singular) |
+| `fa lease acquire\|release\|status --scope S` | store-side leases | scope unset (invariant 11: never singular). ⚠ ratified refinement of invariant 21: revocation is legal as **TTL expiry or human-authorised revocation that WRITES NO ARTIFACT** — a lease is not artifact data, so this is not a force path |
 | `fa wave register\|merge\|abandon <N>` | wave branches | dependency cycle unresolved |
-| `fa wave gate <N> --pass\|--defer <reason>\|--fail` | wave gate | `--pass` without evidence |
+| `fa wave gate <N> --pass\|--fail` | wave gate | `--pass` without evidence. ⚠ `--defer` removed: `deferred` is abolished (above); a deferral is a row with an owner and an expiry |
 | `fa instance new\|graduate\|abandon` | factory instances | invariant 10 (one clone per instance) |
 | `fa convergence advance <cycle>` | convergence clock | monotonicity violated |
 | `fa derivation advance <type> --to proven\|retired` | `derivation_stage` ladder | shadow findings ≠ 0 for that type |
@@ -515,11 +556,25 @@ roles:
 
 ### 8.2 The 35 role identities mapped onto op sets
 
-34 agent definition files under `plugins/vsdd-factory/agents/` plus the `orchestrator/`
-directory = **35 role identities**. (The spine says 34; the difference is the orchestrator,
-which is a directory of workflow references rather than a single `.md`. Recorded rather than
-rounded.) They collapse to **9 op-set classes**, which is the useful unit — a per-agent op
-list would be a 35-row hand-maintained vocabulary, i.e. instance six.
+⚠ **Three numbers are in circulation and all three are right, which is why the reconciliation
+is written out rather than a number picked.** The L5–L6 design corrected my brief with "**44
+agent files, not 34**". Measured:
+
+| measurement | n | command |
+|---|---|---|
+| top-level `agents/*.md` | **34** | `ls plugins/vsdd-factory/agents/*.md \| wc -l` |
+| all `agents/**/*.md` | **44** | `find plugins/vsdd-factory/agents -name '*.md' \| wc -l` |
+| of the 10 under `orchestrator/`, declare "Not directly invokable" | **9** | `grep -l 'Not directly invokable' orchestrator/*.md` |
+| **directly-invokable ROLE identities** | **35** | 34 + `orchestrator/orchestrator.md` |
+
+So **44 files, 35 roles**: the 9 extra files are orchestrator *workflow references*, loaded by the
+orchestrator agent and not invokable as agents. **The least-privilege unit is a role, so 35 is the
+number that governs this section** — but 44 is the correct file count and my brief's 34 was wrong
+in both directions at once (it undercounted files by 10 and roles by 1). The L5–L6 agent was right
+to push, and the resolution is that the two numbers were never measuring the same thing.
+
+The 35 roles collapse to **9 op-set classes**, which is the useful unit — a per-agent op list
+would be a 35-row hand-maintained vocabulary, i.e. drift instance six.
 
 | class | members | write ops | read | notes |
 |---|---|---|---|---|
@@ -656,17 +711,33 @@ pattern, not five.
 
 # L4 — PROJECTIONS
 
-## 11. `fa render`: three renderers, chosen by `authority`
+## 11. `fa render`: four renderers, chosen by `(authority, shape)`
 
-**Decision L4-1: `render` is three functions, not one, and the split is by `authority`.**
-This is what reduces invariant 15 from "reproduce 6,537 arbitrary markdown files" to a
-tractable, per-class contract.
+**Decision L4-1: `render` is four functions, not one, and the selector is `(authority, shape)`
+— shape first.** This is what reduces invariant 15 from "reproduce 6,537 arbitrary markdown
+files" to a tractable, per-class contract.
 
-| authority | files | renderer | round-trip guarantee |
-|---|---|---|---|
-| **`authored`** (68 types) | 4,861 | `"---\n" + canonicalFrontmatter(fields) + "---\n" + body` where **`body` is the stored verbatim bytes** | body is byte-exact **by construction**. Only the frontmatter needs a normalisation contract (§13). |
-| **`derived`** (22 types) | 54 | fully generated from a **render schema** + projection rows | equality is over **rows**, not bytes: `import(render(P)) == P` |
-| **`ingested`** (13 types) | 73 | identity — bytes are stored opaque, addressed by content hash | hash equality |
+⚠ **Corrected after drafting: it is FOUR renderers, and the fourth is forced by a ratified
+invariant-16 refinement.** The L1–L2 design established that **invariant 16 binds PER SHAPE**: 4
+`blob-with-path` types store no body at all, and **11 `append-only-event` types store entries and
+DERIVE the file** — *"16 binds at capture, 15 at cutover"*, and a shape exemption must be
+**declared**, silence is not an exemption. My draft's authority-only split would have rendered
+`burst-log.md` as a verbatim authored body, which is exactly what the ledger shape exists to stop:
+301 commits across three burst-logs, every one an append currently executed as a whole-document
+rewrite. **Shape wins over authority for the 11 ledger types.**
+
+| selector | types | files | renderer | round-trip guarantee |
+|---|---|---|---|---|
+| `shape: append-only-event` | **11** (`authority: authored`) | — | **generated from entry rows** — the file is a projection of the ledger, ordered by key | equality over **rows**; the file has no authored bytes |
+| `authority: authored`, other shapes | 57 | 4,861 − ledger files | `"---\n" + canonicalFrontmatter(fields) + "---\n" + body` where **`body` is the stored verbatim bytes** | body byte-exact **by construction**. Only the frontmatter needs a normalisation contract (§13) |
+| `authority: derived` | 22 | 54 | fully generated from a **render schema** + projection rows | equality over **rows**: `import(render(P)) == P` |
+| `authority: ingested` + `shape: blob-with-path` | 13 + 4 | 73 | identity — bytes stored opaque, addressed by content hash. **No body**, so invariant 16 does not bind (declared exemption) | hash equality |
+
+⚠ The ledger row count is **not** broken out in §1.2's authority census, because that census keyed
+on `authority` alone. The three burst-logs, two decision-logs, lessons files, session-checkpoints,
+tech-debt-register and sidecar-learning are inside the 4,861 `authored` figure. **Re-running the
+census keyed on `(authority, shape)` is a prerequisite for sizing the render job**, and it was not
+run — §24-Q14.
 
 Everything else — 1,132 files with no frontmatter, 193 with frontmatter but no
 `document_type`, 13 with a genuinely unresolved type — is **1,338 files (20.5%) that `render`
@@ -674,7 +745,22 @@ cannot own today** because they have no type. (The 211 `delta-archive` files are
 *declaration*, not by omission: the registry retires them and the store's own history replaces
 them.) §12.4 makes that the honest denominator of invariant 15 rather than a rounding error.
 
-### 11.1 The authored renderer
+### 11.0 The ledger renderer (`shape: append-only-event`, 11 types)
+
+The file is a **projection of entry rows**, ordered by the type's key (`[cycle, entry_id]` for
+burst-log, `[cycle, decision_id]`, `[cycle, lesson_id]`, `[td_id]`, …). There are no authored
+bytes and invariant 16 does not bind. This is the renderer that pays for itself fastest: three
+burst-logs carry **301 commits**, every one an append performed today as a whole-document rewrite
+that can conflict — and *"as rows they cannot"* (`artifact-type-registry.yaml:1378-1381`). It also
+retires the 13 `*-archive` rotation files and the rotation policies that created them, because a
+row set has nothing to rotate.
+
+It needs the same render schema machinery as §11.2 (a declared entry block, a declared order, a
+declared heading form — the corpus already writes `D-524` / `LESSON-*` / `Session Resume
+Checkpoint (<date>)` as H2s, so *"the row model is a transcription, not a redesign"*), and it has
+the same blocker: no `sections:` declaration exists for any of the 11.
+
+### 11.1 The authored renderer (other shapes, 57 types)
 
 ```
 render_authored(artifact) =
@@ -694,9 +780,9 @@ render_authored(artifact) =
    diagnosis (it is not — §16).
 2. Bodies contain **15,568 box-drawing characters** (`─`), 2,282 `│`, 1,416 `═` — hand-drawn
    ASCII diagrams. A regenerating renderer destroys them; a verbatim one cannot.
-3. Bodies contain **216,141 markdown table lines**, of which **32,178** are not canonically
-   padded and **1,118** rows are missing their closing pipe. Reformatting them is a 32k-line
-   diff that would bury every real change forever (§14.6).
+3. ⟲ Bodies contain **214,554 markdown table lines**, of which **31,400** are not canonically
+   padded and **383** rows are missing their closing pipe. Reformatting them is a 31k-line diff
+   that would bury every real change forever (§14).
 
 The human-facing template shape (`behavioral-contract-template.md`, `story-template.md`) is
 therefore reproduced **by the body being the body** — not by the renderer re-deriving `##
@@ -711,7 +797,7 @@ template and the validator disagree" unrepresentable (spine §4.3). Instantiatio
 are different operations and must not share a code path — a renderer that could re-emit the
 skeleton could also silently *replace* an authored body with it.
 
-### 11.2 The derived renderer
+### 11.2 The derived renderer (22 types)
 
 ```
 render_derived(type, scope) =
@@ -725,7 +811,7 @@ render_derived(type, scope) =
 This is the piece that does not exist and has no prior art for 6 of the 22 types (§1.3). Its
 schema is specified in §17.2.
 
-### 11.3 The ingested renderer
+### 11.3 The ingested / blob renderer (13 + 4 types)
 
 Bytes in, bytes out, addressed by hash. **Open:** whether `render` writes them at all, or
 whether the store holds only the hash and the file stays where the tool put it. The argument
@@ -750,7 +836,11 @@ nothing to do with data loss.
 `import(render(store)) == store`, where equality is a **canonical row digest per (project,
 type, key)** over:
 
-- every declared field value, in registry-declared order, with a declared null encoding;
+- every declared field value, in registry-declared order, with a declared null encoding —
+  ⚠ **excluding the three columns the L1–L2 design identified as existing invariant-17
+  violations and therefore migration targets: `bc/vp.version`, `version_cite.verdict`,
+  `finding.occurrences`.** Including a derivable column in the identity digest would make the
+  digest disagree with itself the moment the column is retired;
 - `body` **bytes** (SHA-256);
 - the **section partition**: `(ord, depth, heading, len(body))` per section, plus the D-A
   identity `concat(sections) == body`;
@@ -811,21 +901,21 @@ is indistinguishable from data loss** — this repo has caught a parser silently
 | # | rule | measured cost today |
 |---|---|---|
 | **N1** | frontmatter **key order** → the type's declared order | **1,189 distinct key orders** collapse to ≤103 declared orders. `document_type` is first in 5,085 of 5,405; the other 320 lead with `story_id` (137), `pass` (78), `review_id` (32), `story` (19), `pass_id` (16), `type` (7), `fix_burst` (6) |
-| **N2** | scalar **quoting** → declared per field | **74,359 bare · 20,280 double · 9 single**; **169 of 1,445 keys are written both ways**, including `status`, `version`, `producer`, `timestamp`, `level`, `phase`, `traces_to` |
+| **N2** | scalar **quoting** → declared per field | **74,359 bare · 20,280 double · 9 single**; ⟲ **169 of 1,568 keys are written both ways**, including `status`, `version`, `producer`, `timestamp`, `level`, `phase`, `traces_to` |
 | **N3** | strip trailing whitespace | **140 files, 901 lines** |
 | **N4** | exactly one trailing newline | **19 files** end without one (vsdd 2 · prism 1 · rivetry 16) |
-| **N5** | LF line endings | **0 CRLF files today.** Declared anyway: a Windows contributor is one commit away, and a rule that only exists after it is needed has already lost a round-trip |
-| **N6** | Unicode **NFC** | **0 non-NFC files today.** Same reasoning as N5. 1 NBSP, 0 zero-width, 1,136 smart quotes present |
+| **N5** | LF line endings | **0 CRLF files, 0 BOM.** Declared anyway: a Windows contributor is one commit away, and a rule that only exists after it is needed has already lost a round-trip. (P1's `Counter` omits zero-valued keys, so `crlf`/`bom`/`non_nfc` are *absent* from its output rather than printed as 0 — noted because an absent key and a zero are the same class of ambiguity this whole document is about) |
+| **N6** | Unicode **NFC** | **0 non-NFC files.** Same reasoning as N5. 1 NBSP, 0 zero-width, 1,136 smart quotes present |
 | **N7** | list style: flow vs block sequences → declared per field | **8,640 flow sequences · 12,860 block-sequence items** |
 | **N8** | empty-value encoding (`[]` vs `null` vs bare) → one declared spelling per field type | **3,391 empty values** |
-| **N9** | table cell padding — **ONLY in generated bodies** | 216,141 table lines exist; **none of them are touched** for authored types |
+| **N9** | table cell padding — **ONLY in generated bodies** | ⟲ **214,554** table lines exist; **none of them are touched** for authored types |
 
 ### 13.2 ILLEGAL — must be modelled or refused, never normalised away
 
 | # | shape | measured | disposition |
 |---|---|---|---|
 | **X1** | **duplicate YAML keys** | **12 files** | **REFUSE the import.** A YAML parser keeps the last silently; the earlier value is *gone* and cannot round-trip. Duplicate keys become unrepresentable, and the 12 files are a migration decision with a recorded reason. §24-Q5 |
-| **X2** | **frontmatter comments** | **410 files** carry them; **97** are inline (`key: value  # note`) | **MODEL** (§13.3). Some are load-bearing: `input-hash: "[md5]"  # advisory — used for drift detection, not gating` (`behavioral-contract-template.md:10`) and `origin: greenfield\|brownfield    # metadata-only — does not affect BC semantics` (`:12`) |
+| **X2** | **frontmatter comments** | ⟲ **406 files** carry them · **4,498 comment lines** · **71** inline (`key: value  # note`) | **MODEL** (§13.3). Some are load-bearing: `input-hash: "[md5]"  # advisory — used for drift detection, not gating` (`behavioral-contract-template.md:10`) and `origin: greenfield\|brownfield    # metadata-only — does not affect BC semantics` (`:12`) |
 | **X3** | **nested frontmatter mappings** | **3,030 lines** | **FORBID by schema.** BC-INDEX's `last_amended` is *"tens of KB of nested prose inside YAML"* (`artifact-type-registry.yaml:762`) — and that type is `derived`, so it stops existing. Survivors migrate to body sections |
 | **X4** | **block scalars** (`\|`, `>`) | **234** | Migrate to a body section, or model as a declared multi-line field with a declared re-emit style. Silently reflowing a block scalar changes bytes *and* meaning |
 | **X5** | strikethrough as state (`~~BC-2.02.013~~`) | already measured by `fa shadow` | **MODEL as a lifecycle state.** *"strikethrough is not a representable state, so a derived index would silently lose the withdrawal"* (`fa/shadow.go:446-448`). Already on the HANDOFF next-list |
@@ -873,8 +963,8 @@ Properties, each answering a specific failure this repo has already had:
 | **YAML quoting** | 169 keys written both ways | N2, declared **per field** in the registry. A global rule cannot work: `version: "1.1"` must stay quoted (or YAML makes it a float) while `status: draft` must not |
 | **trailing whitespace** | 140 files / 901 lines | N3 |
 | **CRLF** | **0** | N5, declared before it is needed |
-| **unicode** | 0 non-NFC; top: `—` 164,316 · `→` 92,000 · `§` 41,426 · `─` 15,568 | N6 + **verbatim bodies**. The `§` count matters twice: it is 41,426 live section references, i.e. story 12b's whole subject |
-| **markdown table alignment** | 216,141 table lines · 183,963 padded · 32,178 not · 1,118 missing closing pipe · 11 alignment-colon separators | **authored tables are never reformatted** (N9 excluded). Generated tables get one declared style. This is the single largest hazard *removed by a decision rather than solved by code* |
+| **unicode** | 0 non-NFC; top: `—` 164,344 · `→` 92,003 · `§` **41,622** · `─` 15,568 | N6 + **verbatim bodies**. The `§` count matters twice: it is 41,622 live section markers, i.e. story 12b's whole subject. ⚠ these three counts drifted by 28 / 3 / 196 between two runs an hour apart — **prism is being edited by a concurrent session**, exactly as V-F warns. Any prism-inclusive number here is a snapshot, not a pin |
+| **markdown table alignment** | ⟲ **214,554** table lines · 183,154 padded · **31,400** not · **383** missing closing pipe · 11 alignment-colon separators | **authored tables are never reformatted** (N9 excluded). Generated tables get one declared style. This is the single largest hazard *removed by a decision rather than solved by code* |
 | **prose bodies to 1.57 MB** | **8 files > 600 KB · 17 > 300 KB** · max 1,568.8 KB | verbatim bytes; SHA-256 comparison; byte-diff reported as **offset + bounded window**, never as a whole-file diff |
 | **no final newline** | 19 files | N4 — and note `splitKeepNL` (`fa/registry.go:329-342`) already exists *because* "splitting on `\n` and rejoining loses a missing final newline" |
 | **line-number provenance** | **208 of 214** reported lines pointed at the wrong place; `actual == reported + frontmatter_lines` held **210/210** | every reported location carries **both** `file_line` and `body_line`, named. Still open in `fa refs` today (`PROSE-REFS-OR-FIELDS.md` follow-up) and a **prerequisite**, not a detail: a reference that cannot be opened cannot be adjudicated |
@@ -885,6 +975,13 @@ Already implemented, already measured at **0 mismatches over 6,537 files**, alre
 runtime rather than trusted (`SectionsLossless`, `fa/registry.go:344-350`; gated at
 `fa/registry_gate.go:242-246` with the message *"the derived partition is not byte-exact, so
 render cannot be trusted"*).
+
+⚠ **It binds PER SHAPE, ratified.** 4 `blob-with-path` types store no body and 11
+`append-only-event` types derive the file from entries, so invariant 16 is vacuous for 15 of 103
+types — **and the exemption must be DECLARED in the registry, because silence is not an
+exemption.** An undeclared exemption is indistinguishable from a partition check that never ran,
+which is the same class as `fa shadow`'s `table-absent` outcome: *a spec that matched no table
+would contribute zero findings and read as agreement* (`fa/shadow.go:407-411`).
 
 Three things L4 adds:
 
@@ -943,9 +1040,18 @@ fa render --check --project vsdd-factory
   DIFFERS  behavioral-contract / BC-5.20.001
     field capability            frontmatter-quoting  store="CAP-070"  file=CAP-070
     field lifecycle_status      disagree             store=active     file=draft
-      note: `status` and `lifecycle_status` DISAGREE on 1,949 of the 1,959 BC files
-            carrying both — two fields for one concept (D-D). Reported once per artifact,
-            counted once as a class.
+      note: ⚠ MY DRAFT CALLED THIS "two fields for one concept" AND THAT IS WRONG.
+            The L1-L2 design measured it: status = draft 1951 / active 6 / ready 2 /
+            withdrawn 1; lifecycle_status = active 1945 / retired 5 / deprecated 4 /
+            fulfilled 1 / draft 3 / withdrawn 1; dominant pair ('draft','active') on 1937.
+            They are NOT two copies of one fact — AUTHORING MATURITY vs LIFECYCLE STATE.
+            What is true is that `status` has degenerated to a CONSTANT (1951 of 1959) and
+            therefore carries no information. Ratified recommendation: retire `status`,
+            keep `lifecycle_status`, and point the index projection at the LIVE field.
+            The 1,949-of-1,959 "disagreement" I cited is an artefact of comparing two
+            different questions — the exact error the BC-Status probe already made once
+            this session (0.8% agreement, actually 99.4%, because the probe read the
+            wrong column).
     body                        equal (sha256 3f9c…, 12,844 bytes)
     section partition           equal (8 sections)
 ```
@@ -1226,6 +1332,10 @@ projection_output_id = H(projection_id ‖ projection_version ‖ store_commit
   on *identical pinned input* was the registry's own tightening, not corpus drift.
 - The cache is **content-addressed and discardable**. A projection that cannot be recomputed
   from its key is a second truth.
+- ⚠ **Ratified, and it legalises this section:** invariant 17 read through `authority` permits
+  `path`, the catalog mirror and **materialised views as DECLARED derived caches**; what is
+  forbidden is an *authored* field duplicating a derivable one. So a projection cache is not an
+  invariant-17 violation *provided it is declared* — and an undeclared cache is.
 
 ### 21.2 The five non-determinism sources, each already bitten or nearly
 
@@ -1252,7 +1362,7 @@ which is the problem being solved, not the solution.
 | invariant | enforced by |
 |---|---|
 | 15 `import(render(store)) == store` | §12 three gates · §13 declared normalisation with per-rule counts · §16 two readers |
-| 16 `concat(sections) == body` | §15 · V11 · existing `SectionsLossless` |
+| 16 `concat(sections) == body` | §15 · V11 · existing `SectionsLossless` — **binds PER SHAPE**, with 15 of 103 types (4 `blob-with-path` + 11 `append-only-event`) carrying a **declared** exemption |
 | 17 nothing derivable is stored | §4.6 (derived types get no ops) · V13 · §18 (no count has a setter) |
 | 18 `lease → validate → transact → version → audit`, no bypass | §5.1 (one write path; single-op is sugar) · §9.2 (audit shape) |
 | 19 every aggregate declares a scope predicate | §17.1 (required, load-time refusal) · §18.1 · §20.2 |
@@ -1278,10 +1388,10 @@ which is the problem being solved, not the solution.
 | **R3** | **Path-glob least privilege** | Rows give path exclusion nothing to bite on (`ACCESS-CONTROL.md:26-30`). A role must be a set of *operations*. |
 | **R4** | **Per-table DB `GRANT`s for asymmetry walls** | Sound at the database (ID5/ID6/A5, all denials real) and **defeated locally**: the credential leaks via `ps eww` (ID3) or a `0600` file (ID4), and ID5b is the attack end-to-end. Claude Code runs every agent in **one process at uid 501**, so there is no sibling boundary at all. Would be *security theatre*. |
 | **R5** | **Asymmetry walls as prompt sentences** (status quo) | Not enumerable, not testable, and leaks by inconsistency. §8.3 makes each wall a `read_deny` predicate + `DENIED-ASYMMETRY`. |
-| **R6** | **Render regenerating authored bodies from sections** | D-A: prose is verbatim bytes. Bodies reach **1.57 MB**, carry **15,568** box-drawing characters and **216,141** table lines of which **32,178** are non-canonically padded. Regeneration is a 32k-line diff that hides every real change. |
+| **R6** | **Render regenerating authored bodies from sections** | D-A: prose is verbatim bytes. Bodies reach **1.57 MB**, carry **15,568** box-drawing characters and **214,554** table lines of which **31,400** are non-canonically padded. Regeneration is a 31k-line diff that hides every real change. |
 | **R7** | **Reformatting authored markdown tables to one style** | Same measurement. This is the largest hazard *removed by a decision* rather than solved by code. |
 | **R8** | **Preserving input frontmatter key order** | Would make render a function of history: two artifacts with identical data would render differently, and `--check` could never separate drift from provenance. N1 imposes a declared order instead. |
-| **R9** | **A comment-preserving YAML round-tripper as the whole answer** | Preserves what should be *modelled* (410 files of comments → `field_note`, generalising the registry's own `producer_note`), and still cannot represent the **12 duplicate-key files**, where the earlier value is already gone. |
+| **R9** | **A comment-preserving YAML round-tripper as the whole answer** | Preserves what should be *modelled* (406 files / 4,498 comment lines → `field_note`, generalising the registry's own `producer_note`), and still cannot represent the **12 duplicate-key files**, where the earlier value is already gone. |
 | **R10** | **A single corpus digest for invariant 15** | Cannot diagnose to artifact and field, which is the stated requirement. Would have hidden all 658 cell-level disagreements `fa shadow` found. |
 | **R11** | **Path-prefix scope predicates** (today's `ExcludeSrcPrefix`) | Promotes path-as-identity into the standard against D-C (1,852 renames, 0 deletes) and breaks **silently by re-inclusion** when a legacy file moves. §17.1 requires a field predicate. |
 | **R12** | **One projection per document** | `prism/STORY-INDEX.md` has 18 tables and **11 distinct header signatures**; `ARCH-INDEX` has 7 tables and 7 signatures. A projection owns *many* declared table layouts. |
@@ -1290,7 +1400,7 @@ which is the problem being solved, not the solution.
 | **R15** | **Per-reference dangling reporting now** | 37% precision (11 real / 19 checker's of 30 hand-read). A confident wrong finding set is worse than a count. Earned by a majority-real sample, not by a small count. |
 | **R16** | **Relaxing validation for `bulk`** | The volume is exactly when validation matters. `bulk` differs from `interactive` in *audit shape and required declarations*, never in checks. |
 | **R17** | **Auto-minting `--op-token` and treating it as retry-safe** | Silent double-append: the failure invariant 1 exists to prevent. `fa tx` marks the transaction `retry_unsafe` and refuses the retry instead. |
-| **R18** | **Reporting invariant-15 coverage as one percentage** | 1,325 files (20.3%) are unrenderable for lack of a type. A single percentage is the *count that agrees while meaning something else*. Four numbers, always. |
+| **R18** | **Reporting invariant-15 coverage as one percentage** | 1,338 files (20.5%) are unrenderable for lack of a type. A single percentage is the *count that agrees while meaning something else*. Four numbers, always. |
 
 ## 24. OPEN QUESTIONS
 
@@ -1317,7 +1427,7 @@ Candidate: `(project, cycle, scope, target, pass)` — already the registry's de
 across all 390.
 
 **Q4 — Are frontmatter comments load-bearing enough to model, or should they be dropped with a
-recorded count?** 410 files, 97 inline. At least two template comments *are* load-bearing
+recorded count?** 406 files, 4,498 comment lines, 71 of them inline. At least two template comments *are* load-bearing
 (`# advisory — used for drift detection, not gating`; `# metadata-only — does not affect BC
 semantics`). A stride sample of 30 would settle it, and the sample is cheap. Not run here.
 
@@ -1351,15 +1461,31 @@ been caught **twice** claiming a name without measuring it (`gate`, `scope`), an
 surface loses its numbers and the "rendered markdown is the review surface" claim weakens. This
 is a product decision about what the committed view is *for*, and it belongs to the user.
 
-**Q11 — One store per project, or one store with a `project` column?** Invariant 19 scopes
-every query by project; the zone design is per-**directory** and a cross-database query leaks
-(A2). Those two pull in opposite directions for multi-tenancy. Load-bearing for §17–§21 (a
-`scope_digest` means different things in each) and undecided.
+**Q11 — RESOLVED by the L1–L2 design, ratified into the spine while this document was being
+drafted.** **One store per project, no `project` column**; the predicate is discharged by store
+*selection*. Decided on measured grounds (per-branch push contention, untunable), and it is the
+stronger answer: an omittable predicate is invariant 19's real failure mode and a store handle
+cannot be omitted. Consequences already folded in: §3.4 (`--project` is a selector), §21.1
+(`scope_digest` is per-store, so it no longer has to encode a tenant). **Registry stays shared in
+the binary**, which is what keeps the generated op vocabulary (L3-1) identical across tenants.
 
 **Q12 — Audit volume.** `STATE.md` alone carries 868 commits; op-level audit is one to two
 orders of magnitude larger. Retention, compaction and whether the audit is itself an
 append-only artifact type are undesigned. `dolt gc` reclaims ~6 KB/commit (L7), which is the
 only relevant measurement so far.
+
+**Q14 — The authority census must be re-run keyed on `(authority, shape)`.** §1.2 counted files
+by `authority` alone, which folds the 11 `append-only-event` ledger types into the 4,861
+`authored` figure — and those are the types whose files are **generated from entry rows**, not
+rendered from a verbatim body (§11). The render job is therefore mis-sized in this document by
+however many files the ledgers are, and the three burst-logs alone carry 301 commits. One-line
+fix to probe P1; not run.
+
+**Q15 — Does the ledger renderer own the WHOLE file or only the entry region?** `STATE.md` is
+*three artifacts wearing one filename* — a mutable record plus two ledgers — so its render is a
+composite of one record projection and two ledger projections, and the ordering/interleaving is
+undeclared. 868 commits sit on this one file, so it is the highest-value render target in the
+corpus and the least specified.
 
 **Q13 — What is the scope-predicate language?** §17.2 writes predicates as SQL fragments. A
 bounded DSL is the alternative (and is the precedent in the sibling Rivetry work). The decision
