@@ -31,6 +31,7 @@ const faVersion = "0.1.0"
 var deleteOrder = []string{
 	"vp_bc", "vp_di", "vp_nfr", "vp_subsystem",
 	"story_bc", "story_vp", "story_fr", "story_subsystem", "story_dep", "bc_trace",
+	"prose_ref", "version_cite",
 	"sub_artifact_ref", "sub_artifact",
 	"adversarial_finding", "review",
 	"bc", "vp", "story",
@@ -52,6 +53,8 @@ type ImportStats struct {
 	FindingRows int
 	SubArtifacts    int
 	SubArtifactRefs int
+	ProseRefs       int
+	VersionCites    int
 	Changed     bool
 	Elapsed     time.Duration
 }
@@ -338,6 +341,43 @@ func Import(ctx context.Context, s *Store, root string, out io.Writer) (*ImportS
 	}
 	_ = sarStmt.Close()
 
+	// ---- STORY 12b: prose references and version cites
+	prStmt, err := tx.PrepareContext(ctx, `INSERT INTO prose_ref
+	  (citing_key, citing_type, kind, raw, target, section_ord, status, src_line)
+	  VALUES (?,?,?,?,?,?,?,?)`)
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range c.ProseRefs {
+		if _, err := prStmt.ExecContext(ctx, r.CitingKey, r.CitingType, r.Kind, r.Raw,
+			r.Target, r.SectionOrd, r.Status, r.Line); err != nil {
+			if isDuplicateKey(err) {
+				continue // the same reference twice on one line is one reference
+			}
+			return nil, fmt.Errorf("prose_ref %s: %w", r.CitingKey, err)
+		}
+		st.ProseRefs++
+	}
+	_ = prStmt.Close()
+
+	vcStmt, err := tx.PrepareContext(ctx, `INSERT INTO version_cite
+	  (citing_key, citing_type, target, cited_version, pin_policy, verdict, src_line)
+	  VALUES (?,?,?,?,?,?,?)`)
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range c.VersionCites {
+		if _, err := vcStmt.ExecContext(ctx, r.CitingKey, r.CitingType, r.Target,
+			r.CitedVersion, r.PinPolicy, r.Verdict, r.Line); err != nil {
+			if isDuplicateKey(err) {
+				continue
+			}
+			return nil, fmt.Errorf("version_cite %s: %w", r.CitingKey, err)
+		}
+		st.VersionCites++
+	}
+	_ = vcStmt.Close()
+
 	// ---- what the markdown claims about itself
 	for _, a := range c.Assertions {
 		if _, err := tx.ExecContext(ctx,
@@ -399,6 +439,8 @@ func Import(ctx context.Context, s *Store, root string, out io.Writer) (*ImportS
 			st.Reviews, st.FindingRows, c.FindingDupes, c.FindingMalformed)
 		fmt.Fprintf(out, "sub-artifacts %d · typed links %d (duplicate mentions collapsed %d)\n",
 			st.SubArtifacts, st.SubArtifactRefs, c.SubArtifactDupes)
+		fmt.Fprintf(out, "prose refs %d · version cites %d (over %d known cite targets)\n",
+			st.ProseRefs, st.VersionCites, c.CiteTargetsKnown)
 		if !changed {
 			fmt.Fprintln(out, "no change since the last import (idempotent re-run)")
 		}

@@ -15,7 +15,7 @@ package main
 // the MARKDOWN claims, precisely so a gate can compare those claims against
 // COUNT(*). Recording a wrong number is the point of that table.
 
-const schemaVersion = 3
+const schemaVersion = 4
 
 // openDDL is the `open` zone: specs, stories, waves, state — what most agents read.
 var openDDL = []string{
@@ -260,6 +260,41 @@ var openDDL = []string{
 	  KEY idx_sar_target (target_kind, target_id),
 	  CONSTRAINT fk_sar_sub FOREIGN KEY (owner_key, kind, sub_id)
 	    REFERENCES sub_artifact (owner_key, kind, sub_id) ON DELETE CASCADE
+	)`,
+
+	// STORY 12b. The two reference kinds that genuinely cannot become rows: a section reference
+	// points INTO a body, and a version cite is a claim about a target's state at a moment.
+	//
+	// `section_ord` is D-A's ordinal-keyed partition, so a resolved reference names the SECTION
+	// rather than a 615 KB document. `status` keeps `unresolvable` DISTINCT from `dangling`,
+	// which prose_ref_rules report-unresolvable-separately requires: collapsing them "is how a
+	// prose extractor produces a large, confident, wrong finding set".
+	`CREATE TABLE IF NOT EXISTS prose_ref (
+	  citing_key  VARCHAR(300) NOT NULL,
+	  citing_type VARCHAR(64)  NOT NULL,
+	  kind        VARCHAR(16)  NOT NULL,
+	  raw         VARCHAR(220) NOT NULL,
+	  target      VARCHAR(220) NOT NULL,
+	  section_ord INT          NOT NULL DEFAULT -1,
+	  status      VARCHAR(16)  NOT NULL,
+	  src_line    INT          NOT NULL,   -- part of the PK: the line distinguishes two refs
+	  PRIMARY KEY (citing_key, kind, raw, src_line),
+	  KEY idx_pr_status (status)
+	)`,
+
+	// The verdict is decided by PIN POLICY, never by whether the cite matches today: the same
+	// syntax carries OPPOSITE verdicts. A `lagging-pinned-ok` row is CORRECT by design and the
+	// gate deliberately does not report it.
+	`CREATE TABLE IF NOT EXISTS version_cite (
+	  citing_key    VARCHAR(300) NOT NULL,
+	  citing_type   VARCHAR(64)  NOT NULL,
+	  target        VARCHAR(64)  NOT NULL,
+	  cited_version VARCHAR(16)  NOT NULL,
+	  pin_policy    VARCHAR(12)  NOT NULL,
+	  verdict       VARCHAR(24)  NOT NULL,
+	  src_line      INT          NOT NULL,   -- part of the PK, same reason
+	  PRIMARY KEY (citing_key, target, cited_version, src_line),
+	  KEY idx_vc_verdict (verdict)
 	)`,
 
 	`CREATE TABLE IF NOT EXISTS schema_migrations (

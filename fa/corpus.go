@@ -108,6 +108,10 @@ type Corpus struct {
 	SubArtifacts     []SubArtifactRow
 	SubArtifactRefs  []SubArtifactRef
 	SubArtifactDupes int
+	// STORY 12b: the minimal permanent prose extractor.
+	ProseRefs        []ProseRefRow
+	VersionCites     []VersionCiteRow
+	CiteTargetsKnown int
 	// Enumerated is the set of BC ids the index ENUMERATES in its own table's
 	// first column — the index's claim about which BCs exist, checked separately
 	// from its claim about how many.
@@ -158,6 +162,7 @@ func ScanCorpus(root string) (*Corpus, error) {
 	c.loadAssertions()
 	c.loadReviews()
 	c.loadSubArtifacts()
+	c.loadProseRefs()
 	return c, nil
 }
 
