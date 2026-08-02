@@ -291,6 +291,47 @@ def part1(reg, enums, al, observed):
     print(f"[1m] query verbs                          : {len(built)} built · {len(ph2)} phase-2 · "
           f"impact {'declared' if 'impact' in ph2 or 'impact' in built else 'MISSING'}")
 
+    # [1n] PROSE-REF KINDS. Three defects were measured in this block on 2026-08-01 and each is
+    # now a check, because all three parsed cleanly and were wrong — the class of defect this
+    # validator exists for.
+    prb = reg.get("prose_ref_boundary") or {}
+    prk = reg.get("prose_ref_kinds") or {}
+    if not prb.get("before") or not prb.get("after"):
+        findings.append(("prose-ref-boundary-missing",
+                         "prose_ref_boundary must declare both `before` and `after`; without them "
+                         "`D-\\d+` matches D-074 inside TD-074 (measured over-match: 9,755)"))
+    # A pattern that anchors itself is a second source of truth for the boundary. One place.
+    for k, spec in sorted(prk.items()):
+        pat = (spec or {}).get("pattern", "")
+        if not pat:
+            findings.append(("prose-ref-no-pattern", f"prose_ref_kind '{k}' declares no pattern"))
+            continue
+        if pat.startswith("(?<") or pat.startswith("\\b") and k != "version_cite":
+            findings.append(("prose-ref-self-anchored",
+                             f"prose_ref_kind '{k}' anchors itself; the boundary is applied by the "
+                             "reader from prose_ref_boundary, so this is a second source of truth"))
+        try:
+            re.compile(pat)
+        except re.error as e:
+            findings.append(("prose-ref-pattern-uncompilable", f"prose_ref_kind '{k}': {e}"))
+    # The undeclared-HEAD kinds must stay declared: they were measured at 3,863 / 2,224 / 1,073 /
+    # 893 references and their absence is what made the kind list 36% incomplete.
+    for k in ("tech_debt", "bc_audit", "meta_level", "bc_family"):
+        if k not in prk:
+            findings.append(("prose-ref-head-undeclared",
+                             f"prose_ref_kind '{k}' is missing; it was measured in the corpus and "
+                             "its absence is defect 2 (kind list incomplete by ~22,750 refs)"))
+    # version_cite must keep the PLAIN form. Requiring a preposition saw 39 of 1,612 cites.
+    vc = prk.get("version_cite") or {}
+    if "per|see|against" in vc.get("pattern", ""):
+        findings.append(("prose-ref-version-cite-too-strict",
+                         "version_cite.pattern requires a per|see|against preposition, which "
+                         "matched 39 of 1,612 measured cites (2.4%). Keep the plain NAME vX.Y form "
+                         "as `pattern` and the prepositional one as `pattern_prepositional`"))
+    print(f"[1n] prose-ref kinds                     : {len(prk)} declared · boundary "
+          f"{'declared' if prb.get('before') and prb.get('after') else 'MISSING'} · "
+          f"version_cite {'plain+prepositional' if vc.get('pattern_prepositional') else 'ONE FORM ONLY'}")
+
     # 1i mass accounting: is every observed FILE covered?
     tot = sum(sum(c.values()) for c in observed.values())
     cov = collections.Counter()

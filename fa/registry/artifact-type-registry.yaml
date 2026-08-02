@@ -385,22 +385,84 @@ namespace_reconciliation:
 # documents. And because D-A stores an addressable section partition, a prose reference
 # resolves to (doc_key, section_ord), so a finding can name the SECTION it lives in rather
 # than a 615 KB document.
+#
+# ⚠ THREE DEFECTS WERE MEASURED IN THIS BLOCK ON 2026-08-01 AND ARE FIXED BELOW. All three were
+# found by running it against the corpus rather than by reading it — see
+# research/PROSE-REFS-OR-FIELDS.md.
+#
+#   1. THE PATTERNS WERE UNANCHORED. `D-\d+` matched `D-074` inside `TD-074` and `D-069` inside
+#      `TD-VSDD-069`. Over-match: 9,755 candidates, and `t_task` was 73% NOISE (6,565 -> 1,733).
+#      Every pattern now carries the shared `boundary` guard, asserted by validate_registry.py.
+#   2. THE KIND LIST WAS INCOMPLETE by ~22,750 genuine reference forms over 1,585 distinct
+#      spellings, with the top 20 covering only 55%. The head is now declared (below); the tail
+#      is deliberately NOT, on the same evidence-backed strategy as the 181 non-canonical
+#      document_type values: alias the head, GATE the tail. A pattern per singleton would be
+#      theatre.
+#   3. `version_cite` SAW 2.4% OF ITS OWN SUBJECT. Requiring a `per|see|against` preposition
+#      matched 39 cites against 1,612 written as a plain `NAME vX.Y`. That is a 41x undercount
+#      of exactly the thing `pin_policy` was declared for.
+#
+# `boundary` is applied by the READER, not repeated in every pattern: one place to fix, and a
+# pattern that forgets it cannot silently ship.
+prose_ref_boundary:
+  before: '(?<![A-Za-z0-9-])'
+  after:  '(?![A-Za-z0-9])'
+  note: >
+    Wrapped around every kind's pattern. `before` rejects a preceding letter, digit or hyphen so
+    `TD-074` cannot yield `D-074`; `after` rejects a trailing alphanumeric so `D-41` cannot be
+    read out of `D-413`. Measured cost of omitting it: 9,755 false candidates.
+
 prose_ref_kinds:
-  ac:      {pattern: 'AC-\d+',      scope: file, owner_types: [story, epic], note: "acceptance criterion"}
+  ac:      {pattern: 'AC-\d+[a-z]?',  scope: file, owner_types: [story, epic], note: "acceptance criterion; the optional letter is real — AC-002a is cited in the corpus"}
   ec:      {pattern: 'EC-\d+',      scope: file, owner_types: [behavioral-contract], note: "edge case"}
   pc:      {pattern: 'PC-?\d+',     scope: file, owner_types: [behavioral-contract], note: "precondition"}
   section: {pattern: '§[^,;)]+',    scope: file, owner_types: [any_artifact]}
   t_task:  {pattern: 'T-\d+',       scope: file, owner_types: [story], note: "task"}
-  finding: {pattern: 'F-[A-Za-z0-9]+-\d+', scope: cycle, owner_types: [adversarial-review], note: "see adversarial-finding"}
-  decision: {pattern: 'D-\d+',      scope: cycle, owner_types: [cycle-decision-log, burst-log]}
+  finding: {pattern: 'F-(?:[A-Za-z0-9]+-)*\d+', scope: cycle, owner_types: [adversarial-review], note: "see adversarial-finding. The prefix group is OPTIONAL: a two-segment-minimum form missed the bare F-7 (752 refs remained after the first widening) while still matching F-SP8-001 and F-S808-P2-001"}
+  decision: {pattern: 'D-\d+(?:\.\d+)*(?:\([a-z]\))?', scope: cycle, owner_types: [cycle-decision-log, burst-log], note: "the dotted D-1.2 form is 793 refs; the D-426(a) sub-clause form is cited as a unit"}
   lesson:  {pattern: 'L-[A-Za-z0-9]*-?\d+', scope: cycle, owner_types: [lessons-learned]}
   policy:  {pattern: 'POL(?:ICY)?[- ]\d+', scope: project, owner_types: [policies]}
+
+  # ── the undeclared HEAD, now declared (defect 2) ────────────────────────────
+  tech_debt:
+    pattern: 'TD(?:-VSDD)?-\d+'
+    scope: project
+    owner_types: [tech-debt-register]
+    note: "2,224 refs. The register is one file, so scope is project, not cycle."
+  bc_audit:
+    pattern: 'BC-AUDIT(?:-\d+)?'
+    scope: project
+    owner_types: [any_artifact]
+    note: "3,863 refs (3,094 numbered + 769 bare). Marks a BC audit pass."
+  meta_level:
+    pattern: 'META-LEVEL(?:-\d+)?'
+    scope: project
+    owner_types: [policies, lessons-learned]
+    note: "1,073 refs. POLICY 5 was extended SIX times as META-LEVEL 31..36."
+  invariant:
+    pattern: '[Ii][Nn][Vv]-\d+'
+    scope: file
+    owner_types: [behavioral-contract, domain-spec-invariants]
+    note: "726 refs, the census head after the first four kinds landed. Case-insensitive because the corpus writes both INV-4 and inv-4."
+  bc_family:
+    pattern: 'BC-\d+\.\d+'
+    scope: project
+    owner_types: [behavioral-contract]
+    note: >
+      893 refs. A PARTIAL BC id naming a sub-family (BC-7.03) rather than one contract. It is a
+      reference to a SET, so it resolves iff at least one BC-7.03.* exists — a different
+      resolution rule from a full id, which is why it is its own kind rather than a looser `bc`.
+
   version_cite:
-    pattern: '(?:per|see|against)\s+([A-Z-]+(?:-INDEX)?(?:\.md)?)\s+v(\d+\.\d+)'
+    # Two forms, both measured. The prepositional form is kept as the STRICT signal; the plain
+    # form is what the corpus actually writes 41x more often.
+    pattern: '\b([A-Z][A-Z0-9-]{2,}(?:-INDEX)?(?:\.md)?)\s+v(\d+\.\d+)'
+    pattern_prepositional: '(?:per|see|against)\s+([A-Z][A-Z0-9-]{2,}(?:-INDEX)?(?:\.md)?)\s+v(\d+\.\d+)'
     scope: project
     owner_types: [any_artifact]
     carries_version: true
     pin_policy_from: link_type   # index_cite -> floating · reviewed_version -> pinned
+    measured: "39 prepositional · 1,612 plain, over 2,768 documents"
     note: >
       TAKEN FROM #671. The prose form of a version cite. Extracting it is only safe once
       pin_policy is declared, which is why this kind exists here and not in the first cut.

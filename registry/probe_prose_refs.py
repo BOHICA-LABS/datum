@@ -15,23 +15,37 @@ import os, re, sys, collections
 
 ROOT = os.path.expanduser(sys.argv[1] if len(sys.argv) > 1 else "~/Dev/vsdd-factory/.factory")
 
-# The kinds, VERBATIM from artifact-type-registry.yaml prose_ref_kinds. Copied as patterns
-# rather than re-invented: this probe measures the DECLARED standard, not a parallel one.
-KINDS = {
-    "ac":       (r'AC-\d+',                  "file"),
-    "ec":       (r'EC-\d+',                  "file"),
-    "pc":       (r'PC-?\d+',                 "file"),
-    "t_task":   (r'T-\d+',                   "file"),
-    "finding":  (r'F-[A-Za-z0-9]+-\d+',      "cycle"),
-    "decision": (r'D-\d+',                   "cycle"),
-    "lesson":   (r'L-[A-Za-z0-9]*-?\d+',     "cycle"),
-    "policy":   (r'POL(?:ICY)?[- ]\d+',      "project"),
-    "section":  (r'§[^,;)\s][^,;)]*',        "file"),
-}
+# The kinds are READ FROM THE REGISTRY, never copied.
+#
+# The first cut of this probe hardcoded them, which made it a SECOND source of truth for the
+# standard it was measuring — the exact defect it went on to find in the registry (and the same
+# defect story 4 hit with its hardcoded review-type list). A probe that can disagree with the
+# thing it measures is measuring nothing in particular.
+def _load_kinds():
+    import yaml
+    here = os.path.dirname(os.path.abspath(__file__))
+    reg = yaml.safe_load(open(os.path.join(os.path.dirname(here), "fa", "registry",
+                                           "artifact-type-registry.yaml")))
+    b = reg.get("prose_ref_boundary") or {}
+    before, after = b.get("before", ""), b.get("after", "")
+    out, raw = {}, {}
+    for k, spec in (reg.get("prose_ref_kinds") or {}).items():
+        if k == "version_cite":
+            continue                       # measured separately: it carries a version, not an id
+        pat = (spec or {}).get("pattern")
+        if not pat:
+            continue
+        out[k] = (pat, (spec or {}).get("scope", "file"))
+        raw[k] = pat
+    return out, raw, before, after
+
+
+KINDS, _RAWPAT, _B4, _AFT = _load_kinds()
 # Anchored with \b on BOTH sides plus a guard against a preceding [A-Za-z-]. The registry's
 # declared patterns are unanchored; measured consequence below.
-KIND_RE = {k: re.compile(r'(?<![A-Za-z0-9-])(?:' + p + r')(?![A-Za-z0-9])') for k, (p, _) in KINDS.items()}
-KIND_RE_RAW = {k: re.compile(p) for k, (p, _) in KINDS.items()}   # the DECLARED pattern, as-is
+# Boundary applied FROM the registry's prose_ref_boundary, exactly as a conforming reader must.
+KIND_RE = {k: re.compile(_B4 + r'(?:' + p + r')' + _AFT) for k, (p, _) in KINDS.items()}
+KIND_RE_RAW = {k: re.compile(p) for k, (p, _) in KINDS.items()}   # unanchored, to price the rule
 
 # An OWNER is a top-level artifact id. A cross-document citation of a sub-artifact id must
 # name one, or it is `unresolvable` — never `dangling` (prose_ref_rules
@@ -41,8 +55,18 @@ OWNER_RE = re.compile(r'\b(?:BC-\d+\.\d+\.\d+|VP-\d+|S-\d+\.\d+[A-Za-z0-9.\-]*|E
 # The declared pattern requires a per|see|against preposition. Measured against three looser
 # forms, because a cite the checker cannot see is a cite it cannot judge, and pin_policy is
 # the whole reason this kind exists.
-VERSION_CITE = re.compile(r'(?:per|see|against)\s+([A-Z][A-Z-]*(?:-INDEX)?(?:\.md)?)\s+v(\d+\.\d+)')
-VERSION_CITE_LOOSE = re.compile(r'\b([A-Z][A-Z-]{2,}(?:-INDEX)?(?:\.md)?)\s+v(\d+\.\d+)')
+def _load_vcite():
+    import yaml
+    here = os.path.dirname(os.path.abspath(__file__))
+    reg = yaml.safe_load(open(os.path.join(os.path.dirname(here), "fa", "registry",
+                                           "artifact-type-registry.yaml")))
+    vc = (reg.get("prose_ref_kinds") or {}).get("version_cite") or {}
+    return vc.get("pattern_prepositional", ""), vc.get("pattern", "")
+
+
+_VP, _VPLAIN = _load_vcite()
+VERSION_CITE = re.compile(_VP)
+VERSION_CITE_LOOSE = re.compile(_VPLAIN)
 
 FENCE = re.compile(r'^\s*(```|~~~)')
 
