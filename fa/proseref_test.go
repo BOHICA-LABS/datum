@@ -95,3 +95,45 @@ func TestProseRefsExcludeCodeSpansAndFences(t *testing.T) {
 		t.Errorf("code spans/fences leaked into the cites: %+v", cites)
 	}
 }
+
+func TestSectionRefsHaveTHREEAddressingSchemes(t *testing.T) {
+	// The corpus addresses sections three different ways, and each was found by measuring a
+	// class of "dangling" reference that turned out to be the RESOLVER's defect:
+	//
+	//   heading NAME        §Consequences            exact, or a prefix of the real heading
+	//   section ORDINAL     §7                       D-A keys the partition on the ordinal
+	//   ITEM within one     §Postcondition 5         finer than the partition: the SECTION resolves
+	//
+	// Getting the third wrong put correct citations on the DANGLING side of a distinction that
+	// exists to keep them off it.
+	sections := map[string]int{
+		"consequences":                  3,
+		"postconditions":                5,
+		"precedence ladder — full form": 9,
+	}
+	for _, tc := range []struct {
+		captured string
+		wantOrd  int
+		note     string
+	}{
+		{"Consequences", 3, "exact heading name"},
+		{"7", 7, "section ordinal — D-A's own key"},
+		{"Postcondition 5 to state TIMEOUT semantics", 5, "ITEM inside §Postconditions"},
+		{"Precedence Ladder and then some prose", 9, "captured name is a PREFIX of the heading"},
+	} {
+		_, ord, ok := resolveSectionName(tc.captured, sections)
+		if !ok || ord != tc.wantOrd {
+			t.Errorf("%s: resolveSectionName(%q) = (%d, %v), want ord %d",
+				tc.note, tc.captured, ord, ok, tc.wantOrd)
+		}
+	}
+	// A single vague word must NOT attribute: `§host` would otherwise match any heading
+	// beginning with "host", which is a confident wrong answer.
+	if _, _, ok := resolveSectionName("host", map[string]int{"host functions": 1}); ok {
+		t.Error("a one-word prefix was allowed to attribute; that is a confident guess")
+	}
+	// An ordinal beyond the partition is NOT resolved, so it cannot silently point at nothing.
+	if _, _, ok := resolveSectionName("999", sections); ok {
+		t.Error("an out-of-range ordinal resolved")
+	}
+}

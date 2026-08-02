@@ -225,7 +225,7 @@ itself says what it is waiting for instead of pretending to work.
 | `quarantine.go` | the `fa aggregate` staging-ref policy |
 | `workflows/fa-validate.yml` | the CI gate (deploy to `.github/workflows/` in vsdd-factory) |
 
-Tests: `CGO_ENABLED=1 go test -tags gms_pure_go ./...` — 116 tests (99 top-level functions, 116 including subtests), ~6.7 s, no
+Tests: `CGO_ENABLED=1 go test -tags gms_pure_go ./...` — 117 tests (including subtests), ~6.7 s, no
 network and no `dolt` binary. The integration tests run against a real embedded
 store built from a fixture corpus with one planted violation per gate: a gate that
 has never been shown failing has been run, not tested.

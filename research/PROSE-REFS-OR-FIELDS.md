@@ -163,3 +163,36 @@ python3 registry/probe_prose_refs.py    # census, per-rule cost, undeclared form
 ```
 
 Read-only. `~/Dev/vsdd-factory` was not modified.
+
+
+---
+
+## Follow-up 2026-08-01: sampling the 329 dangling section refs
+
+12b reported dangling section references in AGGREGATE only, because owner attribution was
+unmeasured. Sampling it (deterministic stride, hand-read) was the gating item, and it found that
+**the corpus addresses a section THREE different ways** — each discovered as a class of
+"dangling" that was the RESOLVER's defect, not the document's:
+
+| scheme | example | resolves via |
+|---|---|---|
+| heading NAME | `§Consequences` | exact, or the captured name as a PREFIX of the real heading |
+| section ORDINAL | `§7`, `§1-§12` | D-A's partition is ordinal-keyed — this is the store's own key |
+| ITEM within a section | `§Postcondition 5` | `BC-1.05.036` has `## Postconditions`; item 5 is an ordered-list entry inside it, i.e. FINER than the partition. The SECTION resolves |
+
+Effect of the three passes: **resolved 854 → 1,408 (+65%)**, dangling **329 → 214 (−35%)**,
+unresolvable 2,387 → 1,915.
+
+⚠ **A PREDICTION OF MINE FAILED HERE, and checking it is what found the third scheme.** From the
+first sample I judged that prefix-of-heading matching would recover ~160 of the remaining 250.
+It recovered **46**. Rather than tune further, I read one failing case — `§Postcondition 5` in a
+review of `BC-1.05.036` — and found the item-within-section scheme. Tuning would have buried it.
+
+**Per-reference reporting is still NOT earned.** 214 remain dangling and their post-fix precision
+is unmeasured; the whole point of the aggregate is that a confident wrong finding set is worse
+than a count. What changed is that the residual is now much smaller and three known-good
+resolution schemes are pinned by `TestSectionRefsHaveTHREEAddressingSchemes`.
+
+`fa refs --kind section --status dangling` lists them, because sampling requires listing and
+re-deriving them in a script would have created a second source of truth for the extraction —
+the defect this repo has now fixed three times.

@@ -58,6 +58,10 @@ var (
 	// A section reference. Bounded at the first separator so it cannot swallow a sentence.
 	sectionRefRe = regexp.MustCompile(`§\s*([^,;)\.]{2,60})`)
 	verNumRe     = regexp.MustCompile(`^\d+\.\d+$`)
+	// `§7`, `§7:`, `§7 preamble`, `§1-§12` — an ordinal reference into the partition.
+	numericSectionRe = regexp.MustCompile(`^(\d{1,3})\b`)
+	// `Postcondition 5`, `Precondition 2`, `Invariant 4`, `Decision 1`, `Event 3`, `Scenario 8`
+	itemInSectionRe = regexp.MustCompile(`^([A-Za-z][A-Za-z-]{3,20})\s+\d{1,3}\b`)
 )
 
 // citePinPolicy decides which link type a prose version cite belongs to, and therefore how it
@@ -185,14 +189,90 @@ func resolveSectionName(captured string, sections map[string]int) (string, int, 
 	if sections == nil {
 		return "", -1, false
 	}
+	// A NUMERIC section reference addresses the partition by ORDINAL, not by name — `§7`,
+	// `§1-§12`. D-A stores the partition ordinal-keyed precisely because headings are not
+	// unique (110 documents carry 1,968 duplicate `##`+ headings), so this is the addressing
+	// scheme the store already speaks.
+	//
+	// MEASURED: a name-only lookup can never resolve these, and they were ~10 of a 30-row
+	// sample of the 329 "dangling" refs — a THIRD of that class was the resolver using the
+	// wrong key, not the corpus citing a missing section.
+	if m := numericSectionRe.FindStringSubmatch(captured); m != nil {
+		n, err := strconv.Atoi(m[1])
+		if err == nil && n >= 0 && n <= sectionCount(sections) {
+			return "§" + m[1], n, true
+		}
+		// A numeric ref BEYOND the partition is genuinely out of range: report it, but as its
+		// own thing rather than as a missing heading NAME.
+		return "", -1, false
+	}
 	words := strings.Fields(captured)
+	// Pass 1: the longest leading run of words that is EXACTLY a heading.
 	for n := len(words); n >= 1; n-- {
 		cand := strings.Join(words[:n], " ")
 		if ord, ok := sections[strings.ToLower(cand)]; ok {
 			return cand, ord, true
 		}
 	}
+	// Pass 2: the MIRROR case — the captured name is a PREFIX OF a heading.
+	//
+	// The corpus writes `### Postcondition 5 — <description>` and cites it as
+	// `§Postcondition 5 to state TIMEOUT/...`, so neither string contains the other whole:
+	// the citation truncates the heading AND appends prose. Exact-match-on-prefix therefore
+	// misses it.
+	//
+	// MEASURED: 16 of a 25-row sample of the remaining 250 "dangling" refs were this shape —
+	// 64% of that class was the RESOLVER's defect, not the corpus citing a missing section.
+	// Longest candidate first so the most specific citation wins, and a 1-word candidate is
+	// refused as too weak to attribute: `§host` would otherwise match any heading beginning
+	// with "host".
+	for n := len(words); n >= 2; n-- {
+		cand := strings.ToLower(strings.Join(words[:n], " "))
+		best, bestOrd := "", -1
+		for h, ord := range sections {
+			if strings.HasPrefix(h, cand) && (best == "" || len(h) < len(best)) {
+				best, bestOrd = h, ord
+			}
+		}
+		if best != "" {
+			return best, bestOrd, true
+		}
+	}
+	// Pass 3: `§Postcondition 5` — a reference to a NUMBERED ITEM INSIDE a section.
+	//
+	// BC-1.05.036 has `## Postconditions` as its heading and states Postcondition 5 as an
+	// ordered-list item within it. So the citation addresses a granularity FINER than D-A's
+	// partition: the SECTION resolves, the item is below the partition's resolution.
+	//
+	// This is the third addressing scheme in the corpus (heading name · section ordinal ·
+	// item-within-section), and getting it wrong put these on the WRONG SIDE of the
+	// dangling/unresolvable distinction that report-unresolvable-separately exists to protect —
+	// reporting a correct citation as a missing section.
+	//
+	// Found by CHECKING A FAILED PREDICTION: pass 2 was expected to recover ~160 of the 250
+	// remaining, and recovered 46. Reading one case rather than tuning further is what exposed
+	// the scheme.
+	if m := itemInSectionRe.FindStringSubmatch(captured); m != nil {
+		stem := strings.ToLower(m[1])
+		for _, cand := range []string{stem + "s", stem} { // Postcondition 5 -> "Postconditions"
+			if ord, ok := sections[cand]; ok {
+				return cand, ord, true
+			}
+		}
+	}
 	return "", -1, false
+}
+
+// sectionCount is the highest ordinal in a partition, so an out-of-range numeric reference can
+// be told from an in-range one.
+func sectionCount(sections map[string]int) int {
+	max := 0
+	for _, o := range sections {
+		if o > max {
+			max = o
+		}
+	}
+	return max
 }
 
 // ownerNameRe is any top-level artifact id, used only to tell "the owner is stated" from "the

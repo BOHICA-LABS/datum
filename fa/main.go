@@ -37,6 +37,7 @@ usage: fa <command> [flags]
   count                      record counts, derived — never stored
   doctor                     store health: writable, unmerged, schema, imported
   waves                      wave schedule, derived from story depends_on (topological)
+  refs --kind section|version-cite [--status X]  list prose refs / version cites (read-only)
   shadow <corpus>            STORY 7: generate each derived index ALONGSIDE the authored
                              one and report every disagreement. Never writes, never flips.
   graph build|metrics|dot|diff   knowledge-graph projection + algorithms SQL cannot do
@@ -74,6 +75,8 @@ func main() {
 		err = cmdGraph(ctx, os.Args[2:])
 	case "waves":
 		err = cmdWaves(ctx, os.Args[2:])
+	case "refs":
+		err = cmdRefs(ctx, os.Args[2:])
 	case "shadow":
 		err = cmdShadow(ctx, os.Args[2:])
 	case "version":

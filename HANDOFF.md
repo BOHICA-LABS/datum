@@ -60,9 +60,12 @@ check and is **not** claimed.
 
 ### ▶▶▶ TOP PRIORITY NEXT. Nothing in flight.
 
-1. **Sample the 329 dangling section refs.** `ownerNamedOn` takes the LAST id on the line —
-   right for `per ADR-019 §Consequences`, wrong for `per ADR-019 and BC-1.02.003 §Consequences`.
-   Reported in AGGREGATE only until that precision is measured; per-reference findings need it.
+1. ✅ **DONE — sampled.** It found that the corpus addresses a section THREE ways (heading NAME ·
+   section ORDINAL · ITEM within a section). Resolved **854 → 1,408 (+65%)**, dangling **329 →
+   214**. `fa refs --kind section --status dangling` lists them. **Per-reference reporting is
+   still NOT earned** — 214 remain and their post-fix precision is unmeasured. NEXT: sample those
+   214. ⚠ A prediction of mine failed here (expected ~160 recovered from prefix matching, got 46);
+   reading one failing case instead of tuning is what exposed the third scheme.
 2. **Adjudicate the 330-row Capability block** and the 218 POLICY-8 findings — PO calls.
 3. **Move the shadow SCOPE PREDICATE into the registry** beside `derivation_stage`.
 4. **Story 6** (ledgers → rows) now covers 26,632 of the reference mass; story 12's census says
