@@ -4,8 +4,9 @@ date: 2026-08-02
 purpose: specify L3 (the only write surface) and L4 (everything derived, incl. `fa render` and invariant 15) precisely enough to implement without re-deriving
 status: DESIGN. Nothing implemented (design-only by direction). The 8 settled decisions and 23 invariants of FA-V1-DESIGN.md are treated as BINDING.
 spine: research/FA-V1-DESIGN.md
-corpus_pin: vsdd-factory .factory @ 0aaba144 · prism .factory (concurrent session — re-measure) · rivetry .factory
-measurements_reproduced_here: 6,537 md files · 5,405 with frontmatter · 1,189 distinct frontmatter key orders · 110 docs / 1,970 duplicate `##`+ headings · 4,861 authored / 54 derived / 73 ingested / 1,325 untyped files
+corpus_pin: vsdd-factory .factory @ 0aaba144 · prism .factory (CONCURRENT session — re-measure before trusting any prism count) · rivetry .factory
+measurements_reproduced_here: 6,537 md files · 5,405 with frontmatter · 1,189 distinct frontmatter key orders · 110 docs / 1,970 duplicate `##`+ headings · 4,861 authored / 54 derived / 73 ingested / 1,325 untyped · 21 of 103 types declare sections · 0 of 22 derived types do
+reproduction: every number introduced here is emitted by probe P1–P4 in §25, and all four were RUN as written. Four draft numbers came from ad-hoc variants and were corrected to the probes' output; they are marked ⟲ below.
 ---
 
 # `fa` v1 — L3 semantic operations and L4 projections
@@ -62,10 +63,17 @@ Resolved per-file authority over all three corpora (6,537 markdown files):
 |---|---|---|
 | `authored` | **4,861** | 74.4% |
 | **no frontmatter at all** | **1,132** | 17.3% |
-| unresolved `document_type` (211 = `delta-archive`, a `retired_type`) | 224 | 3.4% |
+| `retired` (211 of 211 are `delta-archive` — the type the registry already retires) | 211 | 3.2% |
 | frontmatter but no `document_type` | 193 | 3.0% |
 | `ingested` | 73 | 1.1% |
 | **`derived`** | **54** | **0.8%** |
+| genuinely unresolved `document_type` | **13** | 0.2% |
+
+⟲ An earlier cut of this table reported 224 unresolved. Folding `retired_types` into the
+authority map — which the registry declares and P4 confirms — resolves 211 of them as
+`retired`, leaving **13**. Worth recording rather than silently improving: the registry already
+knew the answer, and not reading it produced a 17× overstatement of the unresolved class. Same
+shape as the five-times-measured lesson *read the vocabulary FROM the registry*.
 
 Now the churn on the `factory-artifacts` branch (`git log --format= --name-only
 factory-artifacts | sort | uniq -c | sort -rn`):
@@ -92,7 +100,13 @@ Measured over `types:` in the registry:
 
 - All **22** derived types carry `section_policy: free`.
 - **0 of 22** derived types declare a `sections:` list.
-- Only **31 of 103** types declare `sections:` at all; **75** are `section_policy: free`.
+- ⟲ Only **21 of 103** types declare a non-empty `sections:` list at all; **70** are
+  `section_policy: free`, 25 `expected`, 8 `required_unordered`. (An earlier cut said 31/75 —
+  that grep counted `sections: []` as a declaration and swept in `gap_types`. The corrected
+  figure makes the gap *larger*, not smaller.)
+- **12 types carry `section_policy: expected` while declaring no sections at all** — a policy
+  that warns on the absence of an empty list, i.e. a gate that cannot fire. Found by this
+  measurement, not previously reported.
 - **16 of 22** derived types have a template declaring them; the **6 that do not** are
   `behavioral-contract-index`, `verification-property-index`, `behavioral-contract-id-mapping`,
   `story-id-mapping`, `cycle-index`, `regression-state`.
@@ -655,9 +669,10 @@ tractable, per-class contract.
 | **`ingested`** (13 types) | 73 | identity — bytes are stored opaque, addressed by content hash | hash equality |
 
 Everything else — 1,132 files with no frontmatter, 193 with frontmatter but no
-`document_type`, 224 with an unresolved type (211 of them `delta-archive`, correctly a
-`retired_type`) — is **1,325 files (20.3%) that `render` cannot own today** because they have
-no type. §12.4 makes that the honest denominator of invariant 15 rather than a rounding error.
+`document_type`, 13 with a genuinely unresolved type — is **1,338 files (20.5%) that `render`
+cannot own today** because they have no type. (The 211 `delta-archive` files are out of scope by
+*declaration*, not by omission: the registry retires them and the store's own history replaces
+them.) §12.4 makes that the honest denominator of invariant 15 rather than a rounding error.
 
 ### 11.1 The authored renderer
 
@@ -771,13 +786,14 @@ denominator today is:
 
 | | files | in E1's scope? |
 |---|---|---|
-| typed, resolved, authored/derived/ingested | 4,988 | yes |
+| typed, resolved, authored/derived/ingested | **4,988** | yes |
 | **no frontmatter** | **1,132** | **no — no type, no key, no render** |
 | frontmatter, no `document_type` | 193 | no |
-| unresolved type (211 `delta-archive` = retired) | 224 | 211 resolve as retired; 13 do not |
-| **coverage ceiling before typing work** | **76.3%** | |
+| genuinely unresolved type | 13 | no |
+| `retired` (`delta-archive`) | 211 | out of scope **by declaration** |
+| **coverage ceiling before typing work** | **76.3%** (4,988 / 6,537) | |
 
-So **invariant 15 cannot reach 100% until 1,325 files acquire a type**, and reporting it as a
+So **invariant 15 cannot reach 100% until 1,338 files acquire a type**, and reporting it as a
 percentage without that denominator would be the "count that agrees while meaning something
 else" failure invariant 19 exists to catch. `fa render --check` therefore reports
 **four** numbers, never one: `equal`, `differs`, `unrenderable (no type)`, `out-of-scope

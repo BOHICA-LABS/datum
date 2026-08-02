@@ -42,6 +42,31 @@ model at corpus scale. Per this repo's standing rule it gets measured before it 
 a materialization fallback is specified but has **no trigger**, and a design resting on an
 unmeasured assumption is exactly what "never report a number a test could contradict" forbids.
 
+### Ratified consequences of the L5–L6 design (2026-08-02)
+
+- **Evidence exists only if `fa` produced it.** `fa gate exec` is the *sole* writer of the evidence
+  table; no flag accepts evidence bytes. This is the sharpest expression of invariant 22 and it
+  collapses POLICY 5's six-level cure chain (`v1.3 → v1.3.1 → v1.3.3 → v1.3.4 → v1.3.5 → v1.3.6`,
+  recorded in its own `last_amended`) into a single field — because reproducibility-at-a-SHA is a
+  property only the executor can hold.
+- **Unevaluable = `error` = block. No fail-open, anywhere.** Plus a mandatory vacuity guard, because
+  the corpus already demonstrated a gate passing on an empty set.
+- **`deferred` is abolished** as a gate status and replaced by deferral rows carrying an owner and an
+  expiry. Today `gate_status: deferred` satisfies the wave prerequisite with no rationale, owner or
+  expiry — and the sibling hook's error message *recommends* it.
+- **`novelty` is NULL when N+D = 0, and NULL never satisfies a comparison.** That single typing choice
+  kills the live `0.0 (0 / (0 + 0))` division-by-zero without a special case. N/D come from
+  store-side `finding_link` rows, so the adversary's context wall stays intact — it is no longer
+  asked to classify duplicates against a corpus it is forbidden to read.
+- **ONE termination rule, `converge.v1`: keep 3 clean passes, and retire `novelty <= 0.15`
+  entirely** rather than arbitrating between the hook's threshold and the skill's qualitative "LOW".
+  Monotonicity forces `clean_streak = 0` until the regression is dispositioned.
+- **Three-valued conditions: UNKNOWN blocks rather than skips**, and `step_dep.on_skip` is
+  non-nullable. This is the fix for the 140 conditional-dependency edges, and it fails safe.
+- **`manual: true` satisfies invariant 22 via a machine-produced attestation** — who, when, against
+  which `store_version` — typed so queries can separate *attested* from *executed*. A refinement of
+  22, not an exception to it.
+
 **`status` vs `lifecycle_status` — measured, and a resolution recommended (pending ratification).**
 The L1 design asked for a PO call on the 1,949-of-1,959 disagreement. Measured over all 1,959 BCs:
 

@@ -762,6 +762,30 @@ against a live v2.65; and one epic documents its own template non-conformance in
 
 ---
 
+# ⚠ CORRECTIONS TO THIS REVIEW — from the v1 design measurements (2026-08-02)
+
+Designing L5–L6 required re-measuring several of this review's claims exhaustively rather than by
+sample. Six were wrong, and one of the corrections is materially worse than what I reported. Recorded
+rather than patched in place, so the audit trail survives.
+
+| this review said | measured | why it matters |
+|---|---|---|
+| the workflows use **six** step types | **seven** — `parallel-foreach` (8 uses) was omitted | an engine built to the six-type list cannot execute 8 real steps. Its iteration set is also undocumented, which **blocks byte-exact round-trip** |
+| conditional steps in `depends_on` strand the wave gate and Phase 7 (**2** hand-found cases) | **140 edges — 26% of the dependency graph** | and a third stranding I missed: `session-review:1379` depends on `post-feature-validation:1364`, which is **off by default**, so **greenfield cannot reach COMPLETE at all** |
+| `verdict:` holds **21** tokens | **23** tokens over 443 uses, 36% of them severities, incl. an invented `CLEAN_PASS_1_OF_3` | — |
+| the convergence hooks skip **125 of 295** reviews | the `pass-*.md` glob resolves for **6 of 400** | the rule is not partially applied, it is effectively absent |
+| Phase-2 gate has **27** criteria | **26**, and the count is not reproducible under either definition | — |
+| the trajectory violates monotonicity **three** times | **four** strict increases | — |
+| **34** agent definitions | **44** files declaring only `opus`/`sonnet` | widens the model-diversity gap: `holdout-evaluator.md:5` pins `model: opus` against `FACTORY.md:412`'s GPT-5.4, with `openclaw.json` absent |
+
+Two new facts that shape the design rather than correcting it: **278 gate criteria across 38 gates
+with 0 evaluators — but 65% already have a machine shape**, so the gate-as-query work is mostly
+translation, not invention. And of **24 loops**, 19 share the magic cap 10, 3 have no cap, and of 20
+exit conditions **zero** reference a streak — which is the mechanical proof of `CLAUDE.md`'s own
+admission that the 3-clean-pass rule is "structurally impossible under prose-only codification."
+
+---
+
 # ⭐ CONSOLIDATED `fa` FEATURE LIST
 
 Deduplicated across all six reviews. Ordered by leverage — how much of the measured failure mass each
