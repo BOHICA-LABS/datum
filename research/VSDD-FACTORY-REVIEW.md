@@ -3,7 +3,7 @@ title: VSDD-FACTORY-REVIEW — how the factory is supposed to operate, and what 
 date: 2026-08-02
 purpose: a full operational review of ~/Dev/vsdd-factory — phases, agents, artifacts, state, gates, modes — compiled into a feature list for `fa`
 method: six parallel READ-ONLY reviews, each reading the skills/agents/workflows/hooks AND the live .factory corpus, every claim cited to file:line
-status: IN PROGRESS — 2 of 6 areas landed
+status: COMPLETE — all 6 areas landed, consolidated into 22 `fa` features across 4 tiers
 corpus_pin: vsdd-factory .factory @ 0aaba144 (read-only; 0 files modified)
 ---
 
@@ -678,5 +678,418 @@ cannot run `git log` to build a changelog; the maintenance sweep count is docume
 (actual 11, with Sweeps 10 and 11 absent from the skill entirely); path numbering disagrees between
 the orchestrator sequences and the paths guide; and the discovery composite score has three
 different formulas.
+
+---
+
+## AREA 6 — The artifact model: types, keys, indexes, traceability
+
+### What it is
+
+`config/artifact-path-registry.yaml` — ~50 `artifact_type` entries, **every one
+`enforcement_level: block`** — declares each type's home. Templates declare frontmatter and mandated
+sections. The corpus is **3,145 files**: 2,091 under `specs/` (1,959 BCs across `ss-01`…`ss-10`, 80
+VPs, 23 ADRs, 10 subsystem docs, 8 domain-spec shards, a 120 KB PRD), 621 across 5 cycles, 170
+stories, 148 delivery artifacts.
+
+The **traceability chain** is mostly carried by real frontmatter fields, and that part works:
+`capability:` · `subsystem:` · `source_bc:` (VP→BC) · `behavioral_contracts:` /
+`verification_properties:` / `anchored_adrs:` / `subsystems:` / `epic_id:` / `depends_on:` /
+`blocks:` / `closes:` / `target_module:` on stories. Two of these are enforced *bidirectionally* by
+real hooks — story↔BC sync (POLICY 8) and subsystem names (POLICY 6).
+
+### What is broken
+
+**Six mutually inconsistent BC totals in one corpus.** 1,959 files · 1,958 index rows ·
+`total_bcs: 1955` · 1,953 (sum of the Summary column) · **1,949** (stated three times, including
+`| **Total** | | **1949** |` in the same table whose column sums to 1953) · **1,851**
+(`bc-id-mapping.md`, never revised). **5 of 10 per-subsystem counts are wrong**, and for SS-05 the
+declared subtotal, ARCH-INDEX's stated premise, and the directory contents are three different
+numbers for the same set.
+
+**Nothing generates the indexes.** `validate-template-compliance/SKILL.md:148` reassures the reader
+that INDEX files "have no template — they're auto-generated". They are hand-maintained by a
+*voluntary* skill. Measured drift: BC-INDEX **1 missing row**, STORY-INDEX **37 phantom rows** (144
+row IDs vs 107 files — the reverse direction is clean), **5 of 17** epic `story_count` rollups wrong
+(E-11 declares 8 stories and **no file carries `epic_id: "E-11"`**), `sprint-state.yaml` three months
+and 37 stories stale.
+
+The two clean layers are the tell: **VP (80/80/`total_vps: 80`) and ADR (23/23) are exactly right** —
+the two types with a real allocator or a population small enough to hand-maintain. Every larger
+hand-maintained derived artifact has drifted.
+
+**The capability link is 75% unusable and 7 rows are type-confused.** Of 1,959 BCs: `CAP-TBD` 807,
+bare `TBD` 446, `""` 212, real `CAP-NNN` 487 — **three placeholder dialects for one absent value** —
+and **7 BCs carry `capability: "E-12"`, an epic ID in a capability field.**
+
+**AC→BC is unparseable prose.** The only carrier is free text inside an H3:
+`### AC-001 — … (traces to BC-7.06.001 postcondition 1 + BC-1.14.001 precondition 1)`. 12+ stories
+contain no `traces to` string at all. `AC → test` is a *naming convention*. And
+`traceability-chain.md` — the file the traceability-extension skill governs — **does not exist
+anywhere in the corpus**. Story→VP is `[]` for **58 of 107** stories, with deliberate deferral and
+authoring omission indistinguishable.
+
+**ID allocation is prose for every type except ADR.** `create-adr` is the only allocator, is
+explicitly non-atomic ("Users SHOULD serialize"), and `policy-add` uses `max_id + 1` with **name**-based
+collision defence. BC/VP/story/epic/SS have only POLICY 1 prose with no scan procedure and no source
+of truth named. `register-artifact` **mints nothing** — its only defence is a duplicate-*row* check,
+so two agents minting the same BC id are undetectable and the second is silently "already registered".
+
+**225 of 3,145 files (7.2%) match no registry pattern** and are therefore unwritable under the
+blocking hook — 124 adversarial reviews (the registry has only a *flat* `cycles/{id}/adv-{slug}.md`),
+42 legacy stories, 20 ingestion passes, 16 nested semport files, `measurements/*.json|*.sh` (the
+pattern allows only `.md`), and the nested `.factory/.factory/logs/`. `relocate-artifact` recorded
+"0 violations" as a comment. Registry patterns are single-segment-per-placeholder and `.md`-only.
+
+**Path enforcement fails open in four ways**: registry absent → Continue, malformed → Continue,
+unknown `enforcement_level` → advisory, and `on_error = "continue"`. One bad YAML edit silently
+disables all path enforcement. And `{placeholder}` matches any whole segment, so
+`BC-2.02.013-host-run-subprocess.md` — the one BC with a slug in its name, `status: withdrawn`, and
+**the only BC absent from BC-INDEX** — passes the path hook while violating the natural key.
+
+**The structural blind spot, named precisely:** `validate-template-compliance.sh:63` exempts every
+`*INDEX*` file from structure checks; `register-artifact` is voluntary; the only file↔index
+divergence detector is an on-request skill; and `validate-count-propagation.sh:150` states
+*"Absence of keyword in sibling is NOT drift"* — so an un-propagated count is silently fine. **The
+failure the system cannot see is a correctly-located, correctly-shaped artifact that no index knows
+about** — which is exactly the 1 unindexed BC, the 37 phantom rows, and the 225 unmatched files.
+
+Also: STORY-INDEX uses **4 different table schemas** for one type (plus a `Depends-On` typo), never
+caught because of that same INDEX exemption; the ARCH-INDEX decisions table has a **three-way** schema
+conflict between template, writer skill and reality; VP filenames, epic ID format, and 8 PRD-cited BCs
+with no file are all declared-vs-actual mismatches; a stale cross-index pin cites BC-INDEX **v1.84**
+against a live v2.65; and one epic documents its own template non-conformance in an HTML comment
+("Template update tracked as follow-up") while carrying 19 fields against the template's 6.
+
+---
+
+# ⭐ CONSOLIDATED `fa` FEATURE LIST
+
+Deduplicated across all six reviews. Ordered by leverage — how much of the measured failure mass each
+one removes. Every "eliminates" is a defect one of the reviews verified in this corpus.
+
+The single most important observation: **the factory's design intent is consistently sharp, and
+almost every failure is that intent expressed in the wrong substrate** — prose where a schema was
+needed, a hook where a query was needed, bash-over-git where a transaction was needed, and an agent's
+self-report where a derivation was needed. `fa` should not reimplement the factory's judgment. It
+should give that judgment a substrate that can hold it.
+
+---
+
+## Tier 1 — the substrate. These delete whole classes rather than fixing instances.
+
+### F1. Store-assigned identity and versions; no artifact ever transcribes its own identity
+Every artifact gets a store-assigned monotonic version. Nothing writes its own SHA, its own HEAD, or
+another artifact's version into its content.
+
+*Eliminates:* the live **three-commit-per-burst chain** whose 2nd and 3rd commits exist only to write
+the previous commit's SHA into content on the same branch — the exact self-referential loop
+TD-VSDD-053 retired after "6 recurrences in one session costing 5+ force-pushes", now invisible to
+its guard because the stage was renamed from `backfill` to `SHA-patch`. Also: STATE.md citing HEAD as
+`f671ca50` when HEAD is `0aaba144`; the POLICY 14 "5-leg parity" ritual of hand-copying four index
+versions into STATE.md and every story's `last_amended`; and the stale `per BC-INDEX v1.84` pin
+against a live v2.65. **This single change retires TD-VSDD-053, TD-VSDD-044,
+`verify-sha-currency.sh`, the entire burst protocol, and every hand-typed provenance string.**
+
+### F2. Transactions: all-or-nothing across N artifacts, with idempotence keys
+`fa txn begin / write / commit --key <id>`. Replay returns the prior result. One transaction spans
+multiple scopes and repos.
+
+*Eliminates:* `compact-state` appending to five files sequentially so a failure at #4 leaves #1–3
+written, making its "abort without modifying STATE.md" claim unenforceable; duplicate-history on
+retry; the non-atomic multi-repo dual-branch commit with no failure handling between the two pushes
+and no CAS helper for the second branch; and `state-update`/`compact-state` committing without ever
+pushing.
+
+### F3. Optimistic concurrency with typed conflicts — and no force path at all
+`fa write --if-version n`; mismatch returns a `Conflict` naming the artifact, both versions, and the
+conflicting writer. The store has no force, no auto-merge, no auto-rebase.
+
+*Eliminates:* the load-bearing concurrency bug — `factory-cas-push.sh` reads its
+`--force-with-lease` value from the ref *the fetch just updated* and never rebases onto it, so it is
+`--force` with extra steps and discards a concurrent writer's commits outright, while its own header
+promises "Remote state MUST NOT be silently clobbered."
+
+### F4. Store-side leases, scoped to path sets, with server-side expiry
+`fa lease acquire --scope <glob> --ttl`. The lease lives in the store, never inside a protected
+artifact. Every write presents the token; an expired token is rejected at write time. Fail-closed by
+default. `--force` breaks are audited inside the same transaction as the break.
+
+*Eliminates:* a mutex stored as YAML **inside the very file it protects, on the contended branch**;
+a "fetch-before-check" that fetches and then reads a local file the fetch never touches, so a foreign
+lock is invisible; both guard arms running `on_error = "continue"` (fail-open); and the absent
+holdership re-check between commit and push, where a >45-minute burst pushes under an expired lease
+and — via F3 — wins. Scoping also removes the practical incentive to `--force`: today one mutex covers
+the whole branch, so two sessions on disjoint subsystems serialize.
+
+### F5. One typed schema per artifact type — path, key, frontmatter, sections, index shape, in a single definition
+Enforced at write time. Closed enums. Natural keys parsed as typed values (`BC-S.SS.NNN`, `VP-NNN`,
+`S-N.MM`, `E-N`, `ADR-NNN`, `CAP-NNN`, `HS-NNN`), never as `[^/]+` path segments.
+
+*Eliminates:* the type definition being split across four places that disagree (registry / template /
+`register-artifact` routing / two divergent hard-coded section tables of 18 and 15 rows); the
+malformed-key BC that passes the path hook because `{bc-id}` matches a whole segment; **seven
+spellings of one `document_type`**, which is a live gate bypass because
+`validate-template-compliance.sh` exits 0 when no template matches — so choosing a variant spelling
+silently skips the structure gate; a retired enum value (`origin: recovered`) hard-coded into three
+gates against a census of zero; 17 severity tokens, **21 verdict tokens in a field whose declared
+domain is 2** (with 130 uses holding a *severity*), and 11 closure tokens against 5 declared. Also
+`fa` must not exempt indexes from structure checks — that exemption is what hid four STORY-INDEX
+schemas and a `Depends-On` typo.
+
+---
+
+## Tier 2 — derivation. Stop maintaining what can be computed.
+
+### F6. Indexes and counts derived, never maintained
+`fa index build bc|vp|story|arch|epic`; `fa count` owns every stated total. One canonical writer.
+
+*Eliminates:* **six BC totals**, a Summary table contradicting its own column sum, 5 of 10 wrong
+subsystem counts, 1 unindexed BC, **37 phantom STORY-INDEX rows**, 5 of 17 wrong epic rollups, a
+three-months-stale `sprint-state.yaml`. It also makes the ordering rule "state-manager must run LAST
+in every burst or you get version-race regressions" unnecessary rather than merely documented. The
+VP and ADR layers being the only clean ones is the proof: hand-maintenance scales to 23 and 80, not
+to 1,959.
+
+### F7. A declared scope predicate on every derived view; refuse unscoped aggregates
+Each artifact carries `cycle_id` and a lifecycle/cycle/local scope; every query states its predicate.
+
+*This is the result this spike already paid for:* 41 of 148 stories live in `v1.0-legacy/` and
+STORY-INDEX deliberately omits them, so generating from every record would **resurrect 41 retired
+stories while every count still agreed**. It is also the missing carrier for feature mode's delta —
+`affected-files.txt` is referenced 11 times, does not exist, is unregistered so writing it is
+hook-blocked, and the real artifact is a markdown table at another path.
+
+### F8. Derivation edges with version-sets as the staleness key; staleness computed, not stored
+`fa derive --from --to`; `fa stale [--explain]` walks the DAG. Distinguish `stale` / `unverified` /
+`unresolvable`, and keep `fa ack --reason` strictly separate from `fa derive`.
+
+*Eliminates:* a **7-char truncated MD5 of a concatenation** as the staleness key — order-insensitive,
+so swapping two inputs' contents is invisible; and STATE.md exempting itself via an unrecognised
+`input-hash: "[live-state]"` sentinel so that, in the skill's own words, it "silently drops out of
+drift detection" — **the one artifact every session reads is the one never checked**. Preserve the
+existing good instincts verbatim: refuse partial input sets, cluster-triage before bulk update, and
+the honest admission that acking a hash is not re-deriving content.
+
+### F9. Structured traceability as edges, with completeness as a query
+Promote `(traces to BC-7.06.001 postcondition 1)` out of H3 prose into a typed edge. `fa trace` walks
+L1→L2→L3→L4→story→AC→VP→test→PR→demo in both directions.
+
+*Eliminates:* AC→BC readable by no tool (12+ stories carry no trace string at all); AC→test being a
+*naming convention*; `traceability-chain.md` not existing anywhere while a skill governs it; 58 of 107
+stories with `verification_properties: []` where deferral and omission are indistinguishable; 8
+PRD-cited BCs with no file. It also turns 33 spec-coherence criteria — currently executed weekly by an
+LLM reading 1,959 BCs, 107 stories and 80 VPs — into `SELECT … WHERE NOT EXISTS`.
+
+### F10. Referential integrity with the *target type* checked
+`capability:` must resolve to a CAP; `epic_id:` to an epic; `source_bc:` to a BC. Placeholders are a
+first-class incompleteness state with one canonical spelling and a budget.
+
+*Eliminates:* 7 BCs carrying `capability: "E-12"` — an epic id in a capability field — and 1,465
+placeholders in three dialects, which together make "how complete is the capability link?"
+unanswerable by grep.
+
+### F11. Transactional ID minting for every keyed type, with a tombstone ledger
+Scan files ∪ index ∪ tombstones under lock. Retired, withdrawn and never-issued ids stay consumed.
+
+*Eliminates:* `create-adr` being the only allocator and explicitly non-atomic ("Users SHOULD
+serialize"); `policy-add`'s `max_id + 1` race with name-only collision defence; `register-artifact`
+minting nothing, so two agents creating the same BC id are undetectable; the BC-1.12.008 →
+BC-3.05.004 manual corrigendum class; and reserved POLICY 11/12 slots that the third custom policy
+silently consumes.
+
+---
+
+## Tier 3 — making gates real.
+
+### F12. Findings as rows: one ID namespace, declared enums, full lifecycle
+`fa finding add|list --scope`, with severity/category/confidence as closed enums, status through
+`open → … → resolved|suppressed`, first-seen dates, and `closes` links.
+
+*Eliminates:* **~14 ID conventions** where the format hook validates one — the dominant `F-*` family
+alone is >13,000 occurrences and is never inspected, while `per-story-delivery.md` prescribes
+`STORY-NNN-FIX-001` and the hook **blocks it as legacy**; stated finding counts unchecked (210 of 295
+reviews carry none; of the 85 that do, 6 disagree, and the disagreement is *representational* so no
+single parse recovers the set); maintenance findings having **no ID, no status and no suppression**, so
+a false positive re-fires weekly forever and "sweep false-positive rate" is uncomputable; and
+write-denied reviewers being told to write files they cannot write. This is the enabler that lets
+`finding_count`, `severity_distribution` and novelty become derived.
+
+### F13. Convergence computed from finding rows, never claimed
+`fa converge status|check|trajectory`. Novelty from the store's own duplicate-linkage, not the
+adversary's self-report. Monotonicity a hard fail. One termination rule. Reviews resolved by
+`document_type`, never by filename glob.
+
+*Eliminates:* the only Kani-proved gate in the factory reading **hand-written JSON** — 6 proofs over
+`passes_clean` and `last_classification` that nothing recomputes, with a live file asserting
+`passes_clean: 3` beside `"fix_batches_pending": ["B3","B4"]`; `Novelty score | 0.0 (0 / (0 + 0))`
+— division by zero — on a trajectory that violates monotonicity three times and declares
+`CONVERGENCE_REACHED` anyway, because the hook records a stderr warning and exits 0; convergence
+hooks skipping **125 of 295** reviews (including *both* files that actually declare
+`CONVERGENCE_REACHED`) because the corpus's `ADV-*.md` naming is exactly what the glob excludes; and
+the 3-clean-pass rule appearing in five prose locations and **zero** loop exit conditions — which
+`CLAUDE.md` concedes outright: "structurally impossible under prose-only codification."
+
+Keep verbatim what already works: brownfield's **strict-binary** rule that only the literal token
+`NITPICK` closes a pass and *"the agent has no authority to declare convergence — only the protocol
+does"*, with no fixed maximum, plus the verbatim-carryover, contradiction-mandate and
+retraction-registry mechanisms. Encode all four in `fa` rather than in a prompt.
+
+### F14. Gate registry + per-criterion result rows with mandatory evidence links
+`fa gate record --status --evidence`; `fa gate block <transition>`. `pass` requires ≥1 resolvable
+evidence reference; `skip` requires a reason. Gate definitions live once and are referenced.
+
+*Eliminates:* 21- and 27-criterion gates that are prose strings with no evaluator and no record of
+which criterion passed on what evidence; a wave gate satisfied by the *word* "Gate 3" so that
+`Gate 3: FAILED — 5 CRITICAL` passes; `gate_status: deferred` with no rationale, owner or expiry
+(recommended by the sibling hook's own error message); a wave gate that is **wholly inert because
+`wave-state.yaml` was never instantiated**; gates failing open on a missing `jq`/`python3`;
+`Wave 15` declaring `verdict: CONVERGED` with **no record that Gates 2, 4 or 5 ran** and
+`holdout-evaluations/` containing only `.gitkeep`; an extraction-validation floor shipping at
+**6.75% against a required 20% because nothing computes the ratio**; the mutation gate ("exactly 80 —
+no rounding") retired by "deferred per wave gate consensus"; and 16 of 18 policies with
+`lint_hook: null`. Add `fa gate exec` so evidence is a `(command, stdout, exit, sha)` tuple **`fa`
+produced** — that retires the self-attesting `$ grep -c … / 18 / PASS` transcript pattern and the
+six-level POLICY 5 cure recursion chasing it.
+
+### F15. Baselines and ratchets: fail only on *new* violations
+`fa baseline snapshot`; `fa check --since`; `fa ratchet tighten`. Plus time-series retention.
+
+*Eliminates:* the binary choice that forced `validate-consistency` Checks 8/9 to be **permanently
+non-blocking** ("these checks never flip the report's PASS/FAIL"); `regression-state.json` being a
+single overwritten record, so the autonomy criterion "zero regressions in the last 20 runs" cannot be
+evaluated at all; and five maintenance sweeps that require "compare against last baseline" with no
+store.
+
+---
+
+## Tier 4 — access, identity, and operations.
+
+### F16. Verified caller identity, a role→capability manifest, and walls as return codes
+`fa` receives an unforgeable role token; a single machine-readable manifest replaces 34 prose
+`## Tool Access` sections. `fa read` returns `DENIED_BY_WALL` instead of bytes. Walls are keyed to
+*artifact type*, not path spelling. `fa walls verify` audits every dispatch site of a walled role.
+
+*Eliminates:* the tool-profile source of truth (`openclaw.json`) **not existing**, so the audit
+meant to catch profile mismatches cannot run and **29 of 34 agents run with all tools** including
+those whose prose says "Denied: exec"; ten agents that cannot do their declared job with their
+declared profile; the Phase-1d adversary being explicitly **handed the prior passes** the Phase-5
+exclude forbids; holdout-evaluator dispatched at the wave gate with **no `context:` block at all**;
+the same wall class spelled four ways across workflows, none in the path registry; and
+`FACTORY.md`'s own concession that "soft instructions alone are insufficient for wall enforcement."
+Note `holdout-evaluator` is granted `Bash` while "denied" `Grep` — denial of the tool, not the
+capability; only a store-side read gate closes that.
+
+### F17. Scoped writes by artifact type, single-writer ownership, write-without-commit
+Agents never name a `.factory/` path — `fa` computes it from the registry. `fa` rejects a write to a
+type owned by another role. `fa commit` is restricted.
+
+*Eliminates:* **~28 referenced-but-unregistered artifact homes** that are consequently hard-blocked —
+`planning` (84 refs), `discovery` (69), `phase-0-ingestion` (39, with 20 real files already there),
+`maintenance` (28), all seven `phase-f*` homes (128 between them), and **both autonomy configs, so
+autonomy is undefined at runtime**; `.factory/discovery/` and `.factory/maintenance/` being absent
+from disk while STATE.md records a completed sweep; **225 of 3,145 files (7.2%) matching no
+pattern**; and the never-stated distinction that makes the methodology coherent — *write freely, only
+state-manager commits* — which appears in exactly one of 34 agent files while 19 declare direct
+writes. Registry patterns also need recursion and non-`.md` extensions, and registry-vs-reference
+diffing as a CI gate (that catches `planning` vs `plans`, `feature-delta` vs `feature-deltas`, and
+`STORY-INDEX.md` vs `story-index.md` case drift that would break on Linux CI).
+
+### F18. Append-only audit of every read-deny, write and commit, attributed to a role
+`{role, lease, scope, txn, before/after version, reason}`. No write path bypasses it.
+
+*Eliminates:* dispatch identity being captured (1,045 `agent.start` events) and then **dropped before
+any write** — `hook.block` and `commit.made` carry no agent field and the tracking crate explicitly
+*forbids* an `agent_id`; so session-review's Dimension 6, literally "did the information asymmetry
+walls hold?", is unanswerable. It also replaces hand-typed `producer:` frontmatter, which already
+holds **8 identities that are not agents** (330 files by `phase-1-4b-bcs-agent-4`, two spellings of
+`codebase-analyzer`), and the compaction audit trail of **8 `git show <SHA>` pointers that no skill
+produces and nothing verifies**, covering 41 archived rows.
+
+### F19. Typed pipeline state: phase/step/wave/loop/approval frontier as rows
+One status enum. Loop runs record declared cap, iterations used, and **exit reason** (`converged` vs
+`cap_hit` vs `escalated`). Human approvals get pending state, a timeout clock, and recorded answers.
+Skip-propagation semantics defined.
+
+*Eliminates:* **six mutually incompatible STATE.md schemas** where the live file fails its own health
+check on two fields and `PASSED` — the verdict the contract prescribes — appears nowhere in it; the
+same transition restated in 6–7 hand-maintained places per burst; a 2,100-character `current_step:`
+as the de-facto "where are we"; **four conflicting size budgets** (200/415/500) and 27 lines of
+self-reported `wc -l` in an HTML comment; two shipped skills that cannot satisfy a third shipped
+skill's schema, making recover→health-check a guaranteed FAIL; `waiting_human_approval` not existing
+while the heartbeat wants to nudge on it after 4h; iteration caps disagreeing across four sources
+(3/5/10 for Phase 5 alone) with **no record distinguishing convergence from cap-hit**; and
+conditional steps in `depends_on` making the wave gate and Phase 7 **unsatisfiable for non-UI
+products**.
+
+### F20. Checkpoints and crash recovery from the log, never from a filesystem re-scan
+`fa checkpoint create|rehydrate|status`; write-ahead log; `fa txn list --incomplete`; `fa recover`;
+`fa fsck`.
+
+*Eliminates:* `wave-handoff` **never pushing** while its exit-code table claims a push failure mode,
+so CAP-032 losslessness holds only on one machine; a mid-burst crash having no recovery path in any of
+three windows, with the next session's `git stash push -u` burying half-applied work as "sidecar
+noise"; a documented FAIL recovery (`git reset --soft HEAD`) that is a **no-op** and then manufactures
+the forbidden two-commit burst; `recover-state` scanning disk while ignoring `git log` and admitting
+it cannot recover five sections that are all in history; and two divergent health skills where the
+advisory one claims to detect divergence using `git status --porcelain` (which cannot) and whose
+auto-repair is **blocked by the factory's own destructive-command guard**.
+
+**Port `rehydrate-wave` almost unchanged** — the closed-form injection set, the `INJECTED_FILE_COUNT`
+sentinel, warn-on-missing-member, hard-error-on-missing-manifest, the explicit no-RAG prohibition, and
+its literal postcondition→mechanism table. It is the best-specified subsystem in the corpus. Move its
+anti-fabrication checks (40-char-hex, no-hardcode/no-cache, three-state `precompact_flush_sha` that
+hard-blocks rather than writing a bad value, non-empty `active_bcs`, CWE-116 interpolation guard) into
+`fa`, where an agent cannot skip the step that runs them.
+
+### F21. Agent handles instead of filesystem paths
+An agent receives a scoped handle; it never resolves `.factory` against ambient cwd.
+
+*Eliminates:* the entire "which `.factory` am I in" class — `resolve-worktree-identity.sh` exists
+solely because naive git resolution read "the wrong `.factory` (the exact #169 regression)";
+`EnterWorktree` has **zero occurrences** in the tree, so everything is raw `cd`/`git -C`; and
+`.factory/.factory/logs/` exists on disk, caught only by a **PostToolUse** hook that fires *after*
+the write it describes as "silently creates artifacts in the wrong place".
+
+### F22. Operations the workflows already assume and nothing provides
+- **`fa workflow validate|plan|run`** understanding all six real step types. Today the validator
+  permits three and requires `task`, so it **rejects nearly every real step**, and `run-phase`
+  cannot execute any phase workflow at all. Needs cycle detection for the mutual
+  `planning ↔ greenfield` recursion and both gate-block shapes.
+- **`fa schedule`** — both greenfield and feature say "**Schedule** post-feature validation" at
+  7/30/90 days; there is no scheduler and no schedule store, so nothing will ever fire. Discovery
+  declares five cadences behind one run id.
+- **`fa pr`** — story ⇄ PR ⇄ CI ⇄ merge as one join. `pr-manager` is denied `exec`, so every
+  `gh pr view` is a sub-agent dispatch, and dependency-ordered merge is an N-dispatch join with **no
+  persisted story→PR mapping**. Merge prerequisites must be *verdicts*, not filenames: today the hook
+  checks three files exist and satisfies "security review conducted" via a regex over a PR
+  description that pr-manager writes itself.
+- **`fa cost`** — the five-tier budget response up to HARD STOP reads `cost-summary.md`, which does
+  not exist and is unregistered. Budget-driven control flow has no data source.
+- **`fa attest`** — `phase-4-holdout-evaluation.lobster` **blocks** on "different model family
+  (GPT-5.4, not Claude)", a claim nothing can verify and which every agent's `model: opus` frontmatter
+  falsifies. The 23 `model_tier:` keys have no resolver, and the config they route through does not
+  exist. Model diversity is either checkable or it is decoration.
+- **`fa doctor`** — resolve the manifest, every declared read/write target, every walled role's
+  dispatch sites, and every referenced hook plugin. This one command would have surfaced most of what
+  six reviews found by hand.
+
+---
+
+## What to keep exactly as-is
+
+`fa` should preserve, not redesign: the **three adversary perimeters** with typed
+`deferred_findings` targeted at a receiving gate; **brownfield's strict-binary novelty rule** and its
+anti-fabrication clause ("fabricating findings is strictly worse than stopping"); the **coverage audit
+that novelty decay structurally cannot replace** ("make it prove coverage with greps" — it found blind
+spots in 5 of 5 repos after 19–62 rounds); the **two-phase validation split** with its
+`(claimed, recounted, delta)` arithmetic where any non-zero delta is an error; **L4 immutability** with
+`amends:` refinement and withdrawal-in-place; **append-only traceability** with
+`# Existing chain (DO NOT MODIFY)`; the **L0–L4 readiness routing** that refuses to assume the human
+arrives with a finished brief; **regression always full, never delta-scoped**; **"fast revocation,
+slow promotion"** on autonomy; the **release mandatory-invariants table** where each rule carries its
+failure mode, and its escalation contract ("do not improvise on the release pipeline"); the
+**gate presentation protocol** with structured questions, on the stated grounds that "the
+user-as-senior-architect catches things the adversary doesn't"; and the **budget tiers** that never
+downgrade the adversary, holdout-evaluator, formal-verifier, pr-reviewer or security-reviewer.
 
 ---
