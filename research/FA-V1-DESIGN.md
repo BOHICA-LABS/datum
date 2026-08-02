@@ -19,6 +19,49 @@ decisions_settled: 2026-08-02 (authoring surface · v1 scope · type system · w
 | **V-E** | **This workstream builds `fa` only. The vsdd-factory changes are a separate workstream and are DOCUMENTED here, not made.** | Deliverable: `research/FA-V1-FACTORY-CHANGES.md` — a change spec precise enough to execute against without re-deriving it. |
 | **V-F** | **Every project using the factory migrates, not just vsdd-factory.** | Multi-tenancy is a v1 requirement, not a later feature. Measured today: vsdd-factory **6,951** conformance findings · prism **10,843** · rivetry **1,032** (18,826 total). prism is the largest and is edited by a concurrent session — **re-measure before trusting any prism count.** |
 
+### Ratified consequences of the L1–L2 design (2026-08-02)
+
+Two of its calls change the spine and are adopted:
+
+- **One store PER PROJECT, and no `project` column.** The predicate is discharged by *store
+  selection* rather than by a `WHERE` clause. The argument that decides it is measured, not
+  aesthetic: push contention is **per-branch and untunable** (`research/SCALE.md`: 10 clones on one
+  branch produced 54 attempts *with disjoint rows*, versus 1 each on distinct refs, and backoff
+  tuning made it **worse**). A shared store would therefore make vsdd-factory's writes reject
+  prism's for no semantic reason. It also matches invariant 19's actual failure mode — **an
+  omittable predicate is the defect; a store handle cannot be omitted.** The registry stays shared by
+  living in the binary.
+- **The registry GENERATES the schema** — one uniform model (`artifact` + `artifact_field` +
+  `artifact_ref` + body/section) with per-type views, rather than 119 hand-written tables. Coverage
+  stops being ~101 separate tasks and becomes definitional. The typed-core/generic-tail hybrid was
+  rejected on this project's own evidence: 5 types carry 3,801 of ~3,900 artifacts while 62 of 119
+  have 0–1 files, and **two homes for one field is precisely the defect this spike exists to kill.**
+
+⚠ **The one genuinely unmeasured risk in the whole design** is the pivot cost of the field-per-row
+model at corpus scale. Per this repo's standing rule it gets measured before it gets committed to —
+a materialization fallback is specified but has **no trigger**, and a design resting on an
+unmeasured assumption is exactly what "never report a number a test could contradict" forbids.
+
+**`status` vs `lifecycle_status` — measured, and a resolution recommended (pending ratification).**
+The L1 design asked for a PO call on the 1,949-of-1,959 disagreement. Measured over all 1,959 BCs:
+
+| field | distribution |
+|---|---|
+| `status` | **draft 1,951** · active 6 · ready 2 · withdrawn 1 |
+| `lifecycle_status` | active 1,945 · retired 5 · deprecated 4 · fulfilled 1 · draft 3 · withdrawn 1 |
+
+The dominant pair is `('draft', 'active')` on **1,937** files. These are therefore **not two copies of
+one fact** — they are authoring-maturity and lifecycle-state, and the first has degenerated to a
+constant carrying no information (99.6% `draft`). D-D's "narrow `status` to lifecycle only" resolves
+to: **retire `status` as a dead field, keep `lifecycle_status` as the lifecycle**, and have the
+BC-INDEX Status projection read the live field. This also explains a correction already on record —
+BC `Status` looked like 0.8% agreement until the probe was pointed at the field the index actually
+tracks.
+
+⚠ **The 2 namespace renames are now a hard precondition, not a tidiness item.** Schema generation
+reads the registry, so `story-spec`→`story` and `state`→`pipeline-state` must land before generation
+is meaningful. They were previously filed as blocked-on-user cleanup.
+
 ### What V-F changes about the design
 
 The three corpora do not share conventions, and the registry already records where they diverge —
@@ -92,12 +135,12 @@ Existing invariants 1–14 carry forward from `research/SPEC.md`. v1 adds:
 | # | Invariant | Why |
 |---|---|---|
 | **15** | `import(render(store)) == store`, byte-exact | D-B. The only honest proof migration is lossless and reversible. Currently declared and **unbuilt** — highest-priority gap. |
-| **16** | Every artifact stores its **verbatim body**, and its section partition satisfies `concat(sections) == body` | D-A. Today only 3 tables carry a body, so 31% of the corpus cannot be rendered back. |
-| **17** | No stored value is derivable from another stored value | Kills the six-BC-totals class at the schema level rather than by check. Enforced by `authority` in the registry. |
+| **16** | Every artifact stores its **verbatim body**, and its section partition satisfies `concat(sections) == body` | D-A. Today only 3 tables carry a body, so 31% of the corpus cannot be rendered back. **Ratified per-shape 2026-08-02:** 4 `blob-with-path` types legitimately store no body, and 11 `append-only-event` types store *entries* and derive the file — so **16 binds at capture, 15 binds at cutover**. A type claiming an exemption must declare its shape in the registry; silence is not an exemption. |
+| **17** | No stored value is derivable from another stored value | Kills the six-BC-totals class at the schema level rather than by check. Enforced by `authority` in the registry. **Ratified 2026-08-02:** read through `authority` — `artifact.path`, the catalog mirror and any materialized view are legal as **declared derived caches**, invalidated by the same derivation edges as any other projection. What is forbidden is an *authored* field that duplicates a derivable one. Three columns in the current schema are already violations and are migration targets: `bc/vp.version`, `version_cite.verdict`, `finding.occurrences`. |
 | **18** | Every write is `lease → validate → transact → version → audit`, with no bypass path | Makes L1's audit complete and attribution total; kills the 8 non-agent `producer:` identities. |
 | **19** | Every aggregate query declares a scope predicate; unscoped aggregates are refused | The 41-retired-stories result. A count that agrees while meaning something else is the defect no other check catches. |
 | **20** | Every enum value, reference target and natural key is validated at write time, not at read time | The difference between "impossible" and "detected" in §1. |
-| **21** | No force path, no auto-merge, no auto-rebase anywhere in the store | The CAS-as-force finding. Conflict is surfaced and refused, never resolved. |
+| **21** | No force path, no auto-merge, no auto-rebase **on artifact data** | The CAS-as-force finding. Conflict is surfaced and refused, never resolved. **Ratified 2026-08-02:** the L1 design was right that this collided with F4's "audited `--force` lease break". Resolution — a lease is not artifact data, so revocation is permitted, but it is **TTL expiry or human-authorized revocation that writes no artifact**, never a force that overwrites a version. The factory's `factory.lock.stolen` mandatory-audit instinct is preserved; the force verb is not. |
 | **22** | Every gate verdict cites machine-produced evidence; `pass` without evidence is rejected | Wave 15 declared CONVERGED with no record that three of six gates ran. |
 | **23** | Identity is assigned by the store and never appears in artifact content | Retires the whole SHA-transcription class in one rule. |
 
