@@ -217,13 +217,15 @@ itself says what it is waiting for instead of pretending to work.
 | `mdtable.go` | markdown table parsing + cell normalisation, each rule carrying the false-finding count it prevents |
 | `shadow.go` | story 7's shadow stage: derive each index, adjudicate cell by cell, never write |
 | `findings.go` | story 4: adversarial findings as ROWS — six id conventions, one row per (review, finding_id), structural ownership |
+| `subartifact.go` | story 12a: AC/EC/PC/T-task as rows with TYPED links; POLICY 8 becomes a join |
+| `proseref.go` | story 12b: section refs (3-way resolution over D-A's partition) + version cites judged by pin_policy |
 | `graph*.go` · `csr.go` | the knowledge-graph projection and the compact CSR engine for 250k+ |
 | `baseline.go` | the dated allowlist and its ratchet |
 | `doctor.go` | writability, half-merge, schema, content |
 | `quarantine.go` | the `fa aggregate` staging-ref policy |
 | `workflows/fa-validate.yml` | the CI gate (deploy to `.github/workflows/` in vsdd-factory) |
 
-Tests: `CGO_ENABLED=1 go test -tags gms_pure_go ./...` — 106 tests, ~6.8 s, no
+Tests: `CGO_ENABLED=1 go test -tags gms_pure_go ./...` — 116 tests (99 top-level functions, 116 including subtests), ~6.7 s, no
 network and no `dolt` binary. The integration tests run against a real embedded
 store built from a fixture corpus with one planted violation per gate: a gate that
 has never been shown failing has been run, not tested.
