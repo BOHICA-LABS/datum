@@ -514,4 +514,169 @@ transcribed into the payload that defines it, and half the gates fail open on a 
 
 ---
 
-*(Areas 5–6 — artifact model, alternate modes — pending.)*
+## AREA 5 — Non-greenfield modes, delivery, release
+
+### What it is
+
+**8 declared modes, 14 declared paths.** Step counts (via `bin/lobster-parse`): greenfield 72,
+brownfield 26, feature 82, maintenance 34, discovery 29, planning 24, multi-repo 39, code-delivery 23.
+
+**Mode detection** is a single 5-rule dispatch: `project.yaml` → multi-repo; else
+`phase-0-ingestion/project-context.md` present + implementation → feature; absent + `src/` →
+brownfield; absent + no `src/` → greenfield; human phrase → discovery/maintenance; explicit override
+wins.
+
+**Feature mode** replaces Phase 1 with F2 *delta* and Phase 2 with F3, skipping repo-init,
+`adaptive-planning`, CI/CD setup and scenario rotation because "all work is scoped to the delta".
+The delta is `NEW ∪ MODIFIED ∪ DEPENDENT`, **fixed at F1 and immutable** (expansion needs log →
+present → human approve). The scoping matrix is the good part: F4/F6/F7 scope *primary* work to the
+delta but **regression always runs the full suite** — "Silent breakage in unrelated modules is the
+most dangerous kind of regression" — and dependency auditing must always scan the full tree.
+Convergence is delta-only so a small feature isn't held hostage by pre-existing gaps; regression is
+a separate binary check.
+
+**Spec evolution is genuinely append-only.** Continue BC numbering, mark modified BCs UPDATED with
+the previous version inline, "do NOT rewrite or restructure existing unaffected requirements". **L4
+immutability is the hard rule**: once a VP has a passing proof it is `status: locked` and no agent may
+change its pre/postconditions or invariants; refinement mints VP-NNN+1 with `amends:`; withdrawal
+keeps the record with `withdrawal_reason`. Version bumps propagate *upward* (L4 → L3 patch → L2 minor
+→ L1). Traceability extends by **appending** with an explicit `# Existing chain (DO NOT MODIFY)`
+marker, and deprecated requirements stay in the chain as historical record.
+
+**Brownfield ingestion** is the most carefully-designed subsystem reviewed. Passes 0–6 with 7-tier
+file prioritization, a two-sub-pass domain model, and **tests as first-class spec inputs** (test
+assertions → postconditions, fixtures → preconditions, error cases → error contracts, property tests
+→ invariants; confidence HIGH from tests / MEDIUM from code / LOW inferred). Then broad-then-converge
+deepening, ordered 2 and 3 first because later passes benefit from the entity knowledge. Three
+mechanisms make it converge rather than drift: **verbatim carryover** of next-round targets (the
+agent must not pick its own, "which causes topic drift"), a **contradiction mandate** ("the most
+recent round is not automatically right"), and a **negative-finding catalogue** — phantoms must be
+retracted with `CONV-ABS-N` markers, not silently dropped.
+
+Novelty decay is a **strict binary** and the enforcement language is exactly right:
+
+> Only the literal token `NITPICK` counts as convergence. The orchestrator MUST ignore
+> "borderline NITPICK" / "effectively converged" / "recommend halting"… **The agent has no authority
+> to declare convergence — only the protocol does.** … Agents are systematically bad at predicting
+> whether the next round will converge.
+
+With no fixed maximum — "The protocol stops; the agent never does. Empirical: Vault Pass 2 needed 62
+rounds (R6/R10/R15/R30 each predicted 'next is NITPICK' and were wrong)" — and an anti-fabrication
+clause: "Fabricating findings is strictly worse than stopping."
+
+And then a **coverage audit that novelty decay structurally cannot replace**: "every one of 5 repos
+showed genuine B.5 blind spots after 19-62 rounds of convergence", because round-driven deepening
+selects targets from prior-round flags and drifts toward already-covered areas. It must be
+grep-driven: "Don't ask the agent 'are there gaps' — make it prove coverage with greps."
+
+**Validation (B.6)** mandates a two-phase split — behavioral judgment, then **arithmetic** recount
+producing `(claimed, recounted, delta)` where "any non-zero delta is an error regardless of
+magnitude" — because "mixing the phases lets metric inflation slip through". Iteration cap 3
+("diminishing returns, validated by AgenticAKM across 29 repositories"), and an L3 abort: >50%
+hallucinated means re-run with better file prioritization.
+
+**Delivery** is a 23-step typed sub-workflow: worktree → stubs → tests + **red gate** (`type: gate`,
+"tests compile" + "all tests fail", `fail_action: block`) → implement → per-story adversarial
+convergence → UI gates → demo recording (≥1 `.gif`/`.webm` per AC, **not** `.txt`, success *and*
+error paths) → squash+push → PR → pr-reviewer (4th model family, walled from `.factory/**`) ∥
+security-reviewer → convergence loop → brownfield full-regression (**HALT if any existing test
+fails**) → CI → dependency-ordered merge → merge → cleanup.
+
+**Two independent autonomy axes**, both metric-gated: merge autonomy L3/L3.5/L4 with risk thresholds
+and a `restricted_file_patterns` list that always demands a human; and phase-gate autonomy where
+promotion needs `AutonomyScore ≥ 0.85 sustained over 20 runs` with **"fast revocation, slow
+promotion"** — one level auto-revoked if the score drops below 0.70 for any 5-run window.
+
+**Release** defers to `RELEASING.md` as single source of truth, with seven **mandatory invariants**
+each carrying its failure mode — branch from develop not main ("else marketplace ships stale
+source"), merge with `--merge` not `--squash` ("squash collapses develop's ancestry; future releases
+see false 'diverged' warnings"), tag on main, exact tag name because `release.yml` only fires on
+`v*`. The automation split is deliberate: "Pre-tag is operator-driven on purpose: the human is the
+one who knows what's ready to ship and who writes the CHANGELOG narrative." And the escalation
+contract is unambiguous: **"If you encounter a failure mode not in the recovery section, STOP…
+Do not improvise on the release pipeline."**
+
+### What is broken
+
+**The mode discriminator does not exist.** `phase-0-ingestion/project-context.md` — the file rule 2
+branches on — is absent, so **feature mode is only reachable by human override**, yet
+`feature-delta/` and two `cycles/v1.0-feature-*` directories prove it has run repeatedly.
+
+**The scope predicate has no carrier.** `.factory/phase-f1-delta-analysis/affected-files.txt` is
+referenced **11 times** across F1/F5/F6 and (a) does not exist, (b) is unregistered so writing it is
+hook-blocked. The real artifact is a **markdown table** at a different path, so every consumer of
+the delta must parse prose.
+
+**~28 artifact homes are referenced but unregistered, and therefore hard-blocked**, with reference
+counts: `planning` 84 (registry has `plans`), `discovery` 69, `design-system` 41,
+`phase-0-ingestion` 39 (**20 real files already live there** — a retired home, readable but frozen),
+`holdout-scenarios` 37, `session-reviews` 29, `maintenance` 28, `feature` 28, and the
+`phase-f{1..7}-*` homes 128 between them. Consequence: **`.factory/discovery/` and
+`.factory/maintenance/` are entirely absent from disk** while STATE.md records a completed
+maintenance sweep. Both autonomy configs (`merge-config.yaml`, `autonomy-config.yaml`) are likewise
+unregistered and absent — **autonomy is undefined at runtime on this project.**
+
+**Declared skips are not expressible in the workflow.** Of 82 feature steps only 42 carry any
+condition and 14 mention `trivial`; F5/F6/F7/release are unconditional. When `phase-f2-spec-evolution`
+is skipped, five F2-labelled steps still run — including `phase-f2-gate` and
+`phase-f2-human-approval`. So a "skip" removes the worker and leaves the gate and the human approval
+live. Whether F5 runs on a trivial change has **three incompatible answers** across the skill, F1,
+and the docs. Same pattern in maintenance, where `state-backup-sweep-N` is unconditional behind
+conditional sweeps.
+
+**The validation floor shipped at a third of spec and passed.** `extraction-validation.md` reports a
+125-of-1,851 sample = **6.75%** against a required ≥20% — "because nothing computes the ratio".
+
+**Seven spellings of one `document_type`** — `adversarial-review` (257), `adversary-review` (69),
+`adversarial-review-pass` (47), `adversary-pass-report` (28), `adversary-pass` (21),
+`per-story-adversary-review` (6), `local-adversary-review` (6) — and this is a **live gate bypass**:
+`validate-template-compliance.sh` resolves a template by `document_type` and exits 0 "if no template
+found". Every non-greenfield artifact class has no template. **Choosing a variant spelling silently
+skips the structure gate.**
+
+**A retired enum value is still hard-coded in three gates.** Phase 0 requires `origin: recovered`;
+the template enum is `greenfield|brownfield`; the real census is 1,875 `brownfield` / 79 `greenfield`
+/ 5 `spec-revision` — **zero `recovered`**, plus a third value not in the enum.
+
+**Feature mode has two incompatible frontmatter schemas under one `document_type`** — one keyed
+`feature_id`/`timestamp`/`producer` with `level: F1` and routing keys, the other keyed
+`cycle_id`/`created`/`author` with none of them. Delivery artifacts are the least structured: 61
+`pr-description.md` samples have **no frontmatter at all** (it's passed verbatim to `gh`), burying a
+YAML block inside a `<details>` element instead. Four of six declared per-story artifacts exist
+**zero** times; the one that actually carries the PR number and merge SHA is undeclared and exists in
+2 of 64 directories.
+
+**Maintenance findings have no ID, no status and no suppression**, so a false positive re-fires
+weekly forever — and the session review's own goal, "review sweep effectiveness — false positive
+rate", is uncomputable. The maintenance gate is `fail_action: warn`, i.e. non-blocking. Discovery has
+**no `type: gate` step at all**.
+
+**No time-series anywhere.** `regression-state.json` is a single overwritten record, so the autonomy
+criterion "zero regressions in the last 20 runs" cannot be evaluated. Five sweeps require "compare
+against last baseline" with no store.
+
+**Nothing is scheduled.** Both greenfield and feature say "**Schedule** post-feature validation" at
+7/30/90 days — with no scheduler and no schedule store, so nothing will ever fire.
+
+**Discovery carries no provenance at all** — no `inputs:`, no `input-hash:`, no `traces_to:` on any
+artifact, so drift detection is blind to the whole layer. The only signal→insight link is a prose
+table of labels, `competitive-baseline.md` is mutated in place so the baseline an insight was
+computed against is unrecoverable, and the URGENT route fires on two terms that live in different
+artifacts **with no join key**. There is also no idea→ship→outcome link: the calibration loop is
+explicitly specified ("if features with high discovery scores consistently MISS, the weights need
+adjustment") but the only shared field is a date, so two runs on one day collide.
+
+**On the factory's own repo, `quality_gates: {mode: standard}`** — which *disables* every VSDD
+convergence, holdout, formal-verification and adversarial gate at release. Only four `pre_release`
+shell checks run. And `publish: null`, so distribution is a marketplace PR, not a registry.
+
+Also: `Mode:` is prose in the PR body with a real value (`fix-burst`) outside the template's enum;
+demo-recording and record-demo both target `.factory/demo-evidence/` while the delivery gate requires
+`docs/demo-evidence/` on the feature branch (and record-demo permits a `.txt` fallback the gate
+rejects); `technical-writer` is not wired into delivery or release at all, and being denied `exec` it
+cannot run `git log` to build a changelog; the maintenance sweep count is documented as 9, 10 and 11
+(actual 11, with Sweeps 10 and 11 absent from the skill entirely); path numbering disagrees between
+the orchestrator sequences and the paths guide; and the discovery composite score has three
+different formulas.
+
+---
