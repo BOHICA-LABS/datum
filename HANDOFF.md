@@ -1,131 +1,171 @@
 # HANDOFF — dolt-artifact-spike
 
-## ⭐⭐⭐⭐ SESSION SNAPSHOT — 2026-08-01 (wrap at `9be0fcf`) — READ THIS FIRST
+## ⭐⭐⭐⭐⭐ SESSION SNAPSHOT — 2026-08-01 (wrap at `983df3d`) — READ THIS FIRST
 
-**STORY 7's shadow stage and STORY 4's rows both LANDED. Story 12 is NOT started.**
-Corpora READ-ONLY throughout (verified: 0 md/yaml modified in all three).
+**STORY 7 (shadow stage), STORY 4 (findings as rows) and STORY 12 (split into 12a + 12b) ALL
+SHIPPED, plus the three registry pattern defects they depended on.** Nothing in flight, no WIP.
+Corpora READ-ONLY throughout: **0 md/yaml modified in vsdd-factory**; rivetry's 1 was already
+dirty at session start; prism's are a CONCURRENT session, not this work.
+
+Repo: `~/Dev/scrap/dolt-artifact-spike`, **local-only git, NO remote**, clean at `983df3d`.
+The 148 MB `fa/fa` binary is gitignored — rebuild it (kick-start below).
 
 | commit | what |
 |---|---|
-| `2922740` | **STORY 7 — the SHADOW stage.** `fa shadow` derives BC-INDEX / VP-INDEX / STORY-INDEX from the store and adjudicates them cell by cell against the authored documents. Writes NOTHING (hash-verified). **658 findings.** |
-| `9be0fcf` | **STORY 4 — findings as ROWS.** `review` + `adversarial_finding` tables; 390 reviews, 2,211 finding rows; each review's claim about itself compared against `COUNT(*)`. |
+| `2922740` | **STORY 7 — the SHADOW stage.** `fa shadow` derives BC-INDEX / VP-INDEX / STORY-INDEX from the store and adjudicates them CELL BY CELL against the authored docs. Writes NOTHING (hash-verified). **658 findings.** |
+| `9be0fcf` | **STORY 4 — findings as ROWS.** `review` + `adversarial_finding`; 390 reviews, 2,211 finding rows; each review's claim vs `COUNT(*)`. |
+| `387425a` | handoff for the above |
+| `90b43da` | **STORY 12 — measured the ALTERNATIVE first.** 93.6% of prose refs should be ROWS, not extracted. |
+| `aa274dd` | **the DENOMINATOR GAP closed — it overturned my own priority.** |
+| `6722cac` | **the three `prose_ref_kinds` defects fixed + gated** (check `[1n]`). |
+| `d05be8a` | **STORY 12a** — AC/EC/PC/T-task as rows with typed links; POLICY 8 is a JOIN. |
+| `632a6fa` | **STORY 12b** — section refs + version cites judged by `pin_policy`. |
+| `0dc28cb` | corrected a test count I overstated in `632a6fa`'s own message (118 → 116). |
+| `983df3d` | **12b follow-up** — sampled the dangling refs; the corpus addresses a section THREE ways. |
 
-### Verified state (every number re-runnable, see the kick-start below)
+### Verified state — every number re-runnable from the kick-start
 
 | | |
 |---|---|
-| `fa` | **106 tests**, ~6.8 s, no network, no `dolt` binary. Schema **v2**. |
-| registry validator | exit 0 · **18,826** conformance findings (was 18,418 — **stale**, reconciled exactly in registry/README.md: +408 is the registry's own tightening on identical input, +22 untracked prism files) |
-| `fa validate --registry` | **6,957** findings (was 6,864; +93 is story 4's new gate = 68 count + 24 category + 1 severity — fully accounted) |
-| `fa shadow` | **658** findings: 573 real drift · 44 editorial · 41 facts about derivation itself |
+| `fa` | **117 tests**, ~6.7 s, no network, no `dolt` binary. **Schema v4.** |
+| `registry/validate_registry.py` | exit **0** · **18,826** conformance findings · check `[1n]` reports **15** prose-ref kinds |
+| `fa validate --registry` | **7,487** total (776 store-side + 6,711 registry-side) |
+| `fa validate` (store-side only) | **776** — top: 306 floating cites lag · 218 POLICY-8 · 68 review-count · 58 dep-direction |
+| `fa shadow` | **658** — 573 real drift · 44 editorial · 41 facts about derivation itself |
+| `fa import` | bc 1,959 · vp 80 · story 148 · reviews 390 · finding rows 2,211 · sub-artifacts 4,492 (+914 typed links) · prose refs 3,537 · version cites 2,197 |
 | graph / waves | unchanged: 2,421 nodes · 148 stories in 16 waves · 0 cycles |
-| repo | local-only, NO remote, clean at `9be0fcf` |
 
-### ⭐ THE TWO RESULTS THAT MATTER MOST, because they change what comes next
+**New subcommands:** `fa shadow <corpus>` (story 7) · `fa refs --kind section|version-cite
+[--status X]` (read-only listing; sampling requires listing).
+**New tables:** `review`, `adversarial_finding`, `sub_artifact`, `sub_artifact_ref`, `prose_ref`,
+`version_cite`.
 
-1. **A derived index needs a DECLARED SCOPE PREDICATE, or derivation silently changes the
-   document's meaning.** 41 of 148 stories live in `stories/v1.0-legacy/` and STORY-INDEX
-   deliberately omits them (verified as exact set equality, 41 == 41). Generating from every
-   record would have **resurrected 41 retired stories while every count still agreed** — a
-   defect no count check, id-set check or cell check would catch. Story 4 arrived at the SAME
-   class independently (a review's `findings_total` counts only the findings it OWNS, not the
-   pass-1 findings it re-states). **Scope currently lives in Go `shadowSpecs`; it belongs in
-   the registry beside `derivation_stage`.**
-2. **MEASURE THE COLUMNS BEFORE WRITING THE RULES.** `registry/probe_indexes.py` ran first and
-   the first cut reported **~2,768 findings that were artefacts of its own normalisation** —
-   4x the 658 that survive. Two named classes came out of it: a normalisation rule aimed at the
-   WRONG COLUMN manufactures exactly what it was added to prevent (252+40 self-inflicted
-   findings), and **rule ORDER is a correctness property** (emptiness-before-counting asserted
-   the opposite of the truth on 18 rows).
+### ⭐⭐ THE FIVE TRANSFERABLE RESULTS — these change how the next work is done
 
-### ✅ STORY 12 IS DONE — SPLIT INTO 12a + 12b, BOTH SHIPPED (2026-08-01, `632a6fa`)
+1. **A DERIVED ARTIFACT NEEDS A DECLARED SCOPE PREDICATE**, or derivation silently changes the
+   document's meaning. 41 of 148 stories live in `stories/v1.0-legacy/` and STORY-INDEX
+   deliberately omits them (verified as EXACT set equality, 41 == 41). Generating from every
+   record would have **RESURRECTED 41 retired stories while every count still agreed** — a
+   defect no count, id-set or cell check would catch. **Story 4 hit the identical class
+   independently** (`findings_total` counts only the findings a pass OWNS, not the pass-1 ones it
+   re-states in its fix-verification section). ⚠ **Scope still lives in Go `shadowSpecs`; it
+   belongs in the registry beside `derivation_stage`.**
+2. **MEASURE BEFORE WRITING THE RULES.** The probes ran first, and the first cuts STILL reported
+   **~2,768 findings that were artefacts of their own normalisation** — 4× the 658 real ones.
+   Two named sub-classes: a normalisation rule aimed at the **WRONG COLUMN** manufactures exactly
+   what it was added to prevent (292 self-inflicted), and **RULE ORDER IS A CORRECTNESS
+   PROPERTY** (emptiness-before-counting asserted the *opposite* of the truth on 18 rows).
+3. **MASS ≠ VALUE. Never infer a value split from a mass split.** Over corpus mass, prose refs
+   are 93.6% row-shaped / 6.4% prose. Over **the adversary's findings** — the denominator the
+   21.8% value claim uses — 12a and 12b are **EQUAL at 36.8% of class C each**, with 26.3% beyond
+   both. I recommended the wrong priority from the mass number. Thousands of `D-\d+` mentions
+   collapse into a handful of findings; one inlined `100ms` literal is a finding by itself.
+4. **A HAND-MAINTAINED VOCABULARY DRIFTS FROM ANOTHER HAND-MAINTAINED VOCABULARY.** Three times
+   this session a hardcoded list was the defect: story 4's review types (disagreed with the
+   Python extractor's list on 8 spellings both ways), the prose-ref probe's pattern copy, and the
+   registry's own unanchored patterns. **Always read the vocabulary FROM the registry.**
+5. **CHECK YOUR FIX'S PREDICTION, don't tune.** I predicted prefix-of-heading matching would
+   recover ~160 of 250 dangling refs; it recovered **46**. Reading ONE failing case instead of
+   tuning is what exposed the third section-addressing scheme. Tuning would have buried it.
 
-**It was split because the ALTERNATIVE was measured first.** 93.6% of prose-reference candidates
-point at something that should be a ROW, and 26% of what a permanent extractor finds is
-structurally unadjudicable (the prose never says whose `AC-005` it is). Then the DENOMINATOR GAP
-was closed and it overturned the priority: over corpus MASS it is 93.6/6.4, but over the
-ADVERSARY'S FINDINGS 12a and 12b are **equal at 36.8% of class C each**, with 26.3% beyond both.
-Inferring a value split from a mass split was the error. See `research/PROSE-REFS-OR-FIELDS.md`
-and `registry/class_c_decomposition.json`.
+### Corrections I made to my OWN claims — carry these forward
 
-| | shipped |
-|---|---|
-| **registry defects first** | patterns were UNANCHORED (over-match 9,947; `t_task` 73% noise) · kind list INCOMPLETE by ~22,750 refs (5 new kinds declared; head now flat at 649) · `version_cite` saw 2.4% of its subject. All three gated by check `[1n]` |
-| **12a** | 4,492 sub-artifact rows + 914 typed links. **POLICY 8 is now a JOIN** → 218 findings. Two new declared rules removed 105 false findings that blamed documents for correctly documenting gaps |
-| **12b** | 2,197 version cites judged by **pin_policy** (306 floating-lagging; pinned-lagging NOT reported, by design) + 3,570 section refs resolved THREE ways (854 resolved · 329 dangling · 2,387 unresolvable) |
+- **BC `Status` looked like 0.8% agreement** (catastrophic). My probe read `lifecycle_status`.
+  BC files carry **BOTH** `status: draft` (1,950) and `lifecycle_status: active` (1,945);
+  BC-INDEX tracks `status` and real agreement is **99.4%**. Same error explained VP
+  Type/Proof-Method/Scope, all actually 98.8–100%.
+- **The 18,418 baseline was STALE.** Reconciled exactly: 902da9d registry on pinned corpora
+  18,396, +22 untracked prism files = 18,418; HEAD registry on the SAME pinned input 18,804;
+  working 18,826. **+408 is the registry's own tightening, NOT corpus drift.**
+- **My probe over-counted reviews by ONE** (391 vs `fa`'s 390) — a `re.M` fallback matched a
+  `document_type:` line in a BODY. 390 is correct.
+- **My undeclared-forms census over-counted by ~12,150** — a generic `[A-Z]+-…` sweep captured
+  hyphenated English (`PASS-WITH-NITS`, `WASM-only`, `WONT-FIX`). Found by SAMPLING the tail.
+  ⚠ That correction moved the number in FAVOUR of a conclusion I had already reached, which is
+  exactly when to be most skeptical; it rests on 26 of 1,585 tail forms.
+- **I overstated a test count** in `632a6fa`'s message (118 vs 116). Corrected in `0dc28cb`.
 
-⚠ **Coverage of a CLASS is not reproduction of each INSTANCE.** Both instruments emit the right
-kinds of finding at scale; per-finding reproduction of all 19 class-C findings is a separate
-check and is **not** claimed.
+### NEW findings no gate reported before
 
-### ▶▶▶ TOP PRIORITY NEXT. Nothing in flight.
+- **`status` and `lifecycle_status` DISAGREE on 1,949 of the 1,959 BC files carrying both.** Two
+  fields for one concept — D-D's territory, and nothing reports it today.
+- **The `adversarial-finding` template's OWN id convention was the one form the extractor
+  missed.** `adv-s8.00-p1.md` claimed 14 findings and extracted 0 while documenting that exact
+  format in its own `## Finding ID Convention` section. **Six id conventions** live in the corpus.
+- **Severity is unresolved on 23% of finding rows** (499 of 2,211) across six prose conventions.
+- **The corpus addresses a section THREE ways**: heading NAME · section ORDINAL (D-A's own key) ·
+  ITEM within a section (`§Postcondition 5` where the doc has `## Postconditions`).
+- **330 BC-5.\* files carry `capability: CAP-001`** while BC-INDEX distributes them across 11
+  capabilities (`CAP-070`…`080`). One drift event = half of `fa shadow`'s findings.
 
-1. ✅ **DONE — sampled.** It found that the corpus addresses a section THREE ways (heading NAME ·
-   section ORDINAL · ITEM within a section). Resolved **854 → 1,408 (+65%)**, dangling **329 →
-   214**. `fa refs --kind section --status dangling` lists them. **Per-reference reporting is
-   still NOT earned** — 214 remain and their post-fix precision is unmeasured. NEXT: sample those
-   214. ⚠ A prediction of mine failed here (expected ~160 recovered from prefix matching, got 46);
-   reading one failing case instead of tuning is what exposed the third scheme.
-2. **Adjudicate the 330-row Capability block** and the 218 POLICY-8 findings — PO calls.
-3. **Move the shadow SCOPE PREDICATE into the registry** beside `derivation_stage`.
-4. **Story 6** (ledgers → rows) now covers 26,632 of the reference mass; story 12's census says
-   it is the largest remaining row-shaped block.
-5. Reviews still have **no declared natural key** (the key is the path, which D-C forbids).
+### ▶▶▶ TOP PRIORITY NEXT — nothing is in flight
 
-### The superseded plan (kept for the reasoning, not the sequence)
+1. **Sample the remaining 214 dangling section refs** to earn PER-REFERENCE reporting. Currently
+   AGGREGATE ONLY, deliberately: their post-fix precision is unmeasured and a confident wrong
+   finding set is worse than a count. `fa refs --db X --kind section --status dangling` lists them.
+2. **Move the SCOPE PREDICATE into the registry** beside `derivation_stage` (result 1 above). It
+   is the one thing blocking any derived type from advancing `shadow → proven`.
+3. **STORY 6 — ledgers to append-only rows.** The census puts it at **26,632 references**, the
+   largest remaining row-shaped block (`decision` 20,788 + `lesson` 5,844).
+4. **Adjudicate, as PO calls not tool calls:** the 330-row Capability block · the 218 POLICY-8
+   findings · the 68 reviews whose stated finding count disagrees with their own body.
+5. **Give the store what it lacks:** `vp.status` (VP-INDEX's Status column is UNDERIVABLE today
+   and says so) · a representation for a withdrawn-in-place row (`~~BC-2.02.013~~`) · a **declared
+   natural key for reviews** (the key is the corpus-relative PATH, which D-C forbids as identity).
+6. `cycles/INDEX` is now shadowable — story 4 unblocked it.
 
-Worth 21.8% ±8.7 of the adversary's findings. Everything it needs is declared (9
-`prose_ref_kinds`, 7 `prose_ref_rules`, `pin_policy` on all 23 link types, CSR for the section
-nodes). **Three rules are load-bearing or it manufactures false findings:** exclude code spans
-(`ADR-099` appears as an example CLI arg), resolve as-of through `id_alias` (`BC-1.12.008` was
-legitimately renumbered to `BC-3.05.004`), and report `unresolvable`-owner refs separately from
-`dangling`. Sub-artifact ids key on `(owning_artifact_key, ac_id)`. Also the 250k-node driver
-(~100k section nodes).
+### ⛔ BLOCKED ON THE USER (all need write access to vsdd-factory / GitHub — ASK, do not assume)
 
-**Apply this session's two results to it directly:** probe the reference classes and measure
-agreement BEFORE writing the resolution rules (`registry/probe_indexes.py` and
-`probe_findings.py` are the pattern), and expect a SCOPE question — which documents' prose
-references are in scope is the same class of declared predicate as the two above.
+- the **2 namespace renames** (`story-spec`→`story`, `state`→`pipeline-state`) that close story 1.
+  `validate_registry.py` prints **EXIT CRITERION NOT MET: 2** until they land.
+- **opening the ADR** and registering the policy.
+- **answering #671** — an open, unbuilt proposal by another author that this direction contradicts.
 
-**Then, to finish story 7 and 4 (each already has its open list written down):**
-- adjudicate the **330-row Capability block** (330 BC-5.\* files say `CAP-001`; BC-INDEX
-  distributes them across 11 capabilities `CAP-070`..`080`) — a PO call, not a tool call
-- move the scope predicate into the registry · settle the 38 planned STORY-INDEX rows · give
-  the store `vp.status` and a withdrawn-in-place representation
-- **reviews have NO declared natural key** (the key is the path, which D-C forbids as identity)
-- `cycles/INDEX` is now shadowable (story 4 unblocked it)
+### Read, in this order, for the next session
 
-### New findings this session that no gate reported before
-
-- **`status` and `lifecycle_status` DISAGREE on 1,949 of the 1,959 BC files carrying both.**
-  Two fields for one concept — D-D's territory, and nothing reports it today.
-- **The `adversarial-finding` template's own id convention was the ONE form the extractor did
-  not know.** `adv-s8.00-p1.md` claimed 14 findings and extracted 0 while documenting that
-  exact format in its own `## Finding ID Convention` section. Six id conventions live in the
-  corpus; that is the argument for rows, not a parser to fix once.
-- **Severity is unresolved on 23% of finding rows** (499 of 2,211) across six competing prose
-  conventions.
-
-### Read for story 12
-
-`research/SHADOW-INDEXES.md` (story 7, and the 2,768 false findings its rules prevent) ·
-`research/FINDINGS-AS-ROWS.md` (story 4) · then `research/FSTAR-COMPARISON.md` §4, which
-scopes story 12.
+`registry/README.md` (the standard + the 18,826 reconciliation) ·
+`research/SHADOW-INDEXES.md` (story 7, and the false findings its rules prevent) ·
+`research/FINDINGS-AS-ROWS.md` (story 4) ·
+`research/PROSE-REFS-OR-FIELDS.md` (**why story 12 was split, the denominator gap, and the
+dangling-ref follow-up**) · `registry/class_c_decomposition.json` (the 19 hand-classified
+findings, one reason each) · `registry/CHANGE-MANAGEMENT.md` (ADR + policy + 16 stories).
 
 ### Kick-start
 
 ```sh
 cd ~/Dev/scrap/dolt-artifact-spike/fa
-CGO_ENABLED=1 go build -tags gms_pure_go -o fa . && CGO_ENABLED=1 go test -tags gms_pure_go ./...
-cd .. && python3 registry/validate_registry.py                    # exit 0 · 18,826
+CGO_ENABLED=1 go build -tags gms_pure_go -o fa .      # BOTH flags mandatory
+CGO_ENABLED=1 go test -tags gms_pure_go ./...          # 117 tests, ~6.7 s
+cd .. && python3 registry/validate_registry.py         # exit 0 · 18,826 · [1n] 15 kinds
 ./fa/fa init --db /tmp/fadb && ./fa/fa import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
-./fa/fa validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 6,957
-./fa/fa shadow   --db /tmp/fadb ~/Dev/vsdd-factory/.factory             # 658
-python3 registry/probe_indexes.py && python3 registry/probe_findings.py  # the measurements
+./fa/fa validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 7,487
+./fa/fa shadow   --db /tmp/fadb ~/Dev/vsdd-factory/.factory              # 658
+./fa/fa refs     --db /tmp/fadb --kind section --status dangling         # 214
+./fa/fa waves --db /tmp/fadb && ./fa/fa graph build --db /tmp/fadb
+python3 registry/probe_indexes.py && python3 registry/probe_findings.py && \
+  python3 registry/probe_prose_refs.py      # the measurements every rule came from
 ```
 
-⚠ **prism's corpus advanced again** (`.factory` `95b90d003` → `9f3443d6f`; the other session
-committed its 24 stories). Re-measured across it: prism's total is **10,843 either way**.
+⚠ **prism's corpus is edited by a CONCURRENT session** (`.factory` advanced `95b90d003` →
+`9f3443d6f` mid-session; 46 files dirty at wrap, none of it this work — verified 0 modified in my
+active window). Its conformance total was **10,843 either way**. Re-measure before trusting any
+prism count. vsdd-factory and rivetry were static.
+
+### OPERATING PRINCIPLES — every one earned by a real error in this repo
+
+- Measure, don't assume. **NEVER infer a consequence from a structural fact.**
+- **MEASURE THE ALTERNATIVES TO A LEVER BEFORE PULLING IT.** It has now deleted planned work
+  TWICE: free `degree` beat betweenness (AUC 0.871 vs 0.725 at 1/3000 the cost), and measuring
+  rows-vs-prose split story 12 in half instead of building a permanent extractor.
+- **Never report a number a test could contradict.** Chase every "off by a little" — an off-by-ONE
+  review count exposed a frontmatter-parsing difference; an off-by-408 exposed a stale baseline.
+- **Never collapse exit 1 (gate failed) and exit 2 (fa failed).**
+- **Before claiming a field name, measure whether it is already in use** (`gate` and `scope` both
+  were).
+- **A regex must not cross block boundaries**, and **a parser that silently loses input is the
+  single most repeated defect class here** — six instances, the sixth in the STANDARD itself.
+- **Parity, not inspection.** 67/67 rules Go-vs-Python; CSR-vs-gonum on hand-worked answers.
+- **Counting files is not counting artifacts; counting MENTIONS is not counting findings.**
 
 ---
 
