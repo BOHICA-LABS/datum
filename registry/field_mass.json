@@ -1,0 +1,55 @@
+{
+  "grand": {
+    "artifact_field_rows": 133674,
+    "distinct_field_names": 4198,
+    "files": 6538,
+    "files_no_frontmatter": 1132,
+    "files_with_frontmatter": 5406,
+    "keys_empty": 4639,
+    "keys_list": 5096,
+    "keys_scalar": 102064,
+    "list_items": 26971
+  },
+  "overlong_values": 18,
+  "per_corpus": {
+    "prism": {
+      "artifact_field_rows": 46644,
+      "distinct_field_names": 1686,
+      "files": 2785,
+      "files_no_frontmatter": 737,
+      "files_with_frontmatter": 2048,
+      "keys_empty": 1875,
+      "keys_list": 2151,
+      "keys_scalar": 34585,
+      "list_items": 10184
+    },
+    "rivetry": {
+      "artifact_field_rows": 18164,
+      "distinct_field_names": 2132,
+      "files": 668,
+      "files_no_frontmatter": 78,
+      "files_with_frontmatter": 590,
+      "keys_empty": 185,
+      "keys_list": 568,
+      "keys_scalar": 10061,
+      "list_items": 7918
+    },
+    "vsdd-factory": {
+      "artifact_field_rows": 68866,
+      "distinct_field_names": 380,
+      "files": 3085,
+      "files_no_frontmatter": 317,
+      "files_with_frontmatter": 2768,
+      "keys_empty": 2579,
+      "keys_list": 2377,
+      "keys_scalar": 57418,
+      "list_items": 8869
+    }
+  },
+  "rows_per_artifact_percentiles": {
+    "max": 127,
+    "p50": 24,
+    "p90": 36,
+    "p99": 70
+  }
+}
