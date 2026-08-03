@@ -22,7 +22,343 @@
   importer split ledger fields into rows now" was chosen over my recommendation to file it. Build it.
 
 
-## ⭐⭐⭐⭐⭐ SESSION SNAPSHOT — 2026-08-02 (wrap at `1d2024b`) — READ THIS FIRST
+## ⭐⭐⭐⭐⭐ CURRENT SNAPSHOT — 2026-08-03 (wrap at `b3d1bdc`) — READ THIS FIRST
+
+**Workstream:** `fa` v1 — the sole home for every artifact of every project using the vsdd-factory
+methodology. **v1 is DESIGNED (now L1–L7, all seven layers) and PARTLY BUILT.** This session moved the
+code for the first time in three sessions.
+
+**Repo:** `~/Dev/scrap/dolt-artifact-spike` · **local-only git, NO REMOTE** · clean at `b3d1bdc` ·
+8 commits this session. The 148 MB `fa/fa` binary is gitignored — rebuild it (kick-start below).
+
+**ONE-LINE RESUME:** read this block, then `research/FA-V1-DESIGN.md` (the spine — now **16** settled
+decisions), then the task list below.
+
+### What shipped this session
+
+| commit | what |
+|---|---|
+| `18cc040` | **assessed the persona-storyboard process** (read all 1,951 lines) → its fix-burst register is a **THIRD validation register**; 7 transfer candidates, 3 load-bearing |
+| `bfdb308` | ⭐ **closed the pivot cost** — the design's ONE unmeasured assumption — and **DERIVED the missing materialization trigger** |
+| `bfa2807` | ⭐ **fixed all three importer defects + INSTANCE TEN + the subsystem-catalog gap** → `fa import` now ingests **ALL THREE corpora** (was one) |
+| `f1df615` | recorded the **STANDING DIRECTIVE** (top of this file) |
+| `2da3d57` | **L7 designed** — interfaces (CLI/MCP/CI) + a 7-phase delivery plan with per-phase exit criteria |
+| `71a651f` | **adversarial review** of the four layer designs — 8 findings CONFIRMED, 3 WITHDRAWN |
+| `02b4e00` | **RAN the storyboard process against `fa`** — 6 NEW gaps nothing else surfaced |
+| `b3d1bdc` | ⭐ **V-L SETTLED** — the engine question the first 15 decisions left open |
+
+### ⭐ V-L — the engine is now settled, and defended by a PROPERTY SET not a product name
+
+**None of D-A..D-D or V-A..V-K had ever named a storage engine.** Dolt was the spike's *hypothesis*.
+Asked directly whether to move to a graph database, the answer came out measured:
+
+- **The data model is ALREADY graph.** `artifact_field(type,key_hash,field,ord,kind,v_text…)` **is
+  subject–predicate–object**; `artifact_ref` is edges. L2-A specifies a **triple store in SQL**. The
+  only live question was which engine stores the triples.
+- ⭐ **Dolt IS the graph database for TRAVERSAL — measured.** GMS (pure Go, no `dolt` binary)
+  **accepts recursive CTEs**: reachability with correct shortest depths, cycles **terminate**, cycle
+  **detection** works. Real graph (1,547 of 4,060 edges): depth 1 → **1 ms**, 3 → 2 ms, 6 → 6 ms,
+  12 → 13 ms (fixpoint at 6); **whole-graph transitive closure ≤8 = 19,628 pairs in 356–392 ms**.
+- ⚠ **This CORRECTED an overclaim in our own code.** `fa graph`'s help said *"algorithms SQL cannot
+  do"* — true only for **articulation points** and **betweenness**, FALSE for traversal, and
+  **`degree` (the best predictor, AUC 0.871) is a `GROUP BY`.** Help text fixed. The CSR engine's live
+  justification narrows to articulation points + the 250k-node scale case; betweenness was already
+  tested and REJECTED.
+- **L1-0 = the property set P1–P7** (versioned · branch+merge · cell-level merge · SQL **incl.
+  recursive CTEs** · declarative referential integrity · embeddable with no server/binary/network ·
+  transactional). **P1/P4/P6 are VETO properties.** Any engine satisfying all seven is admissible;
+  Dolt is retained on that basis. TerminusDB named and declined, with reasons.
+
+### Verified state — every number re-runnable from the kick-start
+
+| | |
+|---|---|
+| `fa` | **134 tests PASS, 0 fail**, ~15 s · **schema v5** · no network, no `dolt` binary |
+| `fa import` | ⭐ **all THREE corpora** — vsdd `bc=1959 vp=80 story=148` · prism `bc=269 vp=80 story=115 subsystem=22` (+7 collisions) · rivetry `bc=134 vp=55` (+**123** collisions) |
+| `fa validate --registry` | **7,502** (was 7,487; +15 = the new census/ledger/subsystem findings — reconciles exactly with import findings 106→121) |
+| `fa shadow` | **658 — UNCHANGED** |
+| `fa refs --kind section` | resolved **2035** · dangling **30** · unresolvable **1550** — **UNCHANGED** |
+| `validate_registry.py` | **18,936** (vsdd 6,951 · prism **10,953** · rivetry 1,032) ⚠ +105 vs session start is **prism corpus drift** (its concurrent session added 18 `DEFECT-*` files at 08:23–08:25), NOT our change |
+| ledger fields | **18 → 229 entries**, byte-exact reversible; largest **51,566 bytes / 116 entries** |
+| pivot | record read **1.0×** · filtered 2.9× · aggregate **21.7×** · full scan **152.9×** · trigger **190,000** field rows · largest type 49,121 (260 ms) = **3.9× headroom** |
+| storage | at rest EAV **2.37×** · per-edit EAV **12× CHEAPER** · journal amplification **306.6×** |
+| field mass | **133,674** total · **68,866** largest corpus (= order 10⁴, **not** the claimed 10⁵) |
+
+### ▶▶▶ TOP PRIORITY NEXT — the task list, mirrored from the ephemeral tracker
+
+**Session task list: 6 of 6 ✓ COMPLETE** (storyboard assessment · pivot measurement · importer fixes ·
+L7 design · adversarial review · storyboard run) **+ V-L settled on request.** Nothing in flight.
+
+⭐ **THE NEXT SESSION'S WORK, as the user framed it — PERSONAS RE-BASED ON THE FACTORY AGENTS:**
+
+1. **RE-BASE the personas on the 34 real vsdd-factory agents** (measured:
+   `~/Dev/vsdd-factory/plugins/vsdd-factory/agents/*.md` — adversary, architect, product-owner,
+   story-writer, implementer, state-manager, holdout-evaluator, pr-reviewer, spec-reviewer,
+   session-reviewer, code-reviewer, data-engineer, devops-engineer, test-writer, ux-designer,
+   technical-writer, security-reviewer, formal-verifier, e2e-tester, performance-engineer,
+   pr-manager, spec-steward, stub-architect, business-analyst, codebase-analyzer,
+   consistency-validator, demo-recorder, dtu-validator, dx-engineer, github-ops, research-agent,
+   accessibility-auditor, validate-extraction, visual-reviewer).
+   ⚠ **This CORRECTS the storyboard run's cast.** The existing roster (SYS-CC / SYS-ALT / SYS-CI /
+   HUM-OP) is the **TRANSPORT axis**, not the **ROLE axis**. Transport is a *dimension* of a persona;
+   the **agent is the identity**. Why it matters: L3 already says *"a role is a set of permitted
+   operations, not a set of writable globs"*, so **the persona roster and the role→operation manifest
+   are the same artifact** — and X7 requires that manifest before any type can dual-write, putting
+   this on the critical path. It also makes `DENIED-ASYMMETRY` concrete (the perimeter belongs to
+   `adversary` and `holdout-evaluator` specifically) and gives V-I's six diversity-mandated roles
+   real names.
+   ⚠ **Use the runbook's OWN Stage 1 Step 2 distinct-behavioural-cluster test to collapse 34 → ~8–12
+   personas** (merge if identical decision authority + goals across every workflow; split only if one
+   named role holds two materially different authorization sets). Otherwise the coverage cube becomes
+   34 × 42 ≈ 1,400 hand-built cells, and it is already flagged as needing to be GENERATED.
+2. **Per persona: what QUESTIONS does it ask of the store?** The read/query workload, concretely —
+   `adversary` needs *"this diff and nothing about prior passes"*; `state-manager` needs *"the current
+   position"*; `product-owner` needs *"which BCs have no verifying VP"*. **Then verify the store can
+   answer each, and TEST it.** We have measured query *shapes* but never the actual questions a named
+   role would ask.
+3. **Per persona: what CRUD ops does it need?** The write surface. This is where least privilege
+   becomes real, and the ~800 generated ops are expected to be **very unevenly distributed** — that
+   distribution IS the least-privilege argument. Produces the **role→operation manifest** (X7).
+4. **FINISH the storyboard stages that were mapped but not executed.** Honest state: only **ONE**
+   journey exists (`journey-sys-cc.md`); Stages 6 / 6.5 / 7 / 8 were mapped, not run; and the coverage
+   cube's own verdict is **0 of 42 workflows evidenced**, which by the runbook's anti-pattern rule
+   means every workflow currently fails its evidence gate.
+
+5. ⭐⭐ **MODEL AND TEST MULTI-DEV / MULTI-INSTANCE OPERATION** (user-added 2026-08-03). How do N
+   human devs running N instances of the factory coexist — state tracking, task/story claims,
+   artifact attribution?
+
+   **The concrete question asked, and its measured answer:** *does `fa` read the git environment /
+   associate a username to state?* **No.** `commitName()`/`commitEmail()` (`fa/store.go`) read only
+   `FA_COMMIT_NAME`/`FA_COMMIT_EMAIL` and otherwise return the synthetic `fa <fa@local>`; nothing
+   reads `git config user.name`/`user.email`. ⚠ **Worse than synthetic — effectively UNSET:** a probe
+   showed the real data commit recorded **`committer="root" email="root@%"`**, with `fa <fa@local>`
+   appearing only on Dolt's own "Initialize data repository" commit. **So attribution is a constant
+   today, and invariant 18's "attributable" bar plus the production-grade bar's "Attributable" claim
+   are both currently FALSE.**
+
+   **SHOULD it read git identity? Yes — but as ONE OF THREE AXES, never as authorization:**
+
+   | axis | answers | supplied by | used for |
+   |---|---|---|---|
+   | **human** | which dev | git config / explicit flag | provenance, blame, review routing |
+   | **agent role** | which of the 34 agents | the harness (role token) | **authorization** (L3: a role is a set of permitted operations) |
+   | **session** | which instance/run | the harness (session/trace id) | correlating a write burst; detecting a retry storm |
+
+   Constraints, each with a reason already on record:
+   - **Git identity is trivially forgeable** (`git config user.email anyone@...`), so it is PROVENANCE
+     only. Typed `caller-asserted`, never verified, never gated on — otherwise it repeats V-I's
+     defect (an unverifiable claim treated as a gate) and violates L7-K.
+   - **Do not collapse human into role.** That is the same wrong-axis error the persona cast already
+     made. **Every write records the TRIPLE.**
+   - **Fail closed, no silent fallback.** A container/CI runner with no git config must be REFUSED,
+     not defaulted — a default that looks like a real identity is worse than absence
+     (`unevaluable = block`).
+
+   WARNING - THE HARDER HALF, AND IT IS UNSETTLED ANYWHERE: **under D-B the store is GITIGNORED and
+   the render is COMMITTED, so two devs NEVER SHARE A STORE — they share markdown through git.** That
+   means store-side leases (invariant 21) protect nothing *across* devs today, and multi-instance
+   convergence happens by git merge on the render, not in the store. **The decision that determines
+   everything else: does each dev keep a PRIVATE store converging only through the committed render,
+   or does a project's store become SHARED — which re-opens SCALE.md's per-branch push contention,
+   measured at 54 attempts with disjoint rows and made WORSE by backoff tuning?**
+
+   **This is not new scope — `fa` already promised it.** vsdd-factory has `factory-lock` /
+   `factory-unlock`: a cross-session lock on the factory-artifacts orphan branch, CAS-protected push,
+   and a `--force` break-glass with a mandatory audit event. The six-area review flagged that
+   machinery's defects (*lock inside the protected file, CAS-push-as-force, fetch-before-check that
+   reads a local file*) as things **`fa` replaces with store-side leases.** So `fa` has committed to
+   owning multi-dev coordination and has never modelled it.
+
+   **Sub-tasks:** (a) settle private-vs-shared store; (b) the three-axis identity triple on every
+   write, failing closed; (c) coordination primitives — lease TTL/ownership/revocation, task+story
+   claims, and what replaces CAS/break-glass; (d) pipeline-state per dev or per project (V-H helps:
+   STATE.md is a position report, not truth); (e) **TEST IT** — two identities, overlapping AND
+   disjoint writes, a crashed lease holder, a retry storm, a stale-render merge; extend SCALE.md's
+   10/20-clone and 200-agent harnesses; (f) impacts — invariant 18 attribution, whether a HUMAN has a
+   role in the perimeter model or only agents do, and whether **one-store-per-project survives contact
+   with multiple devs.**
+
+**TWO DECISIONS TO SETTLE BEFORE BUILDING (do not assume):**
+- Derive each agent's read/write needs from **its agent file** (what it says it does) or from **what
+  the corpus shows it actually did**? Those will disagree — **and the disagreement is itself a
+  finding.**
+- Does a persona needing **zero writes** stay a persona, or become a pure reader?
+- ⭐ **Private store per dev, or one shared store per project?** This gates the whole multi-dev model
+  (task 5) and nothing in D-A..D-D or V-A..V-L answers it.
+- ⭐ **Does a HUMAN hold a role in the perimeter model, or only agents?** L3's authorization is
+  role-based; if humans have roles, the 34-agent roster is not the whole cast.
+
+### ⛔ ALSO OUTSTANDING — carried forward, in priority order
+
+From the adversarial review (`research/FA-V1-ADVERSARIAL-REVIEW.md`), highest first:
+1. **F1 — locations are Go path literals, not registry data.** SYSTEMATIC across every layer;
+   contradicts V-F; **manufactures FALSE findings.** Measured: `epic`/`fr`/`nfr` = 17/48/88 for vsdd
+   but **0/0/0 for BOTH other projects**, producing **114 false "missing epic"** findings in prism,
+   while `adr`/`cap`/`di` load fine — which is what makes it dangerous. **Ship the zero-universe guard
+   immediately** (any universe empty while ≥1 artifact references it is a finding) — that alone makes
+   all four instances loud, cheaply. Then `sources:` in the registry.
+2. **F8 — X1's denominator shares its numerator's enumerator**, so the anti-instance-nine
+   conservation gate can catch a *filter* bug but never a *location* bug (prism's epics: enumerate 0,
+   compare 0, **PASS**). Needs a total whole-corpus partition into types ∪ `unmodeled_file`.
+3. **F2 — the registry hash gate re-couples every project**, contradicting V-F's independence
+   requirement. Version compatibility, not hash equality.
+4. **F3 — cohort gate X4 embeds a volatile scalar** ("the 18,826 baseline"), which went stale TWICE
+   in one session. Cite artifact + version.
+5. F5 (risk #6's sign is inverted) · F7 (the 10⁵ / 2,362-BC figures) · F4 (cite gate-shaped latencies).
+
+From the storyboard run (`storyboard/v0.1.0-fa/WORKFLOW-INVENTORY.md` §7) — **G-4..G-9 are NEW and
+share one shape: a state entered with NO ROUTE BACK OUT.**
+- **G-4** timing side channel on `DENIED-ASYMMETRY` — undefended and unmentioned in ANY design doc
+- **G-5** a cursor must carry its project, or cross-tenant leakage returns via L7's new chunking
+- **G-6** erasure has NO anti-persona (premature deletion; a vacuously-passing count assertion)
+- **G-7** `fa` cannot detect an **abandoned** `CONTINUATION`
+- **G-8** a recorded classification is replayed forever; no `reclassify` / re-open path
+- **G-9** exit 2 is the only handoff leaving the machine and **who receives it is unrouted**
+
+Also queued: add "surface unpushed/dirty worktrees" to `fa fsck` (F20).
+
+### ⛔⛔ BLOCKED ON THE USER — Phase 0, and it gates schema generation
+
+- the **2 namespace renames** (`story-spec`→`story`, `state`→`pipeline-state`) — a **hard
+  precondition** of schema generation, not cleanup. `validate_registry.py` prints
+  `EXIT CRITERION NOT MET: 2` until they land.
+- **opening the ADR** and registering the policy · **answering #671**
+- **rivetry's `delta-archive` disposition** — it is the source of 123 of its key collisions
+- prism's 80 `vp-*.md`: **ANSWERED this session — fix the matcher** (done), do not rename the corpus
+- prism's 7 `FOLLOWUP` story-id collisions: versions or new ids?
+
+### Nothing was left running
+
+No background commands, no sub-agents, no WIP. Working tree clean. **All three reference corpora were
+READ-ONLY** — verified 0 `.factory` md/yaml written by us in vsdd-factory and rivetry; prism's 21
+touched files are all its OWN concurrent session (18 `DEFECT-*` stories + its STORY-INDEX + its
+STATE/SESSION-HANDOFF). ⚠ `~/Dev/multi-repo` was read in full and **not modified** (its 7 dirty files
+predate this session: `.gitignore` 2026-07-08, `CLAUDE.md` 2026-07-24).
+
+⚠ **A blind spot worth carrying:** `git status --porcelain | grep '\.md$'` **misses files inside an
+untracked directory**, and prism's `.factory` is **gitignored entirely** — so a corpus can change with
+zero porcelain output. Check file counts and mtimes, not just `git status`.
+
+### ⭐ THE RESUME PROMPT — paste this whole block into a fresh session
+
+```text
+READ FIRST — ~/Dev/scrap/dolt-artifact-spike/HANDOFF.md. Read (a) the STANDING DIRECTIVE at the
+very top, then (b) the CURRENT SNAPSHOT — 2026-08-03 block. Together they are a complete,
+self-sufficient zero-context resume: the 8 commits, the 16 settled decisions, every re-runnable
+number, what is outstanding, and what is blocked on me. Ignore the 2026-08-02 block's resume
+prompt — it is marked stale and its tasks are done.
+
+STANDING DIRECTIVE, which outranks any instinct to descope: production grade from day 1. Spend
+the time to do it right. DO NOT DEFER unless I tell you to. Do not narrow a fix to its symptom.
+Every fix ships with its gate, preferably over the REAL corpora rather than a fixture.
+
+WHAT THIS PROJECT IS: `fa` becomes the SOLE HOME of every artifact for EVERY project using the
+vsdd-factory methodology. v1 is DESIGNED across all seven layers L1-L7 and PARTLY BUILT — the
+importer now ingests all three corpora, but there is still NO write path, NO `fa render`, and NO
+section table.
+
+THE TASK — personas re-based on the FACTORY AGENTS, then their queries and their CRUD:
+ 1. RE-BASE the storyboard personas on the 34 real vsdd-factory agents at
+    ~/Dev/vsdd-factory/plugins/vsdd-factory/agents/*.md. The existing cast (SYS-CC/SYS-ALT/
+    SYS-CI/HUM-OP) is the TRANSPORT axis, not the ROLE axis — transport is a dimension, the
+    AGENT is the identity. This matters because L3 already says "a role is a set of permitted
+    operations", so the persona roster and the role->operation manifest are THE SAME ARTIFACT,
+    and X7 needs that manifest before any type can dual-write. Collapse 34 -> ~8-12 personas
+    using the runbook's OWN Stage 1 Step 2 distinct-behavioural-cluster test (merge on identical
+    decision authority + goals; split only on two materially different authorization sets),
+    otherwise the coverage cube becomes 34 x 42 hand-built cells.
+ 2. Per persona: what QUESTIONS does it ask of the store? Concrete queries, not shapes. Then
+    VERIFY the store can answer each one AND TEST IT.
+ 3. Per persona: what CRUD ops does it need? Expect a very uneven distribution over the ~800
+    generated ops — that distribution IS the least-privilege argument. Output: the
+    role->operation manifest.
+ 4. FINISH the storyboard stages that were mapped but not executed. Honest state: only ONE
+    journey exists, Stages 6/6.5/7/8 were mapped not run, and the cube says 0 of 42 workflows
+    are evidenced — so by the runbook's own rule every workflow currently fails its evidence gate.
+ 5. MODEL AND TEST MULTI-DEV / MULTI-INSTANCE. fa does NOT read git identity today, and attribution
+    is effectively UNSET (a probe showed committer="root" email="root@%" on the real data commit), so
+    invariant 18's "attributable" bar is currently FALSE. Should it read git identity? Yes, but as
+    ONE OF THREE AXES — human (git, forgeable, PROVENANCE ONLY) / agent role (the harness's role
+    token, which is what AUTHORIZATION uses) / session id — recorded as a triple on every write,
+    typed caller-asserted, failing CLOSED with no silent fallback. THE HARDER HALF, unsettled
+    anywhere: under D-B the store is GITIGNORED and the render COMMITTED, so two devs never share a
+    store, they share markdown through git, and store-side leases protect nothing across devs.
+    Settle private-vs-shared store FIRST; it gates everything else and re-opens SCALE.md's per-branch
+    push contention. Not new scope: fa already promised to replace factory-lock's CAS/break-glass
+    with store-side leases. Then TEST it (two identities, overlapping+disjoint writes, crashed lease
+    holder, retry storm, stale-render merge).
+
+TWO DECISIONS TO SETTLE WITH ME FIRST, do not assume: (a) derive each agent's needs from its
+AGENT FILE or from WHAT THE CORPUS SHOWS IT DID — they will disagree, and the disagreement is
+itself a finding; (b) does a persona needing ZERO writes stay a persona or become a pure reader?
+
+ALSO OUTSTANDING, highest first — F1 (locations are Go literals, not registry data; SYSTEMATIC,
+contradicts V-F, and MANUFACTURES false findings: epic/fr/nfr are 0/0/0 for two of three
+projects, producing 114 false "missing epic" findings; ship the zero-universe guard first, it is
+cheap) · F8 (X1's denominator shares its numerator's enumerator, so it cannot catch a LOCATION
+bug) · F2 (the registry hash gate re-couples every project) · F3 (X4 embeds a volatile scalar) ·
+G-4..G-9 from the storyboard run, which share one shape: A STATE ENTERED WITH NO ROUTE BACK OUT.
+
+BLOCKED ON ME — ASK, do not assume: the 2 namespace renames (a HARD PRECONDITION of schema
+generation) · opening the ADR · answering #671 · rivetry's delta-archive disposition · prism's 7
+FOLLOWUP story-id collisions.
+
+DO NOT RELITIGATE the 16 settled decisions D-A..D-D and V-A..V-L (spine §§0, 5b-5e). V-L is the
+newest: the store is a VERSIONED RELATIONAL engine holding a TRIPLE model, the graph is a
+PROJECTION served by recursive CTEs, and the engine is defended by the property set P1-P7 (L1-0)
+rather than by the name "Dolt".
+
+OPERATING PRINCIPLES — every one earned by a real error here:
+  - Measure, don't assume. NEVER infer a consequence from a structural fact.
+  - MEASURE THE ALTERNATIVES TO THE LEVER BEFORE PULLING IT.
+  - CHECK YOUR FIX'S PREDICTION, don't tune. Reading ONE case beat tuning twice more this
+    session (instance ten, then the escaped-quote truncation).
+  - A parser that silently loses input is the most repeated defect class here — TEN instances,
+    two of them inside fa itself. Print per-form counts; report malformed; never drop.
+  - A hand-maintained vocabulary drifts from another one. Read vocabulary FROM the registry.
+  - A green check that never ran is not evidence — and a test that LOGS a failure instead of
+    failing is that same defect (I shipped one this session and had to fix it).
+  - Never report a number a test could contradict.
+  - Corpora are READ-ONLY. `git status` MISSES gitignored/untracked-dir changes — check counts
+    and mtimes. No AI attribution in commits. This repo has NO remote.
+
+STATE: clean at b3d1bdc, local-only git, NO remote. 8 commits last session. Nothing in flight,
+no WIP, nothing running.
+```
+
+### Kick-start (shell only)
+
+```sh
+cd ~/Dev/scrap/dolt-artifact-spike/fa
+CGO_ENABLED=1 go build -tags gms_pure_go -o fa .      # BOTH flags mandatory
+CGO_ENABLED=1 go test -tags gms_pure_go ./...          # 134 PASS, 0 fail, ~15 s
+cd .. && python3 registry/validate_registry.py         # exit 0 · 18,936 (prism drifts — re-measure)
+for c in vsdd-factory prism rivetry; do                # ALL THREE now import (exit 0)
+  rm -rf /tmp/fa_$c && ./fa/fa init --db /tmp/fa_$c >/dev/null
+  ./fa/fa import --db /tmp/fa_$c ~/Dev/$c/.factory
+done
+./fa/fa validate --db /tmp/fa_vsdd-factory --registry ~/Dev/vsdd-factory/.factory   # 7,502
+./fa/fa shadow   --db /tmp/fa_vsdd-factory ~/Dev/vsdd-factory/.factory              # 658
+# the measurement probes (opt-in; they need a corpus)
+cd fa && CGO_ENABLED=1 go test -tags gms_pure_go -run TestWideRowCeiling -v .
+FA_PIVOT_CORPUS=~/Dev/vsdd-factory/.factory CGO_ENABLED=1 go test -tags gms_pure_go \
+  -run 'TestPivotCost|TestPivotStorage' -v -timeout 30m .
+CGO_ENABLED=1 go test -tags gms_pure_go -run TestGraphInSQL -v .   # the V-L evidence
+cd .. && python3 registry/probe_field_mass.py
+```
+
+### Read, in this order
+
+`research/FA-V1-DESIGN.md` (**the spine — 16 settled decisions, incl. §5e V-L**) →
+`research/FA-V1-ADVERSARIAL-REVIEW.md` (**what is wrong with the design, F1 first**) →
+`research/FA-V1-L7-INTERFACES-DELIVERY.md` (the 7 phases + exit criteria) →
+`storyboard/v0.1.0-fa/` (the persona work to re-base) →
+`research/FA-V1-PIVOT-MEASUREMENT.md` · `research/STORYBOARD-METHOD-ASSESSMENT.md` → the layer docs.
+
+---
+
+## SESSION SNAPSHOT — 2026-08-02 (wrap at `1d2024b`) — superseded by 2026-08-03 above
 
 **THE PROJECT CHANGED SHAPE THIS SESSION.** It is no longer "can Dolt back a tool that shadows the
 factory's artifacts". The user set the goal: **`fa` becomes the SOLE HOME of every artifact for EVERY
@@ -250,7 +586,7 @@ then the layer you are working on: `FA-V1-L1-L2-STORAGE-SCHEMA.md` · `FA-V1-L3-
 `FA-V1-L5-L6-POLICY-ENGINE.md` · `FA-V1-MIGRATION.md` · `FA-V1-FACTORY-CHANGES.md`.
 `research/VSDD-FACTORY-REVIEW.md` is the problem statement + its own corrections block.
 
-### ⭐ THE RESUME PROMPT — paste this whole block into a fresh session
+### ⚠ STALE RESUME PROMPT (2026-08-02) — its "TASK — all three" are DONE. Use the 2026-08-03 one above.
 
 ```text
 READ FIRST — ~/Dev/scrap/dolt-artifact-spike/HANDOFF.md, the TOP BLOCK. It is a complete,
