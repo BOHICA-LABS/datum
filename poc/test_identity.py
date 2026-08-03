@@ -34,7 +34,7 @@ from pathlib import Path
 import pymysql
 
 sys.path.insert(0, str(Path(__file__).parent))
-from fa_zones import NotVisible, Store  # noqa: E402
+from datum_zones import NotVisible, Store  # noqa: E402
 
 ROOT = Path(__file__).parent / "id"
 DBD = ROOT / "db"

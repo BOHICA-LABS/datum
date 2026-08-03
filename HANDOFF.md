@@ -221,6 +221,33 @@ L7 design · adversarial review · storyboard run) **+ V-L settled on request.**
      not defaulted — a default that looks like a real identity is worse than absence
      (`unevaluable = block`).
 
+   ⛔⛔⛔ **SECOND CORRECTION (2026-08-03) — IDENTITY AND MULTI-DEV ARE ALREADY HARNESSED. I have now
+   been wrong about this area THREE TIMES, always the same way: reasoning from the design docs instead
+   of looking at what exists.** Found while verifying the move carried the stress harnesses over:
+
+   - **`poc/test_identity.py`** covers exactly the identity question, and in more depth than the
+     three-axis sketch above. Its own docstring states the hole: *"`DATUM_ROLE` is SELF-DECLARED. An
+     agent sets an env var and reads whatever it likes. That is a hint, not an identity."* It defines
+     **three enforcement tiers** — (1) advisory role + harness tool-profile path denial (*today's
+     parity*), (2) OS user per agent + chmod/chown on zone dirs, (3) per-role DB credentials — and
+     tests **ID1–ID7**, including `ID1` self-declared role is trivially forgeable (which *quantifies*
+     the gap I merely asserted) and ⭐ **`ID7` identity gives ATTRIBUTION: writes are traceable to the
+     acting agent** — the very thing I called an open question.
+   - **`poc/test_two_devs.py`** is literally the topology: *"Two devs, two machines, one git repo,
+     multiple agents each"*, with **three coordination layers whose COMPOSITION is the question** —
+     L1 flock per machine orders local agents, L2 push / non-fast-forward rejection arbitrates between
+     machines, L3 Dolt 3-way cell merge reconciles pre-push divergence. Real subprocesses, no
+     sql-server.
+   - Siblings on the same axis: `test_multi_instance.py`, `test_multimachine.py`, `test_locking.py`,
+     `test_mutex.py`, `test_serverless_lock.py`, `test_cas_patterns.py`, `test_stress_fleet.py`,
+     `test_stress_opt.py`, `test_scale.py`, `test_zones.py`, `test_asymmetry.py`.
+
+   ⭐ **SO THE NEXT-SESSION TASK IS NOT "MODEL IT" — IT IS: READ THESE HARNESSES AND THEIR RESULTS
+   FIRST, THEN STATE WHAT IS ACTUALLY LEFT.** The genuinely new questions this session raised may
+   already be answered by ID1–ID7. What is very likely still open (but must be CHECKED, not assumed):
+   whether writer authorship survives the CI aggregator's merge DAG, and how the human identity axis
+   composes with the agent-role tiers `test_identity.py` already defines.
+
    ⛔⛔ **CORRECTION (2026-08-03, after the user challenged this and I re-read the IMPLEMENTATION).
    MY FIRST WRITE-UP OF THIS TASK WAS WRONG ON THREE OF FOUR CLAIMS. The multi-dev coordination model
    is DESIGNED, MEASURED and largely SETTLED — it is NOT unmodelled, and `factory-lock` is not being

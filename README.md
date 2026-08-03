@@ -52,7 +52,7 @@ granularity per-directory vs per-table · phase-1 scope.
 | `poc/test_factory_ops.py` | 10 tests — waves, state, context, tasks, templates, versioning |
 | `poc/test_multi_instance.py` | 9 tests — **N devs x M instances x K agents** |
 | `poc/test_scale.py` | 7 tests — scale ceilings (tunable via SCALE_* env) |
-| `poc/fa_zones.py` | zone resolution: id -> type -> zone, roles, one config file |
+| `poc/datum_zones.py` | zone resolution: id -> type -> zone, roles, one config file |
 | `poc/test_zones.py` | 9 tests — zone boundary is real, and invisible to the user |
 | `poc/test_identity.py` | 9 tests — **agent identity: what makes the wall enforceable** |
 | `poc/db/`, `mm/`, `sl/`, `mx/`, `td/`, `se/`, `lc/`, `asym/`, `fo/`, `mi/`, `sc/`, `zn/`, `id/` | Dolt data dirs (gitignored) |
