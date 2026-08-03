@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Agent identity — what makes a zone wall enforceable rather than advisory?
 
-Z6 exposed the hole: `FA_ROLE` is SELF-DECLARED. An agent sets an env var and reads
+Z6 exposed the hole: `DATUM_ROLE` is SELF-DECLARED. An agent sets an env var and reads
 whatever it likes. That is a hint, not an identity. Enforcement needs a PRIVILEGE
 BOUNDARY, and there are only three places one can live:
 
@@ -121,17 +121,17 @@ def id1_self_declared_is_forgeable():
     except Exception as e:                      # noqa: BLE001
         honest = f"{type(e).__name__}: {str(e)[:50]}"
     # The "implementer" simply claims a different role.
-    os.environ["FA_ROLE"] = "holdout-evaluator"
+    os.environ["DATUM_ROLE"] = "holdout-evaluator"
     try:
         z = Store.open(zroot).zone_for_type("holdout_scenario")
         forged = z.name
     finally:
-        os.environ.pop("FA_ROLE", None)
+        os.environ.pop("DATUM_ROLE", None)
     check("ID1 a self-declared role is trivially forgeable",
           honest is not None and forged == "walled",
           f"role=implementer  -> refused: {honest}\n"
-          f"same agent sets FA_ROLE=holdout-evaluator -> resolves zone '{forged}'\n"
-          "=> FA_ROLE is a HINT. It prevents accidents and produces good errors, but it\n"
+          f"same agent sets DATUM_ROLE=holdout-evaluator -> resolves zone '{forged}'\n"
+          "=> DATUM_ROLE is a HINT. It prevents accidents and produces good errors, but it\n"
           "   is not a boundary. Anything that reads its own role from its own\n"
           "   environment can claim any role.")
 

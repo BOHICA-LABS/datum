@@ -1,20 +1,20 @@
 ---
 title: FA-V1-MIGRATION — the per-type, per-project migration and cutover plan
 date: 2026-08-02
-purpose: move EVERY project using the vsdd-factory methodology into `fa`, staged per artifact type, with the evidence that advances each stage and the gate that proves nothing was lost
+purpose: move EVERY project using the vsdd-factory methodology into `datum`, staged per artifact type, with the evidence that advances each stage and the gate that proves nothing was lost
 status: DESIGN. No implementation. Corpora read-only throughout — 0 files modified in vsdd-factory, prism or rivetry.
 binds_to: research/FA-V1-DESIGN.md (8 settled decisions, 23 invariants — including the three 2026-08-02 per-shape ratifications of 16/17/21) · research/FA-V1-L1-L2-STORAGE-SCHEMA.md (whose `id_alias` / `reserved_key` ledgers and "16 binds at capture, 15 binds at cutover" rule this plan uses rather than redefines) · registry/CHANGE-MANAGEMENT.md (ADR, policy, 16 stories, graduation ladder, 7 hazards)
 companion: research/FA-V1-FACTORY-CHANGES.md (the vsdd-factory change spec this plan sequences against)
 ---
 
-# Migrating three corpora into `fa`
+# Migrating three corpora into `datum`
 
-Under **V-A** `fa` is the source and markdown is a rendered view; under **V-F** every project
+Under **V-A** `datum` is the source and markdown is a rendered view; under **V-F** every project
 migrates. This document is the *how*, and it is written against measurements taken today rather
 than against the numbers the review quoted, because two of them moved and three of them were
 wrong in a way that changes the plan.
 
-**The headline result of re-measuring: `fa import` cannot ingest two of the three corpora at all,
+**The headline result of re-measuring: `datum import` cannot ingest two of the three corpora at all,
 and on the third it silently loses 80 files.** Details in §1.4. That is instance nine of the
 defect class this spike has hit eight times, it is live in the tool that would run the migration,
 and it is why §5 is the longest section here.
@@ -113,10 +113,10 @@ works for one project. (CHANGE-MANAGEMENT hazard 6 said this; the layout measure
 ### 1.4 Store coverage and lossiness — and the three live importer defects
 
 The store's schema is **v4**. Exactly **three** tables carry a verbatim body — `bc`, `vp`, `story`
-(`fa/schema.go:51`, `:67`, `:88`). `adr` and `epic` hold `(id, title)` only
-(`fa/schema.go:42-45`); `holdout_scenario` holds `(hs_id, expectation)` (`:333`); `review` holds
+(`datum/schema.go:51`, `:67`, `:88`). `adr` and `epic` hold `(id, title)` only
+(`datum/schema.go:42-45`); `holdout_scenario` holds `(hs_id, expectation)` (`:333`); `review` holds
 `(review_key, cycle, pass, target, src_path)` (`:193`). There is **no `section` table** and no
-`fa render` (`./fa/fa render` → `unknown command "render"`).
+`datum render` (`./datum/datum render` → `unknown command "render"`).
 
 Classifying every typed file by what the store can hold today — B = verbatim body, R = a row but no
 body, N = no table at all:
@@ -135,7 +135,7 @@ counted the 320 + 45 untyped files into the same bucket. Same corpus, two rules,
 map is stated above so the number is checkable.
 
 **Even the B column does not round-trip today, and this is the more serious finding.** `BCRow.Body`
-is the *post-frontmatter* body (`fa/corpus.go:439`, `:485`); the frontmatter is field-extracted, so
+is the *post-frontmatter* body (`datum/corpus.go:439`, `:485`); the frontmatter is field-extracted, so
 every unmodeled key is dropped. Measured distinct frontmatter keys versus the columns that exist:
 
 | type | vsdd | prism | rivetry | example unmodeled keys (with file counts) |
@@ -162,44 +162,44 @@ shape in the registry; silence is not an exemption.**
 one:** three columns in the *current* schema already store a derivable value and must be retired
 during cohort A — `bc.version` / `vp.version` (derivable from the version chain),
 `version_cite.verdict` (derivable from `pin_policy` + the cited vs current version), and
-`finding.occurrences` (a stored `COUNT(*)`, incremented at `fa/import.go:402-403`).
+`finding.occurrences` (a stored `COUNT(*)`, incremented at `datum/import.go:402-403`).
 
 **Three importer defects, found by running it against all three corpora rather than one:**
 
 ```
-$ ./fa/fa import --db /tmp/fadb_v ~/Dev/vsdd-factory/.factory
+$ ./datum/datum import --db /tmp/fadb_v ~/Dev/vsdd-factory/.factory
 imported in 5.6s  bc=1959 vp=80 story=148 subsystem=10 edges=1509 findings=106 assertions=217
 reviews 390 · finding rows 2211 · sub-artifacts 4492 (+914 links) · prose refs 3615 · version cites 2197
 
-$ ./fa/fa import --db /tmp/fadb_p ~/Dev/prism/.factory
-fa: prose_ref stories/PLUGIN-MIGRATION-001-E-…-wasm-plugin.md: Error 1105: string 'ac-003: …' is too large for column 'target'
+$ ./datum/datum import --db /tmp/fadb_p ~/Dev/prism/.factory
+datum: prose_ref stories/PLUGIN-MIGRATION-001-E-…-wasm-plugin.md: Error 1105: string 'ac-003: …' is too large for column 'target'
 
-$ ./fa/fa import --db /tmp/fadb_r ~/Dev/rivetry/.factory
-fa: vp VP-001: Error 1062: duplicate primary key given: [VP-001]
+$ ./datum/datum import --db /tmp/fadb_r ~/Dev/rivetry/.factory
+datum: vp VP-001: Error 1062: duplicate primary key given: [VP-001]
 ```
 
 - **D1 — column overflow aborts the whole import.** `prose_ref.target` is `VARCHAR(220)`
-  (`fa/schema.go:277`) and the insert passes `r.Target` untruncated (`fa/import.go:352`), while the
+  (`datum/schema.go:277`) and the insert passes `r.Target` untruncated (`datum/import.go:352`), while the
   sibling `adversarial_finding` insert truncates statement to 2,000 and location to 500
-  (`fa/import.go:285-286`). prism cannot be imported at all. The transaction correctly rolls back,
+  (`datum/import.go:285-286`). prism cannot be imported at all. The transaction correctly rolls back,
   so this is loud, not silent — but it is a hard stop for the largest corpus.
 - **D2 — duplicate natural keys are handled three different ways for one defect class.**
-  `bc` catches `isDuplicateKey` at the insert and files a finding (`fa/import.go:191-195`);
+  `bc` catches `isDuplicateKey` at the insert and files a finding (`datum/import.go:191-195`);
   `story` catches it at *scan* time, files a finding, and **keeps the first file it walked**
-  (`fa/corpus.go:502-506`) — silently discarding the second file's body; `vp` catches it
+  (`datum/corpus.go:502-506`) — silently discarding the second file's body; `vp` catches it
   **nowhere** and crashes. Measured collisions on filename-derived keys:
   rivetry **74 BC** + **49 VP** (every one a `*.DELTA-ARCHIVE.md` sidecar colliding with its live
   file), prism **7 story** (`S-5.01-mcp-bootstrap.md` vs `S-5.01-FOLLOWUP-MCP-BOOT-mcp-server.md`;
   also `S-1.12`, `S-3.04`, +4).
-- **D3 — the ninth instance: `fa import` silently loses 80 of prism's files.**
-  `reVPFile = ^(VP-\d+)` (`fa/corpus.go:138`) is case-sensitive; **prism names every verification
+- **D3 — the ninth instance: `datum import` silently loses 80 of prism's files.**
+  `reVPFile = ^(VP-\d+)` (`datum/corpus.go:138`) is case-sensitive; **prism names every verification
   property `vp-001-tenant-id-validation.md` in lowercase** — 80 files in
   `specs/verification-properties/`, zero of which the importer sees. The empty-scan guard only
-  fires when BCs *and* VPs *and* stories are all zero (`fa/import.go:102-106`), so a project whose
+  fires when BCs *and* VPs *and* stories are all zero (`datum/import.go:102-106`), so a project whose
   entire L4 layer is invisible imports "successfully". **This is exactly the failure mode
   §6 of FA-V1-DESIGN names as the worst possible place for a ninth instance, and it is live in the
-  migration tool.** Related layout couplings, all hardcoded in `fa/corpus.go`: reviews are read
-  only under `cycles/` (`fa/findings.go:77`), so **53 vsdd + 44 prism review-family files outside
+  migration tool.** Related layout couplings, all hardcoded in `datum/corpus.go`: reviews are read
+  only under `cycles/` (`datum/findings.go:77`), so **53 vsdd + 44 prism review-family files outside
   `cycles/` are invisible**; `stories/epics/E-*.md` (`:250`), `phase-0-ingestion/pass-4-nfr-catalog.md`
   (`:231`), `specs/behavioral-contracts/ss-*` (`:285`) all assume vsdd's tree.
 
@@ -207,11 +207,11 @@ fa: vp VP-001: Error 1062: duplicate primary key given: [VP-001]
 
 | | measured today |
 |---|---|
-| `fa import` (vsdd) | **5.6 s** for 3,145 files, idempotent, one transaction (invariant 6) |
-| `fa validate` (store-side) | 776 findings beyond baseline |
-| `fa validate --registry` | 7,487 |
-| `fa shadow` (story 7) | **658** findings · BC-INDEX 7,836 cells 93.1% agreed · VP-INDEX 400 cells 97.0% · STORY-INDEX 618 cells 89.8% · writes nothing |
-| `fa` test suite | 117 tests, ~6.7 s |
+| `datum import` (vsdd) | **5.6 s** for 3,145 files, idempotent, one transaction (invariant 6) |
+| `datum validate` (store-side) | 776 findings beyond baseline |
+| `datum validate --registry` | 7,487 |
+| `datum shadow` (story 7) | **658** findings · BC-INDEX 7,836 cells 93.1% agreed · VP-INDEX 400 cells 97.0% · STORY-INDEX 618 cells 89.8% · writes nothing |
+| `datum` test suite | 117 tests, ~6.7 s |
 | prose refs | **3,615** today (HANDOFF's snapshot says 3,537 — re-measured at the same corpus pin after `983df3d`; the newer number is the one to carry) |
 
 ---
@@ -223,7 +223,7 @@ first mistake available. They are orthogonal axes and both are per type.
 
 ```
 DERIVATION ladder (registry, 23 derived types)     shadow ─► proven ─► retired
-    "is this document generated, or authored?"      (fa shadow implements stage 1)
+    "is this document generated, or authored?"      (datum shadow implements stage 1)
 
 MIGRATION ladder (this document, all 103 types)    shadow ─► dual-write ─► authoritative ─► md retired
     "who is the source of truth for this type?"
@@ -244,7 +244,7 @@ A `(project, type)` cell is **stage 0** until it has a declared **scope predicat
 This is the one result the spike already paid for: 41 of 148 vsdd stories live in
 `stories/v1.0-legacy/` and STORY-INDEX deliberately omits them (verified as exact set equality,
 41 == 41), so generating from every record would have **resurrected 41 retired stories while every
-count still agreed**. Today that predicate lives in Go (`fa/shadow.go:111` `ExcludeSrcPrefix`) and
+count still agreed**. Today that predicate lives in Go (`datum/shadow.go:111` `ExcludeSrcPrefix`) and
 it must move into the registry beside `derivation_stage` before any cell advances.
 
 Stage 0 is also where the deliberate non-migrations live, each with a recorded reason:
@@ -260,8 +260,8 @@ Stage 0 is also where the deliberate non-migrations live, each with a recorded r
 | S-E1 | the type resolves in the registry for this project — `validate_registry.py` PART 1 exits 0 over this project's values, and every raw spelling this project uses is canonical, aliased, gap-typed or explicitly retired | **green** — 0 undispositioned of 225 observed |
 | S-E2 | the type has a store table with a **verbatim body column** and a stored **ordinal section partition** | **3 of 103** types have a body; **0** have a section table |
 | S-E3 | a **declared scope predicate** in the registry for this `(project, type)` | in Go for 3 types; **absent for 100 others** |
-| S-E4 | `fa import` completes for this project without aborting, and its per-form census for this type balances | **fails outright for prism and rivetry** (§1.4 D1/D2) |
-| S-E5 | the type's filename/path pattern is read **from the registry**, not hardcoded — with per-project overrides where the layouts diverge | hardcoded in `fa/corpus.go`; costs prism 80 VP files |
+| S-E4 | `datum import` completes for this project without aborting, and its per-form census for this type balances | **fails outright for prism and rivetry** (§1.4 D1/D2) |
+| S-E5 | the type's filename/path pattern is read **from the registry**, not hardcoded — with per-project overrides where the layouts diverge | hardcoded in `datum/corpus.go`; costs prism 80 VP files |
 
 **Exit evidence (stage 1 → stage 2). This is the question the brief asks precisely, so it gets
 precise answers.** All seven, per cell, machine-produced, no adjectives:
@@ -270,42 +270,42 @@ precise answers.** All seven, per cell, machine-produced, no adjectives:
 |---|---|---|---|
 | **X1** | **Conservation** | `files_on_disk(project,type) == rows + declared_out_of_scope + rejected_with_reason`, and `skipped_without_reason == 0` | The anti-#9 gate. prism's 80 VPs are 80 files skipped without a reason and nothing failed. |
 | **X2** | **Invariant 16 at capture: the captured body is byte-exact and its partition is total** | for every file of the type: the stored body equals the file's bytes after the frontmatter, **the frontmatter bytes are stored verbatim including key order and every unmodeled key**, and `concat(sections) == body`; report `N compared / N equal`; one mismatch blocks. (The full `import(render(store)) == store` round trip is invariant **15** and gates stage 2 → 3, per the spine's capture/cutover split — see Y6.) | D-A + invariant 16. Today 30–93 frontmatter keys per body type are dropped, so this fails on 100% of files and *should*. `concat(sections) == body` already HOLDS on all 6,537 files, so the partition half is green and the capture half is the work. |
-| **X3** | **Count parity** | `fa count --project P --type T` equals the on-disk count, and every count the corpus *asserts* about T either agrees or is an adjudicated finding with a named owner | The six-BC-totals class. `corpus_assertion` already holds 217 such claims for vsdd. |
-| **X4** | **Baseline preservation** | the `(project, type)` slice of the 18,826 baseline is reproduced by `fa validate --registry` with delta **0**, or reconciled line by line to *registry evolution* vs *corpus drift* | Precedent: 18,418 → 18,826 was +408 of registry tightening on byte-identical input and +22 untracked files. A migration that cannot tell those apart cannot be trusted to report loss. |
+| **X3** | **Count parity** | `datum count --project P --type T` equals the on-disk count, and every count the corpus *asserts* about T either agrees or is an adjudicated finding with a named owner | The six-BC-totals class. `corpus_assertion` already holds 217 such claims for vsdd. |
+| **X4** | **Baseline preservation** | the `(project, type)` slice of the 18,826 baseline is reproduced by `datum validate --registry` with delta **0**, or reconciled line by line to *registry evolution* vs *corpus drift* | Precedent: 18,418 → 18,826 was +408 of registry tightening on byte-identical input and +22 untracked files. A migration that cannot tell those apart cannot be trusted to report loss. |
 | **X5** | **Alias closure applied and recorded** | every raw spelling in this type's alias closure resolved, every non-empty `set:` clause applied, one `migration_event` row per application | 921 files carry an applied alias (vsdd 240 · prism 641 · rivetry 40); 22 aliases carry `set:` clauses over 87 files. A rename without the `set:` destroys `scope` and `reviewer_role`. |
 | **X6** | **Every shadow/validate disagreement dispositioned** | fixed in the corpus · waived with reason + owner · or reclassified into a declared class. No open, unclassified disagreement. | 658 shadow findings today decompose 573 real drift / 44 editorial / 41 facts about derivation itself. The classes exist; the dispositions do not. |
-| **X7** | **The write path exists for the type** | `fa new|set` validates against the type's schema at write time, mints its key transactionally, and a role→operation manifest names its writer | `fa` has **no write path at all** (self-describes as "phase 1: read-only shadow"). Nothing can dual-write until M3 lands. |
+| **X7** | **The write path exists for the type** | `datum new|set` validates against the type's schema at write time, mints its key transactionally, and a role→operation manifest names its writer | `datum` has **no write path at all** (self-describes as "phase 1: read-only shadow"). Nothing can dual-write until M3 lands. |
 
 X2 and X7 are the two that currently block *every* cell. X1 is the one that would have caught
 prism's VPs.
 
-### 2.3 Stage 2 — DUAL-WRITE: `fa` first, markdown still authored
+### 2.3 Stage 2 — DUAL-WRITE: `datum` first, markdown still authored
 
-`fa` is written first and `fa render` regenerates the markdown; the markdown remains committed and
-diffable, and `fa render --check` runs on every commit (invariant 8). Raw `Edit`/`Write` on that
+`datum` is written first and `datum render` regenerates the markdown; the markdown remains committed and
+diffable, and `datum render --check` runs on every commit (invariant 8). Raw `Edit`/`Write` on that
 type's paths is **denied** (M8) — without that, dual-write drifts and the round-trip gate starts
-failing for reasons that have nothing to do with `fa`.
+failing for reasons that have nothing to do with `datum`.
 
 **Exit evidence (stage 2 → stage 3):**
 
 | # | exit gate | pass condition |
 |---|---|---|
-| **Y1** | real usage, not synthetic | ≥20 real write operations of this type through `fa`, spanning ≥1 complete authoring cycle for the type |
-| **Y2** | zero divergence events | every markdown diff touching the type joins to an `fa` transaction id; a diff with no txn is a divergence and resets the clock |
+| **Y1** | real usage, not synthetic | ≥20 real write operations of this type through `datum`, spanning ≥1 complete authoring cycle for the type |
+| **Y2** | zero divergence events | every markdown diff touching the type joins to an `datum` transaction id; a diff with no txn is a divergence and resets the clock |
 | **Y3** | `render --check` green on every commit for the whole window | not "mostly green" — a single failure resets Y1's counter |
 | **Y4** | **the gate has caught ≥1 real regression in real work** | DECISIONS D3's own rule for `advisory → block`, reused verbatim: a gate that has never fired is unproven |
-| **Y5** | every reader migrated | `fa doctor --readers` resolves every hook, skill and agent reference to this type's paths to either the committed render or an `fa` operation |
+| **Y5** | every reader migrated | `datum doctor --readers` resolves every hook, skill and agent reference to this type's paths to either the committed render or an `datum` operation |
 | **Y6** | **invariant 15 green over 100% of the type's instances** | `import(render(store)) == store` at store-fingerprint level, per instance, with a census. This is the gate the spine and the L1–L2 design both place here: the captured body is only dropped once the render can reproduce it. For `append-only-event` types this is the *only* body gate there ever is. |
 
-### 2.4 Stage 3 — AUTHORITATIVE: `fa` is the only writer
+### 2.4 Stage 3 — AUTHORITATIVE: `datum` is the only writer
 
 **Exit evidence (stage 3 → stage 4):**
 
 | # | exit gate | pass condition |
 |---|---|---|
 | **Z1** | 30 days authoritative, `render --check` green, zero manual edits to the type |
-| **Z2** | **the restore drill** | `fa import` of the *committed render* into an empty store reproduces the store fingerprint exactly (`fa/import.go:463` `fingerprint`). This is the reversibility proof, and it is what makes stage 4 safe. |
-| **Z3** | the retirement ledger entry for this type is executed and `fa doctor` finds no dangling reference to the deleted machinery |
+| **Z2** | **the restore drill** | `datum import` of the *committed render* into an empty store reproduces the store fingerprint exactly (`datum/import.go:463` `fingerprint`). This is the reversibility proof, and it is what makes stage 4 safe. |
+| **Z3** | the retirement ledger entry for this type is executed and `datum doctor` finds no dangling reference to the deleted machinery |
 
 ### 2.5 Stage 4 — MARKDOWN RETIRED (a precise name for a narrower thing)
 
@@ -334,10 +334,10 @@ mass only orders within a cohort.
 The dependency edges, each with its measured basis:
 
 1. **subsystem → behavioral-contract.** `bc.ss_id` is an FK; a BC declaring an unknown subsystem is
-   already refused with a finding (`fa/corpus.go:456-460`).
+   already refused with a finding (`datum/corpus.go:456-460`).
 2. **declaring documents → the four ID universes.** `capability` (30), `domain_invariant` (18),
    `nfr` (88), `fr` (48) are extracted from `specs/domain-spec/`, `specs/prd.md` and
-   `phase-0-ingestion/pass-4-nfr-catalog.md` (`fa/corpus.go:222-231`). Those documents —
+   `phase-0-ingestion/pass-4-nfr-catalog.md` (`datum/corpus.go:222-231`). Those documents —
    `domain-spec-section` (31 files), `prd` (3), `prd-supplement-*` (7) — **have no table**, so the
    universes are grep products of unmodeled documents. Model the documents or every reference into
    them is unverifiable.
@@ -350,7 +350,7 @@ The dependency edges, each with its measured basis:
    edge the brief names, and it is the one the corpus proves: the only Kani-proved gate in the
    factory reads hand-written JSON because there were no rows to compute from.
 5. **verification-property needs `vp.status` first.** VP-INDEX's Status column is declared
-   `ColUnderivable` today and says so in the code (`fa/shadow.go:146-147`).
+   `ColUnderivable` today and says so in the code (`datum/shadow.go:146-147`).
 6. **ledgers before `pipeline-state`.** STATE.md is three artifacts (story 11: a mutable record, a
    decisions ledger, a checkpoint ledger). The two ledgers need a home before the record can split.
 7. **`delta-archive` retirement before rivetry's bc/vp.** Measured: 143 of rivetry's 211
@@ -365,10 +365,10 @@ The dependency edges, each with its measured basis:
 **Cohort A — schema prerequisites (no cutover; project-independent).** Not a migration of types but
 the precondition for all of them: (a) a **body + section table for every type**, keyed by ordinal
 per D-A; (b) **verbatim frontmatter bytes** stored alongside the parsed projection, so X2 is
-reachable at all; (c) `fa render`; (d) the scope predicate and the filename patterns moved out of Go
+reachable at all; (c) `datum render`; (d) the scope predicate and the filename patterns moved out of Go
 into the registry; (e) the three importer defects D1/D2/D3 fixed, with one declared collision policy
 per type — **first-wins is banned**; (f) the conservation census promoted from a printed line
-(`fa/import.go:436-443`) to a hard assertion; (g) the three invariant-17 violations already in the
+(`datum/import.go:436-443`) to a hard assertion; (g) the three invariant-17 violations already in the
 schema retired — `bc.version`, `vp.version`, `version_cite.verdict`, `finding.occurrences`; (h) a
 declared `shape` on every type, because under the ratified invariant 16 an undeclared shape is gated
 by every body rule at once.
@@ -450,7 +450,7 @@ their live counterparts.
   the whole estate, so the ladder's upper stages get exercised early on cells that can actually
   reach them.
 - **vsdd-factory second.** Largest single-type mass (1,959 BCs = 45% of the estate's typed files in
-  one type in one project), 69% already body-bearing, and `fa import`/`fa shadow` already run
+  one type in one project), 69% already body-bearing, and `datum import`/`datum shadow` already run
   against it end to end. It gets the *first cell to reach AUTHORITATIVE*.
 - **prism last.** Largest by findings (10,843), by bytes (47.6 MB) and by vocabulary (150 raw
   values, 116 of them unique to it), **cannot be imported today**, and is edited by a concurrent
@@ -463,7 +463,7 @@ their live counterparts.
 ### 3.4 The resulting sequence
 
 ```
-A  schema prerequisites            body+section tables · verbatim frontmatter · fa render
+A  schema prerequisites            body+section tables · verbatim frontmatter · datum render
                                     · scope predicate + patterns into the registry
                                     · D1/D2/D3 · conservation as an assertion
    ├── rivetry:  delta-archive → versions (count-asserted)   ← unblocks rivetry entirely
@@ -498,7 +498,7 @@ migration_event(
 ```
 
 `before` being mandatory is what makes reversal *total* rather than best-effort:
-`fa migrate revert --txn <id>` replays inverses in reverse order, and a transform that cannot state
+`datum migrate revert --txn <id>` replays inverses in reverse order, and a transform that cannot state
 its own inverse cannot be applied at all.
 
 | # | transformation | domain, measured | how it is recorded / reversed |
@@ -519,12 +519,12 @@ its own inverse cannot be applied at all.
 **Ordering rule inside a cell:** T1 → T2 → T3 → T4 → T7 → T8 → T11 → T10, then T5/T6/T9/T12 as
 they arise. Order is a correctness property, not a preference — this spike measured a rule-order
 bug that "asserted the *opposite* of the truth on 18 rows" (emptiness-before-counting in
-`fa/shadow.go:541-551`), and the same class is available here: applying T3 before T1 coerces
+`datum/shadow.go:541-551`), and the same class is available here: applying T3 before T1 coerces
 against the wrong type's enum.
 
 ---
 
-## 5. The acceptance gate — `fa migrate verify`
+## 5. The acceptance gate — `datum migrate verify`
 
 Completeness is a measurement. Six checks, plus the eight protections that keep the gate itself
 honest.
@@ -535,12 +535,12 @@ honest.
 |---|---|---|---|
 | **V1** | **Conservation, in all three directions** | per `(project, type, form)`: `on_disk == migrated + declared_out_of_scope + rejected_with_reason`; `skipped_without_reason == 0`; and the reverse direction — every row resolves to a file or to a declared derivation | a census table, never a boolean |
 | **V2** | **Byte-exact round trip for 100% of bodies** | `N_files_compared`, `N_equal`, `N_differ`, and a tree fingerprint. `N_differ > 0` fails. Both directions: `render(store) == md` byte-exact **and** `import(render(store)) == store` at store-fingerprint level (invariant 15). Evaluated **per shape**: `document`/`record` types are gated at capture by 16 and at cutover by 15; the 11 `append-only-event` types only by 15; the 4 `blob-with-path` types by path + content hash. **Any type not declaring a shape is gated by all of them** — silence is not an exemption. | per-type table + the first 20 differing paths with a byte offset |
-| **V3** | **Per-type count parity** | `fa count` == on-disk == every `corpus_assertion` about the type (217 such claims for vsdd today) or an adjudicated exception with an owner | per-type triple `(counted, on_disk, asserted)` |
+| **V3** | **Per-type count parity** | `datum count` == on-disk == every `corpus_assertion` about the type (217 such claims for vsdd today) or an adjudicated exception with an owner | per-type triple `(counted, on_disk, asserted)` |
 | **V4** | **Conformance-baseline preservation** | the 18,826 total and each project slice (6,951 / 10,843 / 1,032) reproduced with delta **0**, or reconciled to *registry evolution* vs *corpus drift* vs *untracked files* — the three causes the 18,418→18,826 reconciliation already established | a reconciliation table, and the `{registry_version, corpus_pin, dirty_file_list}` each number was taken at |
 | **V5** | **Zero unmodeled `document_type`** | `validate_registry.py` PART 1 exits 0 per project; every raw value canonical, aliased, gap-typed or explicitly retired **with a reason** | per-project value census |
-| **V6** | **Per-form counts, nothing dropped silently** | every extractor reports `(seen, kept, collapsed, malformed, skipped+reason)`. Any nonzero `skipped_without_reason` **fails**. Collapsing is legal only where the relation is a set, and the collapse count is printed | the census already printed at `fa/import.go:436-443`, promoted from print to assertion |
+| **V6** | **Per-form counts, nothing dropped silently** | every extractor reports `(seen, kept, collapsed, malformed, skipped+reason)`. Any nonzero `skipped_without_reason` **fails**. Collapsing is legal only where the relation is a set, and the collapse count is printed | the census already printed at `datum/import.go:436-443`, promoted from print to assertion |
 
-`fa migrate verify` **refuses to run** if the corpus pin recorded in `import_run` differs from the
+`datum migrate verify` **refuses to run** if the corpus pin recorded in `import_run` differs from the
 working tree's current pin, including the dirty-file list. That is not pedantry: prism's `.factory`
 moved 5 commits between the registry's pin and today, and the README already documents the failure
 of "quoting a number whose input moved underneath it."
@@ -565,18 +565,18 @@ each recorded in `research/LESSONS.md §2` with what it faked:
    forever.
 
 **The ninth already exists and I measured it today: prism's 80 verification properties, invisible
-to `fa import` because of a case-sensitive filename regex, with no error and no finding** (§1.4 D3).
+to `datum import` because of a case-sensitive filename regex, with no error and no finding** (§1.4 D3).
 So the protections below are not hypothetical hardening; the first one is a fix for a live bug.
 
 | # | protection | the instance it answers |
 |---|---|---|
-| **P1** | **A zero result is a failure, per type.** If a project's profile declares a type and the extractor yields 0 rows for it, `fa` fails. The existing guard is corpus-wide (`fa/import.go:102-106`, "no records found — wrong path?") and therefore missed a whole layer of one project. | #9 (prism VPs), #1, #3, #5 |
-| **P2** | **Conservation as an assertion, not a print.** The census at `fa/import.go:436-443` already reports dupes/malformed and the comment says why ("an extractor that prints only its successes has silently lost input five times in this spike"). Promote it to a gate: unbalanced = FAIL. | #2, #4, #6 |
-| **P3** | **Vocabularies and patterns read from the registry, never hardcoded.** Transferable result 4: three times in one session a hardcoded list *was* the defect, disagreeing with a sibling implementation on 8 spellings both ways. Filename/path patterns move into the registry per type with per-project overrides, and `fa doctor` fails on any file matching no declared pattern (the 225-unmatched-files class). | #9, and the `cycles/`-only review scan that hides 53 + 44 files |
+| **P1** | **A zero result is a failure, per type.** If a project's profile declares a type and the extractor yields 0 rows for it, `datum` fails. The existing guard is corpus-wide (`datum/import.go:102-106`, "no records found — wrong path?") and therefore missed a whole layer of one project. | #9 (prism VPs), #1, #3, #5 |
+| **P2** | **Conservation as an assertion, not a print.** The census at `datum/import.go:436-443` already reports dupes/malformed and the comment says why ("an extractor that prints only its successes has silently lost input five times in this spike"). Promote it to a gate: unbalanced = FAIL. | #2, #4, #6 |
+| **P3** | **Vocabularies and patterns read from the registry, never hardcoded.** Transferable result 4: three times in one session a hardcoded list *was* the defect, disagreeing with a sibling implementation on 8 spellings both ways. Filename/path patterns move into the registry per type with per-project overrides, and `datum doctor` fails on any file matching no declared pattern (the 225-unmatched-files class). | #9, and the `cycles/`-only review scan that hides 53 + 44 files |
 | **P4** | **Two independent implementations, gated per file.** The Go importer and `validate_registry.py` already disagree-and-reconcile; keep both and gate on **per-file** agreement, not on totals. Precedent: the Go/Python parity diff caught 7 link fields and was "off by exactly ONE file". | #4 (found by chasing 6-vs-7), #2 |
 | **P5** | **A hand-worked sample per type, measured before the rules are written.** ≥20 files per type, hand-classified, compared cell by cell. Precedent: `probe_indexes.py` ran before the shadow differ's rules existed, and the first rule cuts still produced **~2,768 findings that were artefacts of their own normalisation** — 4× the 658 real ones. | the whole class |
-| **P6** | **No threshold anywhere.** No sample fraction, no "≥95% agreement", no rounding. The corpus already shipped a validation floor at **6.75% against a required 20% because nothing computed the ratio**, and a mutation gate specified as "exactly 80 — no rounding" was retired by consensus. `fa migrate verify` has one tolerance: zero. | #4, and the review's own extraction-validation finding |
-| **P7** | **The verdict is derived at print time.** LESSONS rule 8: never write the conclusion into the report string while writing the test — it survives the test failing. `fa migrate verify` computes PASS from the census in the same expression that prints it. | the B12 "=> both directions work" false pass |
+| **P6** | **No threshold anywhere.** No sample fraction, no "≥95% agreement", no rounding. The corpus already shipped a validation floor at **6.75% against a required 20% because nothing computed the ratio**, and a mutation gate specified as "exactly 80 — no rounding" was retired by consensus. `datum migrate verify` has one tolerance: zero. | #4, and the review's own extraction-validation finding |
+| **P7** | **The verdict is derived at print time.** LESSONS rule 8: never write the conclusion into the report string while writing the test — it survives the test failing. `datum migrate verify` computes PASS from the census in the same expression that prints it. | the B12 "=> both directions work" false pass |
 | **P8** | **A deliberate mutation suite.** Before the gate is trusted, inject each known loss shape and require a catch: drop a section · lowercase a filename · duplicate a natural key · overflow a column · remove a frontmatter key · reorder frontmatter keys · strike a row through · add an untracked file. A checker that finds nothing must not report success. | all eight, plus #9 |
 
 ---
@@ -587,9 +587,9 @@ Rollback is per `(project, type)` cell, never global, and every stage has a defi
 
 | from | how to roll back | why it is safe |
 |---|---|---|
-| **stage 1 shadow** | delete the store directory | nothing was written. `fa shadow` writes nothing (hash-verified) and `fa import` is idempotent and re-runnable in 5.6 s. The corpus is untouched — 0 files modified in three corpora across this whole spike. |
-| **stage 2 dual-write** | stop writing through `fa`; re-permit raw `Edit`/`Write` on the type's paths | the markdown was still authored and committed for the whole window; the store was a follower. The `fa`-side history is retained, not lost. |
-| **stage 3 authoritative** | `fa render` the type, commit the render **as** the authored form, re-permit raw edits, revert the type's retirement-ledger entries | this is exactly what **Z2's restore drill** proves before stage 3 is entered: the committed render re-imports to the same fingerprint, so it is a complete authored artifact and not a lossy export. Stage 3 is reversible *because* Z2 passed. |
+| **stage 1 shadow** | delete the store directory | nothing was written. `datum shadow` writes nothing (hash-verified) and `datum import` is idempotent and re-runnable in 5.6 s. The corpus is untouched — 0 files modified in three corpora across this whole spike. |
+| **stage 2 dual-write** | stop writing through `datum`; re-permit raw `Edit`/`Write` on the type's paths | the markdown was still authored and committed for the whole window; the store was a follower. The `datum`-side history is retained, not lost. |
+| **stage 3 authoritative** | `datum render` the type, commit the render **as** the authored form, re-permit raw edits, revert the type's retirement-ledger entries | this is exactly what **Z2's restore drill** proves before stage 3 is entered: the committed render re-imports to the same fingerprint, so it is a complete authored artifact and not a lossy export. Stage 3 is reversible *because* Z2 passed. |
 | **stage 4 md retired** | `git revert` the per-type deletion commit, then treat as stage 3 | deletions are per-type commits, and the render already sits at the same paths, so the revert restores authorship rather than content. |
 
 **What makes the whole thing abandonable:**
@@ -601,11 +601,11 @@ Rollback is per `(project, type)` cell, never global, and every stage has a defi
   so no rollback step can destroy a concurrent writer's work (the `factory-cas-push.sh` failure mode
   is structurally absent). A *lease* is not artifact data, so TTL expiry and human-authorized
   revocation are permitted and audited; what is forbidden is a force that overwrites a version;
-- every transformation carries a mandatory `before`, so `fa migrate revert --txn` is total;
+- every transformation carries a mandatory `before`, so `datum migrate revert --txn` is total;
 - cells are independent, so an abandonment is scoped to one type in one project.
 
 **When to abandon (the criterion, not just the mechanism).** A cell rolls back if: (a)
-`render --check` fails twice for a reason inside `fa` rather than inside the corpus; (b) a
+`render --check` fails twice for a reason inside `datum` rather than inside the corpus; (b) a
 conservation gate fails and the cause is not found within one working session; or (c) **a loss class
 is found that the gate did not catch** — because that means the gate is unproven, and an unproven
 gate on a migration is worse than no migration.
@@ -617,7 +617,7 @@ gate on a migration is worse than no migration.
 ### 7.1 N projects, independently
 
 - **One store per project** (M9), one shared registry — the single canonical copy already
-  `go:embed`'d from `fa/registry/` and read by the Python tooling, so there is no second copy to
+  `go:embed`'d from `datum/registry/` and read by the Python tooling, so there is no second copy to
   drift.
 - Stores are **separate databases in separate directories**, not branches of one database. Two
   measured reasons: invariant 9 (trust zones must be separate directories — zones under one
@@ -639,10 +639,10 @@ session, and a separate factory session doing the advancing.
   The measured evidence that this is safe: prism advanced 75 markdown files and both its conformance
   total (10,843) and its type census were **unchanged**.
 - **Re-measure-on-advance is a gate, not a courtesy.** `import_run` records the corpus pin (commit
-  sha + the dirty-file list); `fa migrate verify` refuses if the pin moved since the evidence was
+  sha + the dirty-file list); `datum migrate verify` refuses if the pin moved since the evidence was
   collected. The alternative is the failure the README already names.
 - **A dirty working tree is a first-class state.** All three corpora are dirty right now (29 / 8 / 9
-  entries). `fa migrate verify` neither ignores them — that is how the +22 untracked-prism-files
+  entries). `datum migrate verify` neither ignores them — that is how the +22 untracked-prism-files
   delta happened — nor fails on them: it pins them as a named class and reports them.
 - **Stage 2 needs a quiesce window scoped to one type, not to the project.** A store-side lease over
   that type's path set (F4). Invariant 11 is the measured reason a global lock is wrong: one mutex
@@ -660,21 +660,21 @@ session, and a separate factory session doing the advancing.
 
 | # | risk | measured basis | mitigation | detecting gate |
 |---|---|---|---|---|
-| **R1** | a parser silently drops a whole form | **LIVE:** prism's 80 VPs → 0 rows, no error (`fa/corpus.go:138`) | P1 zero-result-is-failure, per type; patterns from the registry (P3) | V1 conservation; `fa doctor` on unmatched files |
-| **R2** | duplicate natural keys handled three ways, one of them lossy | **LIVE:** bc → finding at insert; story → **first-wins** at scan (`fa/corpus.go:502`); vp → crash. rivetry 74 BC + 49 VP, prism 7 story | one declared collision policy per type; **first-wins banned**; a collision is an `id_alias`, a version, or a hard failure | collision census must be 0 or fully adjudicated (T5/T12) |
-| **R3** | a column overflow aborts the import mid-corpus | **LIVE:** `prose_ref.target VARCHAR(220)` untruncated (`fa/schema.go:277`, `fa/import.go:352`) while siblings truncate | every text column LONGTEXT, or truncation is an explicit recorded event | zero silent truncations; truncation is a row, not a `truncRunes` call |
+| **R1** | a parser silently drops a whole form | **LIVE:** prism's 80 VPs → 0 rows, no error (`datum/corpus.go:138`) | P1 zero-result-is-failure, per type; patterns from the registry (P3) | V1 conservation; `datum doctor` on unmatched files |
+| **R2** | duplicate natural keys handled three ways, one of them lossy | **LIVE:** bc → finding at insert; story → **first-wins** at scan (`datum/corpus.go:502`); vp → crash. rivetry 74 BC + 49 VP, prism 7 story | one declared collision policy per type; **first-wins banned**; a collision is an `id_alias`, a version, or a hard failure | collision census must be 0 or fully adjudicated (T5/T12) |
+| **R3** | a column overflow aborts the import mid-corpus | **LIVE:** `prose_ref.target VARCHAR(220)` untruncated (`datum/schema.go:277`, `datum/import.go:352`) while siblings truncate | every text column LONGTEXT, or truncation is an explicit recorded event | zero silent truncations; truncation is a row, not a `truncRunes` call |
 | **R4** | deleting `delta-archive` loses the only copy of some versions | rivetry 211 files, 143 keyed | T9's count assertion **before** deletion | `versions(source) == archived + live`, per source |
 | **R5** | a derived index resurrects retired records | 41 legacy stories, exact set equality 41==41 | scope predicate in the **registry**, not in Go | `shadow.scope-excludes` finding + the set-equality assertion |
 | **R6** | frontmatter loss on round trip | 30 / 41 / 93 unmodeled keys per body type; `BCRow.Body` is post-frontmatter | T11: store frontmatter **bytes**, derive the projection from them | V2 byte-exact, including key order |
 | **R7** | baseline drift mistaken for corpus drift (or vice versa) | 18,418 → 18,804 → 18,826, decomposed as +408 registry tightening on byte-identical input and +22 untracked files | every baseline carries `{registry_version, corpus_pin, dirty_list}`; a delta must be attributed to one of three causes | V4 reconciliation table; refuse on moved pin |
-| **R8** | a concurrent factory session invalidates the evidence | prism advanced during the registry work **and** during this session | corpus pin in `import_run`; refuse-on-moved-pin | V4 / `fa migrate verify` precondition |
+| **R8** | a concurrent factory session invalidates the evidence | prism advanced during the registry work **and** during this session | corpus pin in `import_run`; refuse-on-moved-pin | V4 / `datum migrate verify` precondition |
 | **R9** | an alias bulk-applied where per-file adjudication was required | `prd-supplement` ×3, `prd-supplement-edge-case-catalog` ×1, 3 `unresolved:` values | `requires_per_file_adjudication` blocks bulk apply | X6/T12: no cell leaves shadow with an unadjudicated file |
 | **R10** | a split-field transform is irreversible because the source token was discarded | `verdict` → 3 fields + `streak`, 745 files | mandatory `before` in `migration_event`; one event with N outputs | a revert drill on a sample, per type |
 | **R11** | store and files diverge during dual-write | M8; and the corpus already has 5 competing authorities on where artifacts live | PreToolUse deny on the type's paths; every markdown diff must join to a txn id | `render --check` per commit + the divergence join (Y2) |
-| **R12** | a path-coupled extractor misses a project's layout | prism has no `stories/epics/`, rivetry has no `stories/` at all; reviews read only under `cycles/` (53 + 44 files outside); 225 of 3,145 vsdd files match no registry pattern | per-type patterns in the registry with per-project overrides; **no hardcoded path in Go** | `fa doctor` fails on any file matching no declared pattern |
-| **R13** | the migration needs writes to a corpus that is read-only by policy | the 2 namespace renames are **BLOCKED ON USER**; `validate_registry.py` prints `EXIT CRITERION NOT MET: 2` | `fa` writes only its own store until the ADR lands; factory changes are a separate workstream (V-E) | story 1's exit criterion in CI |
+| **R12** | a path-coupled extractor misses a project's layout | prism has no `stories/epics/`, rivetry has no `stories/` at all; reviews read only under `cycles/` (53 + 44 files outside); 225 of 3,145 vsdd files match no registry pattern | per-type patterns in the registry with per-project overrides; **no hardcoded path in Go** | `datum doctor` fails on any file matching no declared pattern |
+| **R13** | the migration needs writes to a corpus that is read-only by policy | the 2 namespace renames are **BLOCKED ON USER**; `validate_registry.py` prints `EXIT CRITERION NOT MET: 2` | `datum` writes only its own store until the ADR lands; factory changes are a separate workstream (V-E) | story 1's exit criterion in CI |
 | **R14** | an enum coercion collides with a live field meaning | measured **twice**: `gate` is a prism identifier (`gate: wave-3-integration-gate`), and `scope` already carries two meanings (prism = blast radius 208 files; vsdd = target) | measure a field name across all projects before claiming it; record per-project semantics (vsdd's `scope` → `target`) | the registry validator's own false-finding checks (225 / 391 / 2,577 precedents) |
-| **R15** | growth outruns the plan | `cycles/` 15.8 MB; prism markdown 47.6 MB; growth unmodelled (open gap 5) | measure store size per cohort; **no summarise-and-discard** — beads' 70% decay mitigation is forbidden for an authoritative spec corpus | a size report per cohort in `fa migrate verify` |
+| **R15** | growth outruns the plan | `cycles/` 15.8 MB; prism markdown 47.6 MB; growth unmodelled (open gap 5) | measure store size per cohort; **no summarise-and-discard** — beads' 70% decay mitigation is forbidden for an authoritative spec corpus | a size report per cohort in `datum migrate verify` |
 | **R16** | a review has no declared natural key, so its identity is its path | the key is the corpus-relative path today, which **D-C forbids as identity**; 186 prism files share the basename `pr-description.md` with different content | declare a composite key for the review family before cohort C leaves shadow | X1/X3 on cohort C; `two review documents claim the same key` finding |
 
 ---

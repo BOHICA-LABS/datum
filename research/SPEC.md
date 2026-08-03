@@ -1,12 +1,12 @@
 ---
-title: fa — specification for the sole interface to factory artifacts
+title: datum — specification for the sole interface to factory artifacts
 date: 2026-07-31
 status: spec derived from a verified spike (193/194 checks, 24 suites, incl. a 200-agent fleet against a real GitHub remote; the one failure is the deliberately pathological per-write push arm)
-evidence: vsdd-factory @82163b7f (.factory on factory-artifacts) · beads @b1694a5 · Dolt 2.2.3 · dolthub/driver/v2 v2.2.0 · github.com/drbothen/dolt-artifact-spike-remote
+evidence: vsdd-factory @82163b7f (.factory on factory-artifacts) · beads @b1694a5 · Dolt 2.2.3 · dolthub/driver/v2 v2.2.0 · github.com/drbothen/datum (formerly dolt-artifact-spike)-remote
 see_also: DECISIONS.md (the 3 settled calls) · ACCESS-PATH.md (which access path) · REMOTE.md (the real remote) · SCALE.md (200 agents + every decentralised contention fix) · CI-AGGREGATOR.md (the cross-internet answer)
 ---
 
-# `fa` — the sole interface to factory artifacts
+# `datum` — the sole interface to factory artifacts
 
 Every capability below is backed by a passing test against the **live** vsdd-factory
 corpus (1,959 BCs, 3,145 files, 1,607 commits). Nothing here is aspirational; where
@@ -84,7 +84,7 @@ Records with real keys, replacing hand-maintained markdown indexes:
 build: the figure was 1,490 while the prototype's frontmatter parser treated a prose value
 containing an unbalanced `[` as an unterminated inline list, swallowing every key after it.
 That lost 19 edges across six S-15.x stories — and `BC-INDEX.md`'s own `total_bcs` claim.
-See [LESSONS §2](LESSONS.md) and `fa/README.md`.)* Node universes come from **authoritative
+See [LESSONS §2](LESSONS.md) and `datum/README.md`.)* Node universes come from **authoritative
 declaring documents only** (`capabilities.md`, `invariants.md`,
 `phase-0-ingestion/pass-4-nfr-catalog.md`, `prd.md`, ADR headings, `stories/epics/`) —
 building them from grep-over-everything would make every reference resolve trivially.
@@ -147,7 +147,7 @@ subsystem, no dangling edge, no malformed id, lease well-formedness. **A gate th
 query cannot disagree with the data it checks** — which retires
 `verify-sha-currency.sh` (269 lines) and the mandated "Defensive Sweep Discipline".
 
-`fa validate` on the live corpus found **38 dangling references and 44 type violations**
+`datum validate` on the live corpus found **38 dangling references and 44 type violations**
 no existing gate catches — including `S-8.09` declaring it blocks 19 stories that were
 never written, and literal placeholders (`BC-4.NN.001`, `"see PO output for actual IDs"`)
 sitting in structured traceability fields.
@@ -198,7 +198,7 @@ sitting in structured traceability fields.
 
 ---
 
-## 4. Invariants `fa` MUST enforce
+## 4. Invariants `datum` MUST enforce
 
 These are not style guidance. Each one, if violated, produces **silent** data loss or
 corruption, and each was found empirically.
@@ -239,7 +239,7 @@ corruption, and each was found empirically.
 7. **A `PRIMARY KEY` is not a concurrency control.**
    Two concurrent writers inserting byte-identical rows merge silently; naive ID
    allocation produced `[1,1,1,1,1,1]`. Allocators need a per-attempt token. *(L4 locking)*
-8. **Markdown is written only by `fa render`, and `render --check` runs in CI.**
+8. **Markdown is written only by `datum render`, and `render --check` runs in CI.**
    Otherwise there are two truths and strictly more drift than today. *(R6)*
 
 9. **Trust zones are separate database DIRECTORIES (or a server with GRANTs).**
@@ -289,46 +289,46 @@ corruption, and each was found empirically.
 
 Invariants 1–7 exist because Dolt's conflict detection is documented as "too lenient"
 ([#7681](https://github.com/dolthub/dolt/issues/7681), strict mode unimplemented). They
-must live in `fa`'s single write path, not in agent instructions.
+must live in `datum`'s single write path, not in agent instructions.
 
 ---
 
 ## 5. CLI surface
 
 ```
-fa init                      create/migrate the store
-fa migrate [--check]         apply pending migrations; --check exits non-zero if pending
-fa import <path>             ingest a markdown corpus (idempotent)
-fa render [--check]          write the generated export; --check fails on drift
-fa validate [--strict]       integrity + type + coverage gates; non-zero on violations
+datum init                      create/migrate the store
+datum migrate [--check]         apply pending migrations; --check exits non-zero if pending
+datum import <path>             ingest a markdown corpus (idempotent)
+datum render [--check]          write the generated export; --check fails on drift
+datum validate [--strict]       integrity + type + coverage gates; non-zero on violations
 
-fa get <id>                  fetch any record by id
-fa count [--by <dim>]        counts, never stored
-fa trace <id> [--depth n]    full chain in either direction
-fa coverage [--subsystem X]  unverified / unimplemented rollup
-fa history <id>              per-record revisions
-fa asof <commit> <id>        point-in-time read
-fa diff <a>..<b>             cell-level change set
+datum get <id>                  fetch any record by id
+datum count [--by <dim>]        counts, never stored
+datum trace <id> [--depth n]    full chain in either direction
+datum coverage [--subsystem X]  unverified / unimplemented rollup
+datum history <id>              per-record revisions
+datum asof <commit> <id>        point-in-time read
+datum diff <a>..<b>             cell-level change set
 
-fa create <type> [fields]    validated create
-fa amend <id> [fields]       validated amend + version bump
-fa retire <id>               lifecycle transition
-fa rm <id> [--cascade]       refused while inbound refs exist
+datum create <type> [fields]    validated create
+datum amend <id> [fields]       validated amend + version bump
+datum retire <id>               lifecycle transition
+datum rm <id> [--cascade]       refused while inbound refs exist
 
-fa lease acquire|release|status --scope <wave-N|phase-N|cycle-X>
-fa wave register <N> <story...> | merge | abandon
-fa wave gate <N> --pass|--defer <reason>|--fail
-fa instance new <name> --mode <m> | list | graduate <name> | abandon <name>
-fa context <wave-N>          derive the exact spec set for a wave
-fa task next <story> | done <task>
-fa template instantiate <type> [fields]
-fa changelog <artifact>      the amendment ledger
-fa sync                      pull, then push (conflict-guarded)
-fa gc                        reclaim space
-fa doctor                    clone health: identity set, no half-merge, schema current
+datum lease acquire|release|status --scope <wave-N|phase-N|cycle-X>
+datum wave register <N> <story...> | merge | abandon
+datum wave gate <N> --pass|--defer <reason>|--fail
+datum instance new <name> --mode <m> | list | graduate <name> | abandon <name>
+datum context <wave-N>          derive the exact spec set for a wave
+datum task next <story> | done <task>
+datum template instantiate <type> [fields]
+datum changelog <artifact>      the amendment ledger
+datum sync                      pull, then push (conflict-guarded)
+datum gc                        reclaim space
+datum doctor                    clone health: identity set, no half-merge, schema current
 ```
 
-`fa doctor` is not optional polish — it covers the two failure modes that silently
+`datum doctor` is not optional polish — it covers the two failure modes that silently
 break a clone: missing git identity (every pull fails) and an unresolved half-merge
 (every commit fails).
 
@@ -344,11 +344,11 @@ Stated explicitly so scope does not drift:
   screenshots are untested here and deliberately excluded.
 - **No shared `sql-server`.** Only if a future phase needs sub-second, up-front
   exclusion for many agents per host — and it reinstates invariant 1 (X7).
-- **`fa` does not resolve merge conflicts automatically.** It aborts cleanly,
+- **`datum` does not resolve merge conflicts automatically.** It aborts cleanly,
   records the conflict, and requires the loser of the push race to re-apply its
   intent as a validated operation. **Policy now designed —
   [DECISIONS.md D1](DECISIONS.md).**
-- **`fa` does not replace git for source code.** Only artifacts.
+- **`datum` does not replace git for source code.** Only artifacts.
 - **Multi-repo mode** (`.factory-project/` + `factory-project-artifacts`) is not
   modelled; single-project only.
 
@@ -358,9 +358,9 @@ Stated explicitly so scope does not drift:
 
 | Phase | Scope | Risk | Value |
 |---|---|---|---|
-| **1** | Read-only shadow: `import` + `validate` in CI **plus a dated baseline allowlist of the 82 existing findings**. Markdown stays truth. one transaction per unit of work (0.9 s import); no remote, no daemon. Implemented as `fa` subcommands — **the end state is one Go binary** (see DECISIONS D3). | Very low — zero agent changes, additive, read-only | Catches all 82 findings, including the four-way count drift. **The baseline is not optional:** a gate that blocks every PR on day one gets switched off. |
-| **2** | Move the lease to `fa lease` (push-as-CAS). Delete the STATE.md YAML lock, the `--force-with-lease` machinery, and `verify-sha-currency.sh`. | Low | Closes a documented CWE-367 |
-| **3** | Invert authority for **record-shaped** artifacts only (BC/VP/story/subsystem/phase). Markdown becomes `fa render` output. ~~Decide the access path here~~ — **settled: embedded, since `fa` is a Go binary** — this is where a long-lived process is worth ~4,000× on reads and where the embedded driver removes the `dolt` binary from the toolchain ([ACCESS-PATH.md](ACCESS-PATH.md)). | Medium — touches `state-manager` and every `create-*` skill | Drift becomes unrepresentable; 90.2%-style coverage gaps become visible |
+| **1** | Read-only shadow: `import` + `validate` in CI **plus a dated baseline allowlist of the 82 existing findings**. Markdown stays truth. one transaction per unit of work (0.9 s import); no remote, no daemon. Implemented as `datum` subcommands — **the end state is one Go binary** (see DECISIONS D3). | Very low — zero agent changes, additive, read-only | Catches all 82 findings, including the four-way count drift. **The baseline is not optional:** a gate that blocks every PR on day one gets switched off. |
+| **2** | Move the lease to `datum lease` (push-as-CAS). Delete the STATE.md YAML lock, the `--force-with-lease` machinery, and `verify-sha-currency.sh`. | Low | Closes a documented CWE-367 |
+| **3** | Invert authority for **record-shaped** artifacts only (BC/VP/story/subsystem/phase). Markdown becomes `datum render` output. ~~Decide the access path here~~ — **settled: embedded, since `datum` is a Go binary** — this is where a long-lived process is worth ~4,000× on reads and where the embedded driver removes the `dolt` binary from the toolchain ([ACCESS-PATH.md](ACCESS-PATH.md)). | Medium — touches `state-manager` and every `create-*` skill | Drift becomes unrepresentable; 90.2%-style coverage gaps become visible |
 | **4** | Parallel wave branches. | Medium | Concurrency the single-orphan-branch design forbids today |
 
 Phase 1 delivers most of the correctness benefit at almost none of the cost, which is

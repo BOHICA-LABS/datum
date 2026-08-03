@@ -331,7 +331,7 @@ def x8_batching_makes_it_viable():
           f"extrapolated 1,959-BC import: {per_proc_ms*1959/1000:.0f}s per-invocation "
           f"vs {batch_ms*1959/1000:.1f}s batched\n"
           "=> matches the 12.7s server-based import; the mutex path is not a bottleneck\n"
-          "   PROVIDED `fa` batches a unit of work into one session per lock hold")
+          "   PROVIDED `datum` batches a unit of work into one session per lock hold")
 
 
 def x7_server_reintroduces_merge_hazard():

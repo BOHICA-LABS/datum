@@ -226,6 +226,6 @@ separate arguments, on their own merits, and D5 shows the shape they take
 .venv/bin/python -u poc/test_stress_fleet.py    # 200 agents, ~45 min, 5/6
 .venv/bin/python -u poc/test_stress_opt.py      # O1-O3 A/B, ~15 min
 .venv/bin/python -u poc/test_decentral.py       # D1-D5, ~45 min, 5/5
-# env: FA_ST_MACHINES/FA_ST_AGENTS/FA_ST_S3_AGENTS · FA_OPT_ONLY=o1 · FA_DC_ONLY=d5
+# env: DATUM_ST_MACHINES/DATUM_ST_AGENTS/DATUM_ST_S3_AGENTS · DATUM_OPT_ONLY=o1 · DATUM_DC_ONLY=d5
 # all three create per-run refs/dolt/<run>/* and delete them in a finally block
 ```

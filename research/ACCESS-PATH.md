@@ -6,7 +6,7 @@ verdict: the embedded driver is NOT the big lever. A missing BEGIN/COMMIT was.
 evidence: dolt 2.2.3 CLI · dolthub/driver/v2 v2.2.0 · live vsdd-factory corpus @82163b7f
 ---
 
-# Which access path should `fa` use?
+# Which access path should `datum` use?
 
 Every timing in this spike before now shelled out to `dolt sql`, paying a measured
 **141 ms** of process spawn per invocation — about **14,000x** the cost of a
@@ -33,7 +33,7 @@ verified afterwards (B6):
 | embedded, one transaction + prepared | **0.4 s** | **0.15** |
 
 The batched → one-transaction step is **17–23x, and it is free**. It needs no Go,
-no new dependency, no rewrite — just a `BEGIN`/`COMMIT` around the batch `fa`
+no new dependency, no rewrite — just a `BEGIN`/`COMMIT` around the batch `datum`
 already writes. The remaining embedded advantage on bulk import is ~2x.
 
 **There are two taxes, and the spike had only identified the outer one:**
@@ -64,11 +64,11 @@ Two real wins:
 
 1. **Cold start is ~2x better** (70 ms vs 136 ms). Of those 70 ms, ~25 ms is the
    Dolt engine opening and the rest is Go runtime + loading a 147 MB binary. So a
-   one-shot CLI-shaped `fa` command is *twice as fast*, not a thousand times.
+   one-shot CLI-shaped `datum` command is *twice as fast*, not a thousand times.
 2. **A long-lived process pays engine open once**, after which queries cost what
-   SQL costs (0.03 ms). This is the case that matters if `fa` ever becomes a
+   SQL costs (0.03 ms). This is the case that matters if `datum` ever becomes a
    daemon, an LSP-style server, or a single process handling a whole wave. It is
-   worth **~4,000x** on read-heavy work like `fa validate` or a traceability
+   worth **~4,000x** on read-heavy work like `datum validate` or a traceability
    rollup, which today pays 132 ms per question.
 
 And one capability the CLI cannot offer at all:
@@ -88,7 +88,7 @@ Measured, not estimated (B1):
 
 | Cost | Finding |
 |---|---|
-| Language | **Go, with CGO.** `dolthub/driver/v2` is a Go `database/sql` driver. An embedded `fa` is a Go binary — a Python `fa` cannot use it at all. |
+| Language | **Go, with CGO.** `dolthub/driver/v2` is a Go `database/sql` driver. An embedded `datum` is a Go binary — a Python `datum` cannot use it at all. |
 | `CGO_ENABLED=0` | build **refuses** (`//go:build cgo`); there is a stub that errors at runtime |
 | Build tags | a bare `CGO_ENABLED=1 go build` **fails** on ICU headers (`unicode/regex.h`). `-tags gms_pure_go` is mandatory; beads pins exactly this and documents the trap |
 | Dependencies | **155 indirect modules** — Dolt and go-mysql-server end up in your build tree |
@@ -118,9 +118,9 @@ Consequences:
   driver's own backoff does (beads sets `cfg.BackOff` with `MaxElapsedTime = 0`,
   i.e. wait until context cancellation, precisely to turn this failure into a
   wait).
-- **The read-only-on-open behaviour is a footgun.** A long-lived `fa` that opens
+- **The read-only-on-open behaviour is a footgun.** A long-lived `datum` that opens
   the store early and writes later can be silently read-only for its whole life.
-  `fa doctor` must check writability, not just openability.
+  `datum doctor` must check writability, not just openability.
 - Invariant 1's token discipline stays confined to the **server** topology, as
   §3e already concluded.
 
@@ -128,7 +128,7 @@ Consequences:
 `DOLT_RESET`, `DOLT_GC`, `DOLT_REMOTE`, `dolt_log`, `dolt_status`,
 `dolt_branches`, `dolt_conflicts`, `dolt_diff_*`, `dolt_history_*` and
 `… AS OF` all work in-process (B8), and so do `DOLT_FETCH` and `DOLT_PUSH`
-against a real GitHub remote (G8). **An embedded `fa` needs no `dolt` binary at
+against a real GitHub remote (G8). **An embedded `datum` needs no `dolt` binary at
 all** — which is the strongest single argument for the embedded path, because it
 removes the pinned-external-binary problem from the toolchain.
 
@@ -143,11 +143,11 @@ instead.** Then decide the access path on the phase, not on the benchmark:
 |---|---|---|
 | 1 — read-only shadow | **CLI + one transaction per unit of work** | Gets 17x for free. Import + validate in CI lands at ~1–2 s, cheap enough for every commit. Zero new language, zero new dependency. |
 | 2 — the lease | CLI | The cost is network (11.4 s/acquire, §6), not process spawn. The access path is irrelevant here. |
-| 3 — invert authority | **revisit embedded seriously** | This is where `fa` starts doing many reads per command and where a long-lived process pays off 4,000x. It also removes the `dolt` binary from the toolchain. |
+| 3 — invert authority | **revisit embedded seriously** | This is where `datum` starts doing many reads per command and where a long-lived process pays off 4,000x. It also removes the `dolt` binary from the toolchain. |
 | 4 — parallel waves | embedded or server | Decide with phase-3 evidence. |
 
 The honest summary: **the 141 ms spawn floor was real but not the bottleneck it
-looked like.** It is 2x, not 14,000x, for the CLI-shaped commands `fa` actually
+looked like.** It is 2x, not 14,000x, for the CLI-shaped commands `datum` actually
 runs — because those commands run one query, and the engine has to open either
 way. The 14,000x figure compares spawn against a query on an *already-open*
 engine, which only a long-lived process can exploit.

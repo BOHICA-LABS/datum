@@ -1,4 +1,4 @@
-// bench — embedded dolthub/driver/v2 harness for the fa spike.
+// bench — embedded dolthub/driver/v2 harness for the datum spike.
 //
 // Measures the EMBEDDED path so it can be compared against the `dolt sql` CLI
 // path that every other timing in this spike used (141 ms spawn floor).
@@ -234,7 +234,7 @@ func main() {
 		emit(out)
 		done()
 
-	// one-shot doing the real work of `fa count`: open + COUNT(*).
+	// one-shot doing the real work of `datum count`: open + COUNT(*).
 	case "oneshot-count":
 		_, conn, done, tim, err := open(ctx, dir, database)
 		if err != nil {

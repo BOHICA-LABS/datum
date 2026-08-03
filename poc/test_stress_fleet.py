@@ -55,7 +55,7 @@ ROOT = POC / "st"
 RES = ROOT / "results"
 SELF = str(Path(__file__).resolve())
 REMOTE = os.environ.get("FA_GH_REMOTE",
-                        "https://github.com/drbothen/dolt-artifact-spike-remote.git")
+                        "https://github.com/drbothen/datum (formerly dolt-artifact-spike)-remote.git")
 RUN = os.environ.get("FA_ST_RUN") or f"st-{int(time.time())}"
 DATA_REF = f"refs/dolt/{RUN}/data"
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Zone resolution for `fa` — the part that must stay invisible.
+"""Zone resolution for `datum` — the part that must stay invisible.
 
-Design rule: **an agent never names a zone.** It says `fa get HS-001` and fa works out
+Design rule: **an agent never names a zone.** It says `datum get HS-001` and fa works out
 which database that lives in, whether this role may see it, and what to say if not.
 
 On disk:
@@ -46,7 +46,7 @@ zones:
     visible_to: [orchestrator, holdout-evaluator, adversary, state-manager]
 """
 
-# id prefix -> artifact type. This is what lets `fa get HS-001` route itself.
+# id prefix -> artifact type. This is what lets `datum get HS-001` route itself.
 ID_PATTERNS: list[tuple[str, str]] = [
     (r"^BC-\d+\.\d+\.\d+", "bc"),
     (r"^VP-\d+", "vp"),
@@ -128,7 +128,7 @@ def _parse_config(text: str) -> dict:
 
 @dataclass
 class Store:
-    """The one object `fa` holds. Everything else routes through it."""
+    """The one object `datum` holds. Everything else routes through it."""
     root: Path
     role: str = "orchestrator"
     zones: dict[str, Zone] = field(default_factory=dict)
@@ -136,8 +136,8 @@ class Store:
 
     @classmethod
     def open(cls, root: str | Path | None = None, role: str | None = None) -> "Store":
-        root = Path(root or os.environ.get("FA_ROOT", ".factory-db")).resolve()
-        role = role or os.environ.get("FA_ROLE", "orchestrator")
+        root = Path(root or os.environ.get("DATUM_ROOT", ".factory-db")).resolve()
+        role = role or os.environ.get("DATUM_ROLE", "orchestrator")
         cfg_path = root / "fa.yaml"
         cfg = _parse_config(cfg_path.read_text() if cfg_path.exists() else DEFAULT_CONFIG)
         zones = {}
@@ -175,7 +175,7 @@ class Store:
                 f"not an error — see fa.yaml zones.{z.name}.visible_to")
         if not z.path.exists():
             raise ZoneError(f"zone '{z.name}' is not initialized at {z.path} "
-                            f"— run `fa init`")
+                            f"— run `datum init`")
         return z
 
     def readable_zones(self) -> list[str]:
@@ -207,7 +207,7 @@ class Store:
         return [dict(zip(hdr, l.split(","))) for l in lines[1:]]
 
     def init(self):
-        """`fa init` — create every zone. One command, no zone names required."""
+        """`datum init` — create every zone. One command, no zone names required."""
         self.root.mkdir(parents=True, exist_ok=True)
         cfg = self.root / "fa.yaml"
         if not cfg.exists():
@@ -216,7 +216,7 @@ class Store:
         for z in self.zones.values():
             if not (z.path / ".dolt").exists():
                 z.path.mkdir(parents=True, exist_ok=True)
-                subprocess.run(["dolt", "init", "--name", "fa", "--email", "fa@local"],
+                subprocess.run(["dolt", "init", "--name", "fa", "--email", "datum@local"],
                                cwd=z.path, capture_output=True, text=True)
                 made.append(z.name)
         return made

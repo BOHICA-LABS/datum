@@ -141,7 +141,7 @@ beads is the existence proof that the architecture works at scale with agent wri
 
 ## 3. POC results — 13/13 against the live corpus
 
-Built `poc/fa.py` (the sole interface) + `poc/schema.sql`, imported the **real**
+Built `poc/datum.py` (the sole interface) + `poc/schema.sql`, imported the **real**
 `vsdd-factory/.factory` corpus, ran `poc/test_spike.py`. Each test targets a specific
 observed failure. Re-runnable (verified twice, exit 0).
 
@@ -321,7 +321,7 @@ documents as an invalid conflict token:
 
 `poc/test_cas_patterns.py` P2 isolates that pattern: **30/30 trials, all 6 writers
 won.** T4 only passed because it *also* wrote a per-agent-unique `holder` value; the
-fence contributed nothing. `poc/fa.py` has been fixed to write a random token.
+fence contributed nothing. `poc/datum.py` has been fixed to write a random token.
 
 ### Why the obvious CAS is unsafe
 
@@ -388,7 +388,7 @@ The uncomfortable part: **item 3 is a permanent correctness tax on every writer.
 Get it wrong in one code path and you reintroduce silent lost updates with no error
 anywhere — which is precisely the class of bug the current markdown design at least
 makes *visible* as a merge conflict. Any adoption must encode the token discipline in
-the single write path (`fa`) so no agent can bypass it.
+the single write path (`datum`) so no agent can bypass it.
 
 ## 3d. Do we need a central server? (refines constraint 4.1.1)
 
@@ -493,7 +493,7 @@ incomplete rollout degrades into visible errors rather than silent corruption.
 X8 is a constraint, not a nicety. Cost is per **invocation** (~140–270 ms of process
 spawn + storage open), not per write. Per-statement invocations extrapolate to **531 s**
 for a 1,959-BC import; batching 300 statements into one session gives **13.4 s** —
-matching the 12.7 s server-based import. So: **`fa` must take the mutex once per unit of
+matching the 12.7 s server-based import. So: **`datum` must take the mutex once per unit of
 work and do all of that unit's writes in one Dolt session.** A naive implementation that
 shells out per row is ~40× slower and will feel broken.
 
@@ -598,7 +598,7 @@ merge semantics.
 
 **It works, and it is the right target.** Two devs with multiple agents each need no
 daemon, no shared server, and no new infrastructure — just the repo they already have.
-The cost is four disciplines that must live in the single write path (`fa`), not in agent
+The cost is four disciplines that must live in the single write path (`datum`), not in agent
 prose: conflict-abort, append-only counters, idempotent retry, pull-before-work. All four
 are mechanical and testable, which is exactly what makes them suitable for a tool rather
 than a protocol document.
@@ -738,7 +738,7 @@ Honest accounting. These are real and some are unattractive.
 **Phase it. Do not big-bang the orphan branch.**
 
 **Phase 1 — read-only shadow (low risk, immediate value).**
-Keep markdown as truth. Import into Dolt on every commit and run `fa validate` in CI.
+Keep markdown as truth. Import into Dolt on every commit and run `datum validate` in CI.
 This alone would have caught all four drift classes found here, and it needs zero changes
 to how agents write. Ship this first; it earns the rest.
 
@@ -747,7 +747,7 @@ self-contained win, closes a documented CWE-367, and retires `verify-sha-currenc
 cross-record checks. Requires the server, so it also proves out the daemon.
 
 **Phase 3 — invert authority for record-shaped artifacts only.** BCs, VPs, stories,
-subsystems, phase/pipeline state. Markdown becomes `fa render` output, committed for
+subsystems, phase/pipeline state. Markdown becomes `datum render` output, committed for
 review and backup. Indexes and counts stop being written by hand. Narrative artifacts stay
 as files.
 
@@ -775,14 +775,14 @@ of it, which is why it should go first.
 ## Appendix — reproducing
 
 ```bash
-cd ~/Dev/scrap/dolt-artifact-spike
+cd ~/Dev/datum
 brew install dolt                                   # 2.2.3 verified
 (cd poc/db && dolt sql-server --host 127.0.0.1 --port 3308 &)   # NOTE: no --user in 2.2.x
-.venv/bin/python poc/fa.py init
-.venv/bin/python poc/fa.py import ~/Dev/vsdd-factory/.factory
+.venv/bin/python poc/datum.py init
+.venv/bin/python poc/datum.py import ~/Dev/vsdd-factory/.factory
 .venv/bin/python poc/graph_import.py ~/Dev/vsdd-factory/.factory   # graph + findings report
-.venv/bin/python poc/fa.py count --by-subsystem
-.venv/bin/python poc/fa.py validate
+.venv/bin/python poc/datum.py count --by-subsystem
+.venv/bin/python poc/datum.py validate
 
 .venv/bin/python -u poc/test_spike.py               # 13/13  store
 .venv/bin/python -u poc/test_graph.py               #  8/8   relationship graph

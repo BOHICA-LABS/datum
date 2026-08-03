@@ -1,7 +1,7 @@
 ---
 title: FA-V1-L3-L4 — the semantic operation API and the projection layer
 date: 2026-08-02
-purpose: specify L3 (the only write surface) and L4 (everything derived, incl. `fa render` and invariant 15) precisely enough to implement without re-deriving
+purpose: specify L3 (the only write surface) and L4 (everything derived, incl. `datum render` and invariant 15) precisely enough to implement without re-deriving
 status: DESIGN. Nothing implemented (design-only by direction). The 8 settled decisions and 23 invariants of FA-V1-DESIGN.md are treated as BINDING.
 spine: research/FA-V1-DESIGN.md
 corpus_pin: vsdd-factory .factory @ 0aaba144 · prism .factory (CONCURRENT session — re-measure before trusting any prism count) · rivetry .factory
@@ -9,7 +9,7 @@ measurements_reproduced_here: 6,537 md files · 5,405 with frontmatter · 1,189 
 reproduction: every number introduced here is emitted by probe P1–P4 in §25, and all four were RUN as written. Four draft numbers came from ad-hoc variants and were corrected to the probes' output; they are marked ⟲ below.
 ---
 
-# `fa` v1 — L3 semantic operations and L4 projections
+# `datum` v1 — L3 semantic operations and L4 projections
 
 ## 0. Scope, and what this document is allowed to change
 
@@ -23,7 +23,7 @@ in §24 rather than resolved silently. Two places where the spine's own prose ne
 are measured, not argued.
 
 **One thing this document deliberately does NOT do:** it does not restate the type system.
-The registry (`fa/registry/artifact-type-registry.yaml`, 2,713 lines) already declares 103
+The registry (`datum/registry/artifact-type-registry.yaml`, 2,713 lines) already declares 103
 canonical types — 68 authored / 22 derived / 13 ingested — plus 16 `gap_types`, 4
 `retired_types`, 23 `link_types`, 17 closed enums and 180 aliases. Everything below is
 *generated from* or *validated against* that file. Re-deriving it would create the second
@@ -46,8 +46,8 @@ appended, and each is marked ⚠ in place:
 | **The registry GENERATES the schema** (one uniform `artifact`/`artifact_field`/`artifact_ref`/body model with per-type views) | Independent convergence with **L3-1** (§1.1): the op vocabulary is generated from the same registry that generates the schema, so ops and columns cannot drift apart. Two agents reached "generate it" from different directions |
 | **Invariant 16 binds PER SHAPE** — 4 `blob-with-path` types store no body; **11 `append-only-event` types store entries and DERIVE the file**; a shape exemption must be *declared* | §11: **render is FOUR renderers, not three.** My authority-only split would have rendered `burst-log.md` as a verbatim authored body — precisely what the ledger shape exists to prevent. §15: the exemption must be declared. §24-Q14: §1.2's census is mis-keyed as a result |
 | **Invariant 17 read through `authority`** — materialised views are legal as *declared* derived caches; three current columns (`bc/vp.version`, `version_cite.verdict`, `finding.occurrences`) are already violations | §12.1: those three are **excluded from the identity digest**. §21.1: the projection cache is legal *because declared* |
-| **Evidence exists only if `fa` produced it**; `fa gate exec` is the sole writer of the evidence table; **`deferred` abolished** | §4.7: `gate record` → **`gate exec`**; `--evidence` survives only as a reference to a row `fa` wrote; `--defer` removed from `wave gate` |
-| **Invariant 21 refined** — lease revocation is legal as TTL expiry or human-authorised revocation that **writes no artifact** | §4.7: `fa lease` gets a revocation path without a force path |
+| **Evidence exists only if `datum` produced it**; `datum gate exec` is the sole writer of the evidence table; **`deferred` abolished** | §4.7: `gate record` → **`gate exec`**; `--evidence` survives only as a reference to a row `datum` wrote; `--defer` removed from `wave gate` |
+| **Invariant 21 refined** — lease revocation is legal as TTL expiry or human-authorised revocation that **writes no artifact** | §4.7: `datum lease` gets a revocation path without a force path |
 
 Two further corrections they forced on *my own* numbers, both recorded in place rather than
 patched away:
@@ -70,8 +70,8 @@ reports that *every convergence table FKs to it*. That raises my Q3 from "render
 
 ### 1.1 The write surface has to be generated, because a hand-written one drifts
 
-The spine's example ops — `fa bc set-postcondition`, `fa story add-ac`, `fa finding add`,
-`fa gate record` — are a *vocabulary*. This repo's most reliable transferable result is that
+The spine's example ops — `datum bc set-postcondition`, `datum story add-ac`, `datum finding add`,
+`datum gate record` — are a *vocabulary*. This repo's most reliable transferable result is that
 **a hand-maintained vocabulary drifts from another hand-maintained vocabulary**, measured
 three separate times in one session: story 4's hardcoded review-type list disagreed with the
 Python extractor's on 8 spellings *in both directions*; the prose-ref probe's copy of the
@@ -151,7 +151,7 @@ VP-INDEX (140), cycles/INDEX (140 across two files)** — have *neither* a decla
 schema *nor* a template. The registry already knows: they are its `template_missing`
 namespace class (`artifact-type-registry.yaml:336-347`).
 
-**This is the concrete content of the spine's "highest-priority missing piece".** `fa render`
+**This is the concrete content of the spine's "highest-priority missing piece".** `datum render`
 is not blocked on a rendering engine. It is blocked on **22 missing render schemas**, of
 which 6 have no prior art to lift at all. §17.2 specifies the schema; §24-Q1 records who
 must author them.
@@ -175,7 +175,7 @@ Everything in §3–§10 is that sentence made mechanical.
 ### 3.1 Grammar
 
 ```
-fa <noun> <verb>[-<qualifier>] <key-component>... [--<field> <value>]... [--op-token <t>]
+datum <noun> <verb>[-<qualifier>] <key-component>... [--<field> <value>]... [--op-token <t>]
      |       |                    |                     |
      |       |                    |                     value flags: only DECLARED fields
      |       |                    positional: the type's `key:` components, IN DECLARED ORDER
@@ -189,7 +189,7 @@ Three hard rules, each retiring a measured defect class:
    `derived_never_authored` (`artifact-type-registry.yaml:149-156`) and D-C forbids it as
    identity. This is what makes the review's *~28 unregistered artifact homes · 225 unmatched
    files · `planning` vs `plans` · case drift* unrepresentable rather than detectable.
-2. **No op accepts an id it mints.** Identity is store-assigned (invariant 23). `fa bc
+2. **No op accepts an id it mints.** Identity is store-assigned (invariant 23). `datum bc
    create` *returns* the `bc_id`; it does not take one, except under a migration op (§9.3)
    where the id is being *carried in* from the corpus.
 3. **No op accepts a count.** Every count is a projection (§18). `epic.story_count` — a
@@ -199,9 +199,9 @@ Three hard rules, each retiring a measured defect class:
 
 ### 3.2 Noun resolution
 
-`fa bc …` and `fa behavioral-contract …` are the same op. The short-name table is generated
+`datum bc …` and `datum behavioral-contract …` are the same op. The short-name table is generated
 from the registry: a short name is legal iff it is unambiguous across all 103 canonical types
-+ 16 gap types. **Aliases are NOT accepted as nouns.** `fa adversary-review add` fails with a
++ 16 gap types. **Aliases are NOT accepted as nouns.** `datum adversary-review add` fails with a
 message naming the canonical type — because an alias is a *migration and history device, not
 a permanent tolerance* (`aliases.yaml` header), and accepting 180 alias spellings on the
 write surface is how V-C's "unrepresentable thereafter" quietly becomes "still representable".
@@ -221,17 +221,17 @@ write surface is how V-C's "unrepresentable thereafter" quietly becomes "still r
 | `retire` / `deprecate` / `supersede` | types with `lifecycle_status` in `enums` | `enums.lifecycle_status` | IDEMPOTENT |
 | `rm` | every `authored` type | — | IDEMPOTENT (refused while inbound refs exist, W9) |
 
-`set-<field>` names are *derived*, so `fa bc set-postcondition` from the spine is really
-`fa bc set-section Postconditions BC-1.05.036 --from-stdin` — because `Postconditions` is a
+`set-<field>` names are *derived*, so `datum bc set-postcondition` from the spine is really
+`datum bc set-section Postconditions BC-1.05.036 --from-stdin` — because `Postconditions` is a
 **section** of `behavioral-contract` (`artifact-type-registry.yaml:724`), not a field. That is
 not pedantry: sections are the D-A partition of a verbatim body, and a `set-postcondition`
 that pretended to be a field write would have to re-serialise the body, which is exactly the
 lossy path invariant 16 exists to forbid.
 
-`fa story add-ac` from the spine is real and is `fa ac create <story-key> --statement … [--traces
+`datum story add-ac` from the spine is real and is `datum ac create <story-key> --statement … [--traces
 <bc-key> --clause "postcondition 3"]` — because story 12a already made AC/EC/PC/T-task **rows**
 with a composite key `(owner_key, kind, sub_id)` and a typed `sub_artifact_ref`
-(`fa/schema.go:233-263`). The op vocabulary follows the schema, not the sentence.
+(`datum/schema.go:233-263`). The op vocabulary follows the schema, not the sentence.
 
 ### 3.4 Value shape
 
@@ -249,7 +249,7 @@ with a composite key `(owner_key, kind, sub_id)` and a typed `sub_artifact_ref`
   contention is per-branch and untunable (10 clones on one branch = 54 attempts *with disjoint
   rows*, vs 1 each on distinct refs, and backoff made it worse). That is a **stronger** form of
   what this section wanted: invariant 19's real failure mode is an *omittable* predicate, and a
-  store handle cannot be omitted. There is still no default: `--project` (or `FA_PROJECT`)
+  store handle cannot be omitted. There is still no default: `--project` (or `DATUM_PROJECT`)
   selects the store, and an unset one is `NO-PROJECT` (exit 2), never an implicit pick.
 
 ## 4. The op families
@@ -260,40 +260,40 @@ registry's `family:` field), plus the hand-written semantic ops.
 ### 4.1 `family: spec` (behavioral-contract, verification-property, prd, domain-spec-section, …)
 
 ```
-fa bc create        --project P --subsystem SS-05 --capability CAP-070 --origin greenfield \
+datum bc create        --project P --subsystem SS-05 --capability CAP-070 --origin greenfield \
                     --title "…" --introduced v1.3.0            -> returns BC-5.41.003
-fa bc set-status            BC-5.41.003 --value ready
-fa bc set-capability        BC-5.41.003 --value CAP-071
-fa bc add-verified-by       BC-5.41.003 --value VP-088
-fa bc set-section           BC-5.41.003 --name Postconditions --from-stdin
-fa bc retire                BC-5.41.003 --replacement BC-5.42.001 --cycle v1.4.0
-fa vp create        --project P --module … --proof-method kani --feasibility … --source-bc BC-…
-fa vp add-behavioral-contract VP-088 --value BC-5.41.003
+datum bc set-status            BC-5.41.003 --value ready
+datum bc set-capability        BC-5.41.003 --value CAP-071
+datum bc add-verified-by       BC-5.41.003 --value VP-088
+datum bc set-section           BC-5.41.003 --name Postconditions --from-stdin
+datum bc retire                BC-5.41.003 --replacement BC-5.42.001 --cycle v1.4.0
+datum vp create        --project P --module … --proof-method kani --feasibility … --source-bc BC-…
+datum vp add-behavioral-contract VP-088 --value BC-5.41.003
 ```
 
-Note what is *absent* and why: there is no `fa bc set-bc-id` (invariant 23), no
-`fa bc set-version` or `set-timestamp` or `set-input-hash` (`derived_never_authored`), no
-`fa bc set-verdict` or `set-delta` or `set-changelog` (`defaults.forbidden`,
-`artifact-type-registry.yaml:157-163`), and no `fa bc-index …` of any kind (authority:
+Note what is *absent* and why: there is no `datum bc set-bc-id` (invariant 23), no
+`datum bc set-version` or `set-timestamp` or `set-input-hash` (`derived_never_authored`), no
+`datum bc set-verdict` or `set-delta` or `set-changelog` (`defaults.forbidden`,
+`artifact-type-registry.yaml:157-163`), and no `datum bc-index …` of any kind (authority:
 derived — §4.6).
 
 ### 4.2 `family: delivery` (story, epic, pr-description, code-delivery-artifact)
 
 ```
-fa story create     --project P --epic E-9 --points 5 --priority P1 --title "…" --target-module …
-fa story add-depends-on   S-9.07 --value S-9.03      # `blocks` is DERIVED — see below
-fa story set-wave         S-9.07 --value 16
-fa story add-bc           S-9.07 --value BC-5.41.003
-fa ac create              S-9.07 --statement "…" --traces BC-5.41.003 --clause "postcondition 3"
-fa task done              S-9.07 --task T-4
-fa epic set-status        E-9 --value complete
+datum story create     --project P --epic E-9 --points 5 --priority P1 --title "…" --target-module …
+datum story add-depends-on   S-9.07 --value S-9.03      # `blocks` is DERIVED — see below
+datum story set-wave         S-9.07 --value 16
+datum story add-bc           S-9.07 --value BC-5.41.003
+datum ac create              S-9.07 --statement "…" --traces BC-5.41.003 --clause "postcondition 3"
+datum task done              S-9.07 --task T-4
+datum epic set-status        E-9 --value complete
 ```
 
-⚠ **`fa story add-blocks` DOES NOT EXIST.** `depends_on`/`blocks` are `symmetric_with`
+⚠ **`datum story add-blocks` DOES NOT EXIST.** `depends_on`/`blocks` are `symmetric_with`
 (`artifact-type-registry.yaml:183-184`) and `link_rules` requires one direction stored and
 the other derived (`:232-234`). One direction is arbitrary but must be *fixed*; `depends_on`
-wins because it is the direction the wave scheduler consumes (`fa/graph_cmd.go:13-42`).
-Consequence: all **58** `direction` findings in `fa`'s baseline become unrepresentable as a
+wins because it is the direction the wave scheduler consumes (`datum/graph_cmd.go:13-42`).
+Consequence: all **58** `direction` findings in `datum`'s baseline become unrepresentable as a
 class, not fixed as 58 entries — and `S-8.09`'s claim to block 19 stories that were never
 written becomes a refused write, because `add-depends-on` on the *other* story would fail
 V6 (§6).
@@ -301,19 +301,19 @@ V6 (§6).
 ### 4.3 `family: review` + findings
 
 ```
-fa review open      --project P --cycle v1.4.0 --scope story --target S-9.07 --pass 3 \
+datum review open      --project P --cycle v1.4.0 --scope story --target S-9.07 --pass 3 \
                     --reviewer-role adversary --previous-review <key>
-fa finding add      <review-key> --severity HIGH --category … --statement … --location … \
+datum finding add      <review-key> --severity HIGH --category … --statement … --location … \
                     --owned true --op-token <t>
-fa finding restate  <review-key> --of <origin-review-key>/<finding-id>
-fa finding close    <review-key>/<finding-id> --by <fix-burst-key> --evidence <run-id>
-fa review close     <review-key>              # gate_result / convergence / severity_max DERIVED
+datum finding restate  <review-key> --of <origin-review-key>/<finding-id>
+datum finding close    <review-key>/<finding-id> --by <fix-burst-key> --evidence <run-id>
+datum review close     <review-key>              # gate_result / convergence / severity_max DERIVED
 ```
 
 Three things this shape settles:
 
 - **`finding_count`, `findings_total` and `severity_distribution` have no setters at all.**
-  They are `COUNT(*)`/`GROUP BY` over `adversarial_finding` (`fa/schema.go:212-226`). Measured
+  They are `COUNT(*)`/`GROUP BY` over `adversarial_finding` (`datum/schema.go:212-226`). Measured
   worth: **68 claims across 66 documents disagree with their own bodies** — roughly a third of
   reviews that state a count.
 - **`restate` is a distinct op from `add`.** `owned` distinguishes a finding a pass
@@ -323,20 +323,20 @@ Three things this shape settles:
   conflated the two would make the count silently mean something else while agreeing.
 - **`review close` takes no verdict.** `gate_result` / `convergence` / `severity_max` are
   computed from the finding rows (D-D, and invariant 22: *`pass` without evidence is
-  rejected*). `fa gate record` (§4.7) is where a *gate* verdict enters, and it requires an
+  rejected*). `datum gate record` (§4.7) is where a *gate* verdict enters, and it requires an
   `--evidence <run-id>` naming a machine-produced artifact row.
 
 ### 4.4 `family: ledger` (`shape: append-only-event` — burst-log, cycle-decision-log, lessons-learned, session-checkpoints, tech-debt-register, spec-open-questions)
 
 ```
-fa burst append     --project P --cycle v1.4.0 --entry-date … --related-story S-9.07 \
+datum burst append     --project P --cycle v1.4.0 --entry-date … --related-story S-9.07 \
                     --from-stdin --op-token <t>          -> returns D-525
-fa decision append  --project P --cycle v1.4.0 --from-stdin --op-token <t>
-fa lesson append    --project P --cycle v1.4.0 --from-stdin --op-token <t>
-fa td append        --project P --severity HIGH --effort M --from-stdin --op-token <t>
-fa td resolve       TD-VSDD-053 --by S-9.07 --resolved-date …
-fa question append  --project P --from-stdin --op-token <t>
-fa question resolve QQ-014 --by <adr-key>
+datum decision append  --project P --cycle v1.4.0 --from-stdin --op-token <t>
+datum lesson append    --project P --cycle v1.4.0 --from-stdin --op-token <t>
+datum td append        --project P --severity HIGH --effort M --from-stdin --op-token <t>
+datum td resolve       TD-VSDD-053 --by S-9.07 --resolved-date …
+datum question append  --project P --from-stdin --op-token <t>
+datum question resolve QQ-014 --by <adr-key>
 ```
 
 `append` is the **only** non-idempotent verb, and it is the only verb that *requires*
@@ -349,27 +349,27 @@ created them (`retired_types.rotation_archive_variants`).
 ### 4.5 `family: state` + config (pipeline-state, policies, wave-state, sprint-state)
 
 ```
-fa state set-phase        --project P --value 3
-fa state set-cycle        --project P --value v1.4.0
-fa policy add             --project P --name … --enforced-by <hook|gate|op> --from-stdin
-fa lease acquire|release  --scope wave-16|phase-3|cycle-v1.4.0
+datum state set-phase        --project P --value 3
+datum state set-cycle        --project P --value v1.4.0
+datum policy add             --project P --name … --enforced-by <hook|gate|op> --from-stdin
+datum lease acquire|release  --scope wave-16|phase-3|cycle-v1.4.0
 ```
 
-`fa state set-*` is a *record* op over three fields. The 868 commits on `STATE.md` are the
+`datum state set-*` is a *record* op over three fields. The 868 commits on `STATE.md` are the
 measured cost of that file also carrying a decisions ledger and a checkpoint ledger; under L3
-those two become `fa decision append` and `fa checkpoint append` (§4.4) and the record has
-three setters. **`fa policy add` requires `--enforced-by`** — a policy with no mechanical
+those two become `datum decision append` and `datum checkpoint append` (§4.4) and the record has
+three setters. **`datum policy add` requires `--enforced-by`** — a policy with no mechanical
 enforcer is a comment, and POLICY 5 has been extended six times as META-LEVEL 31→36 trying to
 fix cite drift with prose (`artifact-type-registry.yaml:2101-2104`).
 
 ### 4.6 `authority: derived` types have NO ops. That is the enforcement of invariant 17.
 
-The generator emits **zero** write ops for the 22 derived types. `fa bc-index set-total-bcs`
+The generator emits **zero** write ops for the 22 derived types. `datum bc-index set-total-bcs`
 does not exist and cannot be added without changing `authority:` in the registry, which is a
 change-management event (`registry/CHANGE-MANAGEMENT.md`). Attempting a derived write returns
 `DENIED-AUTHORITY` (§6, V2) naming the projection that owns the value.
 
-Same for `ingested`: 13 types get `fa ingest <type> --from-stdin --tool … --run-id …` and
+Same for `ingested`: 13 types get `datum ingest <type> --from-stdin --tool … --run-id …` and
 nothing else. An ingested artifact is the output of semgrep/cargo-audit/Kani, *not an authored
 judgement* (`artifact-type-registry.yaml:1241`), so there is no field an agent may edit.
 
@@ -380,20 +380,20 @@ gets its own test, its own audit shape, and an entry here because it cannot be g
 
 | op | drives | refuses when |
 |---|---|---|
-| `fa gate exec <gate>` | gate ledger + **the evidence table** | ⚠ renamed from my draft's `gate record` per the ratified L5–L6 decision: **evidence exists only if `fa` produced it**, `fa gate exec` is the *sole* writer of the evidence table, and **no flag accepts evidence bytes**. My draft's `--evidence <run-id>` survives only as a *reference* to a row `fa` itself wrote. Also ratified: **`deferred` is abolished** as a gate status, replaced by deferral rows with owner and expiry — so there is no `--defer` on this op |
-| `fa gate present <gate>` | gate presentation protocol (spine §7 keep-list) | — |
-| `fa lease acquire\|release\|status --scope S` | store-side leases | scope unset (invariant 11: never singular). ⚠ ratified refinement of invariant 21: revocation is legal as **TTL expiry or human-authorised revocation that WRITES NO ARTIFACT** — a lease is not artifact data, so this is not a force path |
-| `fa wave register\|merge\|abandon <N>` | wave branches | dependency cycle unresolved |
-| `fa wave gate <N> --pass\|--fail` | wave gate | `--pass` without evidence. ⚠ `--defer` removed: `deferred` is abolished (above); a deferral is a row with an owner and an expiry |
-| `fa instance new\|graduate\|abandon` | factory instances | invariant 10 (one clone per instance) |
-| `fa convergence advance <cycle>` | convergence clock | monotonicity violated |
-| `fa derivation advance <type> --to proven\|retired` | `derivation_stage` ladder | shadow findings ≠ 0 for that type |
-| `fa alias retire <alias>` | alias ledger | that type's baseline ≠ 0 |
-| `fa idalias record <old> <new>` | `id_alias` (D-C) | either id unknown |
-| `fa finding close` | finding lifecycle | no fix reference |
-| `fa attest <artifact> --run <id>` | attestation | run not reproducible |
-| `fa propose op\|field\|type` | escape hatch (§10) | never — it is the refusal path |
-| `fa migrate apply <plan>` | bulk/migration writer class (§9.3) | plan lacks count assertions |
+| `datum gate exec <gate>` | gate ledger + **the evidence table** | ⚠ renamed from my draft's `gate record` per the ratified L5–L6 decision: **evidence exists only if `datum` produced it**, `datum gate exec` is the *sole* writer of the evidence table, and **no flag accepts evidence bytes**. My draft's `--evidence <run-id>` survives only as a *reference* to a row `datum` itself wrote. Also ratified: **`deferred` is abolished** as a gate status, replaced by deferral rows with owner and expiry — so there is no `--defer` on this op |
+| `datum gate present <gate>` | gate presentation protocol (spine §7 keep-list) | — |
+| `datum lease acquire\|release\|status --scope S` | store-side leases | scope unset (invariant 11: never singular). ⚠ ratified refinement of invariant 21: revocation is legal as **TTL expiry or human-authorised revocation that WRITES NO ARTIFACT** — a lease is not artifact data, so this is not a force path |
+| `datum wave register\|merge\|abandon <N>` | wave branches | dependency cycle unresolved |
+| `datum wave gate <N> --pass\|--fail` | wave gate | `--pass` without evidence. ⚠ `--defer` removed: `deferred` is abolished (above); a deferral is a row with an owner and an expiry |
+| `datum instance new\|graduate\|abandon` | factory instances | invariant 10 (one clone per instance) |
+| `datum convergence advance <cycle>` | convergence clock | monotonicity violated |
+| `datum derivation advance <type> --to proven\|retired` | `derivation_stage` ladder | shadow findings ≠ 0 for that type |
+| `datum alias retire <alias>` | alias ledger | that type's baseline ≠ 0 |
+| `datum idalias record <old> <new>` | `id_alias` (D-C) | either id unknown |
+| `datum finding close` | finding lifecycle | no fix reference |
+| `datum attest <artifact> --run <id>` | attestation | run not reproducible |
+| `datum propose op\|field\|type` | escape hatch (§10) | never — it is the refusal path |
+| `datum migrate apply <plan>` | bulk/migration writer class (§9.3) | plan lacks count assertions |
 
 ⚠ **Name check, because this repo has been caught twice claiming a field name without
 measuring it.** `gate` is *already in live use in prism as an identifier* (`gate:
@@ -405,10 +405,10 @@ before the noun is fixed.
 
 ## 5. How ops compose into one transaction
 
-### 5.1 `fa tx` — the only multi-op entry point
+### 5.1 `datum tx` — the only multi-op entry point
 
 ```sh
-fa tx --project P --role implementer --actor-kind interactive <<'OPS'
+datum tx --project P --role implementer --actor-kind interactive <<'OPS'
 {"op":"story.set-status","key":["S-9.07"],"fields":{"value":"in-progress"}}
 {"op":"ac.create","key":["S-9.07"],"fields":{"statement":"…"},"refs":[{"link":"traces","target":"BC-5.41.003","clause":"postcondition 3"}]}
 {"op":"finding.close","key":["adv-s9.07-p2","HIGH-P34-001"],"fields":{"by":"fb-14"}}
@@ -427,12 +427,12 @@ OPS
 - **Ordering inside a transaction is the caller's, and is preserved in the audit.** Two ops
   touching the same field is not an error; last-write-wins *within* the transaction, and both
   are audited. Refusing it would make a generated op stream (§9.3) unusable.
-- A single-op invocation (`fa bc set-status …`) is sugar for a one-line `fa tx`. There is one
+- A single-op invocation (`datum bc set-status …`) is sugar for a one-line `datum tx`. There is one
   write path, not two — otherwise invariant 18's "no bypass" is a claim about half the code.
 
 ### 5.2 Conflict
 
-`fa tx` **never merges and never forces** (invariant 21). On a push-race loss it returns
+`datum tx` **never merges and never forces** (invariant 21). On a push-race loss it returns
 `CONFLICT` (exit 5) with the losing op stream echoed back verbatim on stdout, so the caller
 re-applies *its intent as a validated operation* rather than re-resolving bytes. The echoed
 stream is the retry payload, which is why idempotence classification (§7) is a per-op property
@@ -441,7 +441,7 @@ and not a per-command flag.
 ## 6. Validation: an ORDERED ladder, and the order is a correctness property
 
 The single most expensive lesson in this spike's rule-writing is that **rule order is a
-correctness property, not a performance choice.** Measured: in `fa/shadow.go:541-551`,
+correctness property, not a performance choice.** Measured: in `datum/shadow.go:541-551`,
 running the generic emptiness/placeholder rules *before* the count rules reported 18 rows as
 "the index states a value the store does not hold" where the index stated zero and the store
 held zero — *a finding that says the opposite of what is true*. The comment in that file ends
@@ -462,7 +462,7 @@ So the validation ladder is declared as an order, and the order is tested.
 | **V8** | **required fields present and non-empty** | `MISSING-REQUIRED` (exit 1) | after refs, because a required *link* field must be a resolvable ref before its presence means anything. **A declared-empty value is a declaration of none and passes; an absent field fails.** Those are different states (§19). |
 | **V9** | **placeholder / declared-gap discrimination** | `PLACEHOLDER` (exit 1) or accepted as `placeholder` state | ⚠ **must run AFTER V7/V8 and BEFORE V10.** Measured: treating a self-marking gap cell (`[process-gap]`, "v1.1 candidate", "uncontracted", "BC candidate", "proposed") as a trace produced **55** POLICY-8 findings and **50** dangling-trace findings — **50 of 53 of the entire dangling class** — *blaming the document for correctly documenting a gap* (`artifact-type-registry.yaml:503-512`). `placeholder` is **one declared state**, so the op accepts it explicitly and the projection can distinguish it. |
 | **V10** | section policy (`required_ordered` / `required_unordered` / `expected` / `free`) | `SECTION-POLICY` (exit 1, or warn) | only meaningful once the body/section payload has passed the field checks. |
-| **V11** | **invariant 16**: `concat(sections) == body`, byte-exact | `PARTITION-LOSSY` (exit 2) | a *tool* failure, not a gate failure: if the partition is lossy the store cannot render, so this is exit 2. Already implemented and checked rather than trusted (`fa/registry.go:344-350`, `fa/registry_gate.go:242-246`). |
+| **V11** | **invariant 16**: `concat(sections) == body`, byte-exact | `PARTITION-LOSSY` (exit 2) | a *tool* failure, not a gate failure: if the partition is lossy the store cannot render, so this is exit 2. Already implemented and checked rather than trusted (`datum/registry.go:344-350`, `datum/registry_gate.go:242-246`). |
 | **V12** | **invariant 23**: no store-assigned identity appears in submitted content | `IDENTITY-IN-CONTENT` (exit 1) | last, because it scans the accepted payload. Retires the whole SHA-transcription class (TD-VSDD-053/044, `verify-sha-currency.sh`) in one rule. |
 | **V13** | **invariant 17**: no submitted value is derivable from another stored value | `DERIVABLE-VALUE` (exit 1) | generated: any field the registry marks derived has no setter, so V13 only fires on *content* that restates a derived value (a body asserting `Total BCs: 1949`). §18.3. |
 
@@ -505,7 +505,7 @@ append-only row's key. Effects:
 - A retry with a **new** token appends twice, correctly, because that is a second intent.
 - Two agents appending concurrently cannot collide, because their tokens differ.
 
-`fa tx` mints one token per *op* if the caller omits it and the op is non-idempotent — but
+`datum tx` mints one token per *op* if the caller omits it and the op is non-idempotent — but
 then the transaction is marked `retry_unsafe: true` in the audit, and a retry is refused with
 `TOKEN-REQUIRED` (exit 1). Auto-minting a token and *pretending* it is retry-safe would be
 the silent-double-append this whole invariant exists to prevent.
@@ -528,8 +528,8 @@ Claude Code runs *every agent inside one OS process at uid 501*, so there is no 
 a credential in an env var leaks to a sibling via `ps eww` (ID3, ID5b end-to-end).
 
 **Decision L3-2: a role is a set of op-name selectors plus a set of readable zones.** Both are
-declared in `fa.yaml` beside the existing zone map, both are enumerable, and — the property
-paths never had — **both are testable**: `fa role explain <role>` prints the permitted op set,
+declared in `datum.yaml` beside the existing zone map, both are enumerable, and — the property
+paths never had — **both are testable**: `datum role explain <role>` prints the permitted op set,
 and a test can assert `role adversary` cannot execute `finding.restate` on a prior pass.
 
 ```yaml
@@ -604,17 +604,17 @@ Today the wall is prose in a prompt plus a tool profile:
 Under L3 it is a `read_deny` predicate, and the refusal is a structured code:
 
 ```
-$ fa get adv-s9.07-p2 --role adversary
+$ datum get adv-s9.07-p2 --role adversary
 DENIED-ASYMMETRY (exit 3)
   'adv-s9.07-p2' is a prior pass of the review you are performing.
-  role 'adversary' is denied reads matching fa.yaml roles.adversary.read_deny[0]
+  role 'adversary' is denied reads matching datum.yaml roles.adversary.read_deny[0]
     (type=adversarial-review, predicate="cycle = $CURRENT and pass < $MY_PASS")
   This is an information-asymmetry wall, not an error. Do not retry; do not seek another route.
 ```
 
 Four properties this buys that a prompt sentence does not:
 
-1. **Enumerable.** `fa role explain adversary --walls` lists every wall. A wall that is a
+1. **Enumerable.** `datum role explain adversary --walls` lists every wall. A wall that is a
    sentence in one of 35 prompt files is not inventoriable.
 2. **Testable.** The wall becomes an assertion, not a hope. This is the same move
    `TestShadowWritesNothing` makes for "shadow never writes" — hash the corpus before and after
@@ -629,10 +629,10 @@ Four properties this buys that a prompt sentence does not:
 
 **The hard requirement carried forward unchanged:** a walled role must not have unrestricted
 `Bash`. Denying `Read` on a zone while leaving `Bash` open is not a wall — `cat` walks straight
-through it. `fa`'s role check prevents accidents and produces actionable errors; the *boundary*
+through it. `datum`'s role check prevents accidents and produces actionable errors; the *boundary*
 is the harness's `permissions.deny` + `PreToolUse` + per-agent `allowed-tools`, and the role
 must be **injected by the hook, not passed as an argument the agent controls**
-(`ACCESS-CONTROL.md:230-242`). `FA_ROLE` read from the environment is a hint; `fa` records
+(`ACCESS-CONTROL.md:230-242`). `DATUM_ROLE` read from the environment is a hint; `datum` records
 `role_source: env|hook` in every audit row so an unhooked deployment is *visible* rather than
 silently advisory.
 
@@ -655,7 +655,7 @@ Two measured reasons, not one:
 | `interactive` | an agent role, one unit of work | 1–50 ops | full validation; leases; `retry_unsafe` tracked |
 | `bulk` | an agent role, a declared batch | 50–10⁴ ops | requires `--batch-reason` and a **pre-declared expected count**; validation identical (never relaxed) |
 | `migration` | R-ADMIN, one-time | 10⁴–10⁶ ops | requires a `migration_id`, an ADR reference, and **count assertions** (§9.3) |
-| `projection` | `fa render` / projection refresh | any | may write **only** `authority: derived` rows; may write **no** authored field; cannot be invoked by an agent role |
+| `projection` | `datum render` / projection refresh | any | may write **only** `authority: derived` rows; may write **no** authored field; cannot be invoked by an agent role |
 
 Every audit row also carries `op_batch` (the transaction id), `role`, `role_source`,
 `op_token`, `registry_digest` and `store_commit_before/after`. **`registry_digest` is not
@@ -667,8 +667,8 @@ per-version reconciliation to establish that.
 ### 9.3 Migration ops carry their own falsifiable prediction
 
 ```sh
-fa migrate apply plans/M-004-delta-archive.yaml --dry-run
-fa migrate apply plans/M-004-delta-archive.yaml --commit
+datum migrate apply plans/M-004-delta-archive.yaml --dry-run
+datum migrate apply plans/M-004-delta-archive.yaml --commit
 ```
 
 A plan is refused unless it declares, per step, **the count it expects to change and the count
@@ -690,11 +690,11 @@ raw SQL**.
 | case | answer | mechanism |
 |---|---|---|
 | **The content has no field** | Put it in **prose**. | D-A: the body is verbatim bytes and the section partition is derived. 26.3% of class C is unreachable by rows *anyway* (`PROSE-REFS-OR-FIELDS.md`), so prose is not a loophole — it is the honest home for judgement. `set-section` / `set-body` are always available on `document`-shaped types. |
-| **The field exists in the corpus but not in the registry** | `fa propose field` | Returns exit 4 with a `field-extension-request` row. **Nothing is written to the artifact.** The registry already treats this as its primary evidence channel: *"Every alias with a non-empty `set:` clause is a field the canonical type is missing"* (spine §4.2), and `local-adversary-review` is called out as proof the canonical type is **UNDER-SPECIFIED, not deviant**. |
+| **The field exists in the corpus but not in the registry** | `datum propose field` | Returns exit 4 with a `field-extension-request` row. **Nothing is written to the artifact.** The registry already treats this as its primary evidence channel: *"Every alias with a non-empty `set:` clause is a field the canonical type is missing"* (spine §4.2), and `local-adversary-review` is called out as proof the canonical type is **UNDER-SPECIFIED, not deviant**. |
 | **The op does not exist for a field that does** | Impossible by construction. | Ops are generated from the registry (L3-1). If the field is declared, the op exists. This is the whole return on generating rather than authoring the vocabulary. |
-| **The question has no query verb** | `fa sql --read-only` | Already the declared answer: *"`fa sql --read-only` stays available for exploration precisely so nobody has to fake a verb"* (`artifact-type-registry.yaml:284-288`). **Read-only, and it is not a write hatch.** A verb enters properly via a registry entry + a declared JSON output schema + a test with a fixture corpus + a baseline entry. |
+| **The question has no query verb** | `datum sql --read-only` | Already the declared answer: *"`datum sql --read-only` stays available for exploration precisely so nobody has to fake a verb"* (`artifact-type-registry.yaml:284-288`). **Read-only, and it is not a write hatch.** A verb enters properly via a registry entry + a declared JSON output schema + a test with a fixture corpus + a baseline entry. |
 
-**Rejected: `fa tx --unsafe-freeform` / `fa sql --write` / an admin SQL console.** The reason
+**Rejected: `datum tx --unsafe-freeform` / `datum sql --write` / an admin SQL console.** The reason
 is measured, not stylistic: *an LLM composing joins across 25 tables returns
 plausible-but-wrong answers with **NO error** — the exact failure class this project exists to
 eliminate* (`artifact-type-registry.yaml:242-249`). A write hatch has the same property with
@@ -711,7 +711,7 @@ pattern, not five.
 
 # L4 — PROJECTIONS
 
-## 11. `fa render`: four renderers, chosen by `(authority, shape)`
+## 11. `datum render`: four renderers, chosen by `(authority, shape)`
 
 **Decision L4-1: `render` is four functions, not one, and the selector is `(authority, shape)`
 — shape first.** This is what reduces invariant 15 from "reproduce 6,537 arbitrary markdown
@@ -791,7 +791,7 @@ Description` / `## Preconditions` / `## Postconditions` / `## Invariants` / `## 
 `sections:` list for `behavioral-contract` (`artifact-type-registry.yaml:724`) is what
 `section_policy: required_unordered` *validates* against; it is not a print order.
 
-Where the template shape *is* generated is at **instantiation**: `fa template instantiate
+Where the template shape *is* generated is at **instantiation**: `datum template instantiate
 behavioral-contract` emits the declared sections as empty headings, which is what makes "the
 template and the validator disagree" unrepresentable (spine §4.3). Instantiation and rendering
 are different operations and must not share a code path — a renderer that could re-emit the
@@ -851,14 +851,14 @@ type, key)** over:
 **The comparison is per-artifact and per-field. There is no corpus-level digest.** A single
 digest tells you "something moved" and nothing else; the spine's own requirement is that a
 failure is "diagnosed to a specific artifact and field". A corpus digest cannot do that, and
-would have hidden every one of the 658 cell-level disagreements `fa shadow` found — the
-measured proof that *counts and id-sets cannot see cell content* (`fa/shadow.go:21-26`).
+would have hidden every one of the 658 cell-level disagreements `datum shadow` found — the
+measured proof that *counts and id-sets cannot see cell content* (`datum/shadow.go:21-26`).
 
 ### 12.2 E0 — BYTE equality, on the normalised corpus
 
 `render(import(bytes)) == bytes`, gated **only after a one-time normalising commit** (§13.4).
 E0 is the gate that makes `render --check` meaningful in CI (invariant 8: *markdown is written
-only by `fa render`, and `render --check` runs in CI*), and R1 already measured the
+only by `datum render`, and `render --check` runs in CI*), and R1 already measured the
 determinism side: 1,960 files, same digest across runs; R7: 9.2 MB in 0.4 s.
 
 Before the normalising commit, E0 runs in **report mode** with a per-rule count, and that
@@ -885,7 +885,7 @@ denominator today is:
 
 So **invariant 15 cannot reach 100% until 1,338 files acquire a type**, and reporting it as a
 percentage without that denominator would be the "count that agrees while meaning something
-else" failure invariant 19 exists to catch. `fa render --check` therefore reports
+else" failure invariant 19 exists to catch. `datum render --check` therefore reports
 **four** numbers, never one: `equal`, `differs`, `unrenderable (no type)`, `out-of-scope
 (ingested/retired)`.
 
@@ -918,7 +918,7 @@ is indistinguishable from data loss** — this repo has caught a parser silently
 | **X2** | **frontmatter comments** | ⟲ **406 files** carry them · **4,498 comment lines** · **71** inline (`key: value  # note`) | **MODEL** (§13.3). Some are load-bearing: `input-hash: "[md5]"  # advisory — used for drift detection, not gating` (`behavioral-contract-template.md:10`) and `origin: greenfield\|brownfield    # metadata-only — does not affect BC semantics` (`:12`) |
 | **X3** | **nested frontmatter mappings** | **3,030 lines** | **FORBID by schema.** BC-INDEX's `last_amended` is *"tens of KB of nested prose inside YAML"* (`artifact-type-registry.yaml:762`) — and that type is `derived`, so it stops existing. Survivors migrate to body sections |
 | **X4** | **block scalars** (`\|`, `>`) | **234** | Migrate to a body section, or model as a declared multi-line field with a declared re-emit style. Silently reflowing a block scalar changes bytes *and* meaning |
-| **X5** | strikethrough as state (`~~BC-2.02.013~~`) | already measured by `fa shadow` | **MODEL as a lifecycle state.** *"strikethrough is not a representable state, so a derived index would silently lose the withdrawal"* (`fa/shadow.go:446-448`). Already on the HANDOFF next-list |
+| **X5** | strikethrough as state (`~~BC-2.02.013~~`) | already measured by `datum shadow` | **MODEL as a lifecycle state.** *"strikethrough is not a representable state, so a derived index would silently lose the withdrawal"* (`datum/shadow.go:446-448`). Already on the HANDOFF next-list |
 
 ### 13.3 The two new stored shapes X2 forces
 
@@ -932,15 +932,15 @@ parenthetical prose measured in 48 prism `producer` values, keeping `producer` a
 (`artifact-type-registry.yaml:123-124`). **Generalising it is the same move, and it is what
 makes X2 legal to round-trip instead of legal to lose.**
 
-Note the current parser cannot do this: `fa/frontmatter.go:73-74` skips comment lines and
+Note the current parser cannot do this: `datum/frontmatter.go:73-74` skips comment lines and
 `:99-101` strips trailing comments before storing. That is correct for *validation* and fatal
 for *round-trip*, which is precisely why §16.2 requires a second, lossless reader.
 
 ### 13.4 The one-time normalising commit
 
 ```
-fa normalize --project P --dry-run     # per-rule counts + full diff, writes nothing
-fa normalize --project P --commit      # one reviewable commit, N1–N8 only
+datum normalize --project P --dry-run     # per-rule counts + full diff, writes nothing
+datum normalize --project P --commit      # one reviewable commit, N1–N8 only
 ```
 
 Properties, each answering a specific failure this repo has already had:
@@ -958,7 +958,7 @@ Properties, each answering a specific failure this repo has already had:
 
 | hazard | measured across 3 corpora | design answer |
 |---|---|---|
-| **heading duplication** | **110 docs / 1,970 duplicate `##`+ headings** (vsdd 38/579 · prism 61/848 · rivetry 11/543). ⚠ reproduced within 2 of the spine's 1,968 — methodology difference, direction identical | already solved: the partition is **ordinal-keyed**, heading is *data* (`fa/registry.go:288-325`). A resolver keyed on heading collides; a heading claimed by >1 section resolves to `ordAmbiguous = -2` and a reference to it is **`unresolvable`, never `dangling`** (`fa/proseref.go:113-114, 286-288`) |
+| **heading duplication** | **110 docs / 1,970 duplicate `##`+ headings** (vsdd 38/579 · prism 61/848 · rivetry 11/543). ⚠ reproduced within 2 of the spine's 1,968 — methodology difference, direction identical | already solved: the partition is **ordinal-keyed**, heading is *data* (`datum/registry.go:288-325`). A resolver keyed on heading collides; a heading claimed by >1 section resolves to `ordAmbiguous = -2` and a reference to it is **`unresolvable`, never `dangling`** (`datum/proseref.go:113-114, 286-288`) |
 | **YAML key order** | **1,189 distinct orders** | N1 + declared per-type order. **Not** "preserve the input order" — that would make the render a function of history, so two artifacts with identical data would render differently and `--check` could never distinguish drift from provenance |
 | **YAML quoting** | 169 keys written both ways | N2, declared **per field** in the registry. A global rule cannot work: `version: "1.1"` must stay quoted (or YAML makes it a float) while `status: draft` must not |
 | **trailing whitespace** | 140 files / 901 lines | N3 |
@@ -966,41 +966,41 @@ Properties, each answering a specific failure this repo has already had:
 | **unicode** | 0 non-NFC; top: `—` 164,344 · `→` 92,003 · `§` **41,622** · `─` 15,568 | N6 + **verbatim bodies**. The `§` count matters twice: it is 41,622 live section markers, i.e. story 12b's whole subject. ⚠ these three counts drifted by 28 / 3 / 196 between two runs an hour apart — **prism is being edited by a concurrent session**, exactly as V-F warns. Any prism-inclusive number here is a snapshot, not a pin |
 | **markdown table alignment** | ⟲ **214,554** table lines · 183,154 padded · **31,400** not · **383** missing closing pipe · 11 alignment-colon separators | **authored tables are never reformatted** (N9 excluded). Generated tables get one declared style. This is the single largest hazard *removed by a decision rather than solved by code* |
 | **prose bodies to 1.57 MB** | **8 files > 600 KB · 17 > 300 KB** · max 1,568.8 KB | verbatim bytes; SHA-256 comparison; byte-diff reported as **offset + bounded window**, never as a whole-file diff |
-| **no final newline** | 19 files | N4 — and note `splitKeepNL` (`fa/registry.go:329-342`) already exists *because* "splitting on `\n` and rejoining loses a missing final newline" |
-| **line-number provenance** | **208 of 214** reported lines pointed at the wrong place; `actual == reported + frontmatter_lines` held **210/210** | every reported location carries **both** `file_line` and `body_line`, named. Still open in `fa refs` today (`PROSE-REFS-OR-FIELDS.md` follow-up) and a **prerequisite**, not a detail: a reference that cannot be opened cannot be adjudicated |
+| **no final newline** | 19 files | N4 — and note `splitKeepNL` (`datum/registry.go:329-342`) already exists *because* "splitting on `\n` and rejoining loses a missing final newline" |
+| **line-number provenance** | **208 of 214** reported lines pointed at the wrong place; `actual == reported + frontmatter_lines` held **210/210** | every reported location carries **both** `file_line` and `body_line`, named. Still open in `datum refs` today (`PROSE-REFS-OR-FIELDS.md` follow-up) and a **prerequisite**, not a detail: a reference that cannot be opened cannot be adjudicated |
 
 ## 15. Invariant 16: `concat(sections) == body`
 
 Already implemented, already measured at **0 mismatches over 6,537 files**, already checked at
-runtime rather than trusted (`SectionsLossless`, `fa/registry.go:344-350`; gated at
-`fa/registry_gate.go:242-246` with the message *"the derived partition is not byte-exact, so
+runtime rather than trusted (`SectionsLossless`, `datum/registry.go:344-350`; gated at
+`datum/registry_gate.go:242-246` with the message *"the derived partition is not byte-exact, so
 render cannot be trusted"*).
 
 ⚠ **It binds PER SHAPE, ratified.** 4 `blob-with-path` types store no body and 11
 `append-only-event` types derive the file from entries, so invariant 16 is vacuous for 15 of 103
 types — **and the exemption must be DECLARED in the registry, because silence is not an
 exemption.** An undeclared exemption is indistinguishable from a partition check that never ran,
-which is the same class as `fa shadow`'s `table-absent` outcome: *a spec that matched no table
-would contribute zero findings and read as agreement* (`fa/shadow.go:407-411`).
+which is the same class as `datum shadow`'s `table-absent` outcome: *a spec that matched no table
+would contribute zero findings and read as agreement* (`datum/shadow.go:407-411`).
 
 Three things L4 adds:
 
 1. **It is a V11 write-time check** (§6), not only an import-time one. A `set-body` that
    produced a lossy partition is refused at exit **2** — a tool failure, not a gate failure,
    because a store that cannot partition cannot render.
-2. **Section bodies include their own heading line** (`fa/registry.go:314-319`). That is what
+2. **Section bodies include their own heading line** (`datum/registry.go:314-319`). That is what
    makes concat byte-exact, and it means `set-section` replaces *heading + content*, so an op
    cannot orphan a heading from its body.
 3. **Fence awareness is part of the invariant.** A `## ` line inside a code block is not a
-   heading (`fenceRe`, `fa/registry.go:278`). Every section-aware projection inherits this;
+   heading (`fenceRe`, `datum/registry.go:278`). Every section-aware projection inherits this;
    one that re-implemented the scan would be vocabulary instance six.
 
 ## 16. Diagnosing a round-trip failure
 
 ### 16.1 Outcome vocabulary — reused, not reinvented
 
-`fa render --check` adjudicates cell by cell and field by field using **the vocabulary
-`fa/shadow.go:520-621` already earned**: `agree` / `agree-casefold` / `agree-set` /
+`datum render --check` adjudicates cell by cell and field by field using **the vocabulary
+`datum/shadow.go:520-621` already earned**: `agree` / `agree-casefold` / `agree-set` /
 `disagree` / `title-abbreviates` / `title-elaborates` / `index-placeholder` / `store-empty` /
 `prose-in-set` / `row-truncated` / `row-duplicated` / `row-struck-through` /
 `column-underivable`. That vocabulary is not a style choice: getting to it cost **~2,768
@@ -1015,7 +1015,7 @@ Render adds six outcomes:
 
 ### 16.2 Two readers, and the difference between them is the diagnosis
 
-- **The validating reader** is today's `ParseFrontmatter` (`fa/frontmatter.go`): deliberately
+- **The validating reader** is today's `ParseFrontmatter` (`datum/frontmatter.go`): deliberately
   not a real YAML parser, because *"a full parser would accept shapes the corpus treats as
   violations"* — and every branch in it exists because the Python prototype got it wrong and
   **the bug faked a clean result**.
@@ -1030,7 +1030,7 @@ accepting shapes the gates reject.
 ### 16.3 The report
 
 ```
-fa render --check --project vsdd-factory
+datum render --check --project vsdd-factory
   authored  4861: equal 4820 · differs 41
   derived     54: equal  0 · differs 54   (22 types lack a render schema — 6 lack any prior art)
   ingested    73: hash-equal 73
@@ -1066,7 +1066,7 @@ The measured result: **41 of 148 stories live in `stories/v1.0-legacy/` and STOR
 deliberately does not enumerate them.** Verified as *exact set equality* — the set "absent
 from the index" is **exactly** the set of files in that directory, 41 == 41. Generating from
 every record would have **resurrected 41 retired stories while every count still agreed**
-(`fa/shadow.go:98-113`). Story 4 hit the identical class independently: `findings_total`
+(`datum/shadow.go:98-113`). Story 4 hit the identical class independently: `findings_total`
 counts only the findings a pass **owns**, not the 412 it re-states.
 
 **Decision L4-3: `scope` is a required field of every projection, it must be written
@@ -1076,7 +1076,7 @@ PREDICATE OVER FIELDS — never a path prefix.**
 ⚠ The second half of that decision is a **correction to the existing implementation**, and it
 matters because the HANDOFF's next-priority item is "move the scope predicate into the
 registry". Today the scope is `ExcludeSrcPrefix: ["stories/v1.0-legacy/"]`
-(`fa/shadow.go:161-164`) — **a path predicate.** Moving it into the registry unchanged would
+(`datum/shadow.go:161-164`) — **a path predicate.** Moving it into the registry unchanged would
 promote path-as-identity into the standard, which D-C forbids on measured grounds (1,852 BC
 renames, 0 deletes: *nearly every BC has moved*). A path predicate breaks the moment a legacy
 story is relocated, and it breaks **silently, by re-including the record**.
@@ -1096,7 +1096,7 @@ derived from the files — someone must *assign* it. §24-Q2.
 **Every projection additionally declares its scope's expected cardinality as an assertion.**
 `excluded == 41` is checked on every run, and the check is reported even when it passes —
 because *"a scope rule that silently removed records would be indistinguishable from a
-generator that never saw them"* (`fa/shadow.go:370-372`).
+generator that never saw them"* (`datum/shadow.go:370-372`).
 
 ### 17.2 The projection schema
 
@@ -1113,7 +1113,7 @@ One projection may own **many table layouts**. Measured, this is not optional:
 | `cycles/*/INDEX.md` ×2 | — | — | — | — | 98 + 42 |
 
 *"What varies between tables in one document is not only WHICH columns exist but what a given
-column MEANS"* (`fa/shadow.go:64-69`) — the measured case is STORY-INDEX's `BCs` column, which
+column MEANS"* (`datum/shadow.go:64-69`) — the measured case is STORY-INDEX's `BCs` column, which
 is a **count** (`26`) in the E-1 tables and a **list** (`[BC-1.11.002, …]`) in the E-10 tables.
 Declaring it a count produced 62 findings saying "states no number" about cells that stated
 membership *explicitly* — a **stricter** claim, not a missing one.
@@ -1122,7 +1122,7 @@ membership *explicitly* — a **stricter** claim, not a missing one.
 projections:
   story-index:
     type: story-index                 # must have authority: derived
-    derivation_stage: shadow          # the existing ladder; never flipped (fa/shadow.go:337-355)
+    derivation_stage: shadow          # the existing ladder; never flipped (datum/shadow.go:337-355)
     scope:                            # REQUIRED. No default.
       predicate: "lifecycle_status != 'superseded'"
       expect_excluded: 41
@@ -1152,33 +1152,33 @@ projections:
 Five properties, each from a measured failure:
 
 - **`ColKind` per column, declared not sniffed** — *"sniffing is how `TBD` ends up meaning
-  three things"* (`fa/shadow.go:41-43`).
+  three things"* (`datum/shadow.go:41-43`).
 - **`ColUnderivable` is a first-class kind**, reported as a **coverage gap** and never
   compared. *"A shadow that silently skipped such a column would overstate what it proves"*
-  (`fa/shadow.go:70-73`). The live case is `VP-INDEX.Status`: the `vp` table has no status
+  (`datum/shadow.go:70-73`). The live case is `VP-INDEX.Status`: the `vp` table has no status
   column, agreement against the *files* is 100%, and leaving it silently uncompared would
-  misrepresent coverage (`fa/shadow.go:144-148`).
+  misrepresent coverage (`datum/shadow.go:144-148`).
 - **A sub-block's `scope` may narrow, never widen.** A widening block would let a table
   contain rows the document's own scope excludes — the resurrection bug at table granularity.
 - **`order_by` is total.** A projection with a partial order is non-deterministic (§21).
 - **Header signature is a declared property, not a discovered one.** Discovery (a subset test
-  over `RequireHeader`, `fa/shadow.go:89-95`) is right for the *shadow* stage, which reads
+  over `RequireHeader`, `datum/shadow.go:89-95`) is right for the *shadow* stage, which reads
   authored documents it did not write. It is wrong for `render`, which writes them.
 
 ### 17.3 The retirement ladder is unchanged and is not skipped
 
-`shadow → proven → retired`. `fa derivation advance` refuses while that type's shadow findings
-are non-zero, and `fa shadow` **writes nothing** — hash-verified by `TestShadowWritesNothing`.
+`shadow → proven → retired`. `datum derivation advance` refuses while that type's shadow findings
+are non-zero, and `datum shadow` **writes nothing** — hash-verified by `TestShadowWritesNothing`.
 The discipline, quoted because it is the reason `render` cannot simply be switched on:
 
 > *if the generator is subtly wrong then hand-maintained drift is replaced by GENERATED drift
-> and the evidence that would have caught it is gone.* — `fa/shadow.go:9-12`
+> and the evidence that would have caught it is gone.* — `datum/shadow.go:9-12`
 
 Current evidence, per index: BC-INDEX **93.1%** cell agreement (7,294/7,836), VP-INDEX
 **97.0%** (388/400), STORY-INDEX **89.8%** (555/618). **658 findings total** — 573 real drift,
 44 editorial, 41 facts about derivation itself. **No index may advance past `shadow` today.**
 And the single largest block is one drift event: 330 BC-5.\* files carry `capability: CAP-001`
-while BC-INDEX distributes them across 11 capabilities (`CAP-070`…`080`) — half of `fa
+while BC-INDEX distributes them across 11 capabilities (`CAP-070`…`080`) — half of `datum
 shadow`'s total, and a **PO adjudication**, not a tool call.
 
 ## 18. Count projections: every stated total, owned
@@ -1211,7 +1211,7 @@ Under L4:
   literal. `emit_count` substitutes; the number is not authorable.
 - **A count in an authored body is a V13 finding** (§6). It cannot be *refused* — prose may
   legitimately discuss numbers — but it is reported with the projection it contradicts.
-- `corpus_assertion` (`fa/schema.go:156-163`) — the one table that deliberately stores a wrong
+- `corpus_assertion` (`datum/schema.go:156-163`) — the one table that deliberately stores a wrong
   number so a gate can compare it — **survives only for `ingested` and not-yet-migrated
   types.** Once a type renders, its assertions are the projection and there is nothing to
   compare.
@@ -1253,7 +1253,7 @@ findings against correct documents. Measured on **both** sides:
 | state | meaning | measured evidence |
 |---|---|---|
 | **SATISFIED** | declared, resolves | — |
-| **DECLARED-EMPTY** | `verification_properties: []` — an affirmative claim of *none* | **3,391 empty values** in the corpus. The registry gate already treats this as its own class: *"a declaration of none, weaker than absence"* (`fa/registry_gate.go:191-194`) |
+| **DECLARED-EMPTY** | `verification_properties: []` — an affirmative claim of *none* | **3,391 empty values** in the corpus. The registry gate already treats this as its own class: *"a declaration of none, weaker than absence"* (`datum/registry_gate.go:191-194`) |
 | **UNDECLARED** | the field is absent | distinct from empty. Collapsing them makes "we decided there are none" and "nobody looked" the same fact |
 | **DECLARED-GAP** | the cell **marks itself** as a gap | markers measured in the corpus: `[process-gap]`, "v1.1 candidate", "uncontracted", "BC candidate", "proposed". Treating these as traces produced **55 POLICY-8 + 50 dangling findings — 50 of 53 of the whole dangling class** — *blaming the document for correctly documenting a gap* |
 | **DANGLING** | declared, owner known, target absent | 39 frontmatter danglers today; **27 of them are `story.blocks` → a story never written** (`S-8.09` alone declares it blocks 19) |
@@ -1285,11 +1285,11 @@ SCC 4.6 ms at 240k, and **96× less memory**. gonum stays for what CSR does not 
 PageRank) and for nothing else. The projection contract is already right and is not
 renegotiated: rebuilt from a store query on every use, never persisted, no setters, every
 output `authority: derived` and subject to `shadow → proven → retired`
-(`fa/graph.go:1-20`). Break rule 1 and it is the second replica.
+(`datum/graph.go:1-20`). Break rule 1 and it is the second replica.
 
 `multi.DirectedGraph`, not `simple` — the graph genuinely has parallel edges (a story points
 at a BC via `behavioral_contracts` **and** via `traces_to`, with different pin policies), and
-`simple` would silently collapse them and understate coupling (`fa/graph.go:52-57`).
+`simple` would silently collapse them and understate coupling (`datum/graph.go:52-57`).
 
 ### 20.2 What `--scope` must be mandatory FOR
 
@@ -1307,9 +1307,9 @@ predicate languages would be three vocabularies to drift.
 
 ### 20.3 What graph projections must refuse rather than approximate
 
-`fa waves` already models this: a schedule over a cyclic dependency graph **does not exist**,
+`datum waves` already models this: a schedule over a cyclic dependency graph **does not exist**,
 so it prints the cycles and exits 1 — *"emitting a plausible one would be worse than failing"*
-(`fa/graph_cmd.go:26-35`). Every graph projection inherits the rule: no partial result is
+(`datum/graph_cmd.go:26-35`). Every graph projection inherits the rule: no partial result is
 emitted as if it were total.
 
 ## 21. Determinism, caching, staleness
@@ -1341,9 +1341,9 @@ projection_output_id = H(projection_id ‖ projection_version ‖ store_commit
 
 | source | rule | evidence |
 |---|---|---|
-| **map iteration order** | every projection sorts explicitly | Go randomises map ranges. `fa/shadow.go:509-515` sorts findings; `attachSet` sorts set members *because* "an index listing the same members in another order is not drift" (`:268-270`) |
-| **the clock** | no projection reads it | `import_run` deliberately holds **no timestamp and no path**, so a re-import leaves the working set byte-identical (`fa/schema.go:310-313`, W5) |
-| **absolute paths** | never in output | `baseline write` records the corpus **basename** + git ref, not the machine's path — *"an absolute home path in a committed file is noise that differs on every machine and in CI"* (`fa/main.go:398-406`) |
+| **map iteration order** | every projection sorts explicitly | Go randomises map ranges. `datum/shadow.go:509-515` sorts findings; `attachSet` sorts set members *because* "an index listing the same members in another order is not drift" (`:268-270`) |
+| **the clock** | no projection reads it | `import_run` deliberately holds **no timestamp and no path**, so a re-import leaves the working set byte-identical (`datum/schema.go:310-313`, W5) |
+| **absolute paths** | never in output | `baseline write` records the corpus **basename** + git ref, not the machine's path — *"an absolute home path in a committed file is noise that differs on every machine and in CI"* (`datum/main.go:398-406`) |
 | **collation** | byte-order sort, declared | locale-sensitive sort makes output host-dependent |
 | **floating point** | integers + declared rounding | §18.3 |
 
@@ -1373,9 +1373,9 @@ which is the problem being solved, not the solution.
 | 1 per-attempt unique value | §7.2 `--op-token` |
 | 3 append-only allocators | §7.3 |
 | 4 idempotent retries | §7.1 three classes |
-| 6 one transaction per unit of work | §5.1 (`fa tx`; 531 s → 15.7 s → 0.9 s) |
+| 6 one transaction per unit of work | §5.1 (`datum tx`; 531 s → 15.7 s → 0.9 s) |
 | 7 a PK is not concurrency control | §7.2 |
-| 8 markdown written only by `fa render`; `--check` in CI | §12.2 E0 |
+| 8 markdown written only by `datum render`; `--check` in CI | §12.2 E0 |
 | 11 leases per-scope | §4.7 |
 | 17-as-defect-elimination (the review's ~40) | §3.1 (no paths, no ids, no counts) + §4.6 + §6 |
 
@@ -1392,14 +1392,14 @@ which is the problem being solved, not the solution.
 | **R7** | **Reformatting authored markdown tables to one style** | Same measurement. This is the largest hazard *removed by a decision* rather than solved by code. |
 | **R8** | **Preserving input frontmatter key order** | Would make render a function of history: two artifacts with identical data would render differently, and `--check` could never separate drift from provenance. N1 imposes a declared order instead. |
 | **R9** | **A comment-preserving YAML round-tripper as the whole answer** | Preserves what should be *modelled* (406 files / 4,498 comment lines → `field_note`, generalising the registry's own `producer_note`), and still cannot represent the **12 duplicate-key files**, where the earlier value is already gone. |
-| **R10** | **A single corpus digest for invariant 15** | Cannot diagnose to artifact and field, which is the stated requirement. Would have hidden all 658 cell-level disagreements `fa shadow` found. |
+| **R10** | **A single corpus digest for invariant 15** | Cannot diagnose to artifact and field, which is the stated requirement. Would have hidden all 658 cell-level disagreements `datum shadow` found. |
 | **R11** | **Path-prefix scope predicates** (today's `ExcludeSrcPrefix`) | Promotes path-as-identity into the standard against D-C (1,852 renames, 0 deletes) and breaks **silently by re-inclusion** when a legacy file moves. §17.1 requires a field predicate. |
 | **R12** | **One projection per document** | `prism/STORY-INDEX.md` has 18 tables and **11 distinct header signatures**; `ARCH-INDEX` has 7 tables and 7 signatures. A projection owns *many* declared table layouts. |
-| **R13** | **Discovering table layouts by header subset at render time** | Right for `shadow` (reading documents it did not write, `fa/shadow.go:89-95`); wrong for `render`, which writes them. Discovery on the write side means the output shape depends on the previous output. |
-| **R14** | **Flipping derived types straight to derived** | *If the generator is subtly wrong, hand-maintained drift is replaced by GENERATED drift and the evidence that would have caught it is gone* (`fa/shadow.go:9-12`). Current agreement is 89.8–97.0% with 658 findings — nothing may advance. |
+| **R13** | **Discovering table layouts by header subset at render time** | Right for `shadow` (reading documents it did not write, `datum/shadow.go:89-95`); wrong for `render`, which writes them. Discovery on the write side means the output shape depends on the previous output. |
+| **R14** | **Flipping derived types straight to derived** | *If the generator is subtly wrong, hand-maintained drift is replaced by GENERATED drift and the evidence that would have caught it is gone* (`datum/shadow.go:9-12`). Current agreement is 89.8–97.0% with 658 findings — nothing may advance. |
 | **R15** | **Per-reference dangling reporting now** | 37% precision (11 real / 19 checker's of 30 hand-read). A confident wrong finding set is worse than a count. Earned by a majority-real sample, not by a small count. |
 | **R16** | **Relaxing validation for `bulk`** | The volume is exactly when validation matters. `bulk` differs from `interactive` in *audit shape and required declarations*, never in checks. |
-| **R17** | **Auto-minting `--op-token` and treating it as retry-safe** | Silent double-append: the failure invariant 1 exists to prevent. `fa tx` marks the transaction `retry_unsafe` and refuses the retry instead. |
+| **R17** | **Auto-minting `--op-token` and treating it as retry-safe** | Silent double-append: the failure invariant 1 exists to prevent. `datum tx` marks the transaction `retry_unsafe` and refuses the retry instead. |
 | **R18** | **Reporting invariant-15 coverage as one percentage** | 1,338 files (20.5%) are unrenderable for lack of a type. A single percentage is the *count that agrees while meaning something else*. Four numbers, always. |
 
 ## 24. OPEN QUESTIONS
@@ -1411,7 +1411,7 @@ template to lift; **`behavioral-contract-index` (218 commits), `verification-pro
 `story-id-mapping`, `regression-state` have none.** The only surviving description of BC-INDEX's
 shape is BC-INDEX itself — so the render schema must be *reverse-engineered from the artifact it
 replaces*, which is the one input guaranteed to contain the drift. Proposal: derive a candidate
-schema from the live document, then gate it by requiring `fa shadow` cell agreement to *rise*
+schema from the live document, then gate it by requiring `datum shadow` cell agreement to *rise*
 under it. Not designed here.
 
 **Q2 — Who assigns `generation`/`lifecycle_status` to the 41 legacy stories?** The scope
@@ -1497,8 +1497,8 @@ alternative before pulling the lever. That measurement has not been made.
 ## 25. Reproduce every number in this document
 
 Every number introduced by *this* document (as opposed to carried from the spine, the registry
-or `fa`'s own gates) came from one of the four read-only probes below. Run from
-`~/Dev/scrap/dolt-artifact-spike`. **A number in this document that is not reproducible by one
+or `datum`'s own gates) came from one of the four read-only probes below. Run from
+`~/Dev/datum`. **A number in this document that is not reproducible by one
 of these is a defect in this document.**
 
 ### P1 — file census by resolved `authority`, plus the byte-level hazards (§1.2, §11, §13.1, §14)
@@ -1506,7 +1506,7 @@ of these is a defect in this document.**
 ```sh
 python3 - <<'PY'
 import os,re,yaml,collections,unicodedata
-R='fa/registry/'
+R='datum/registry/'
 reg=yaml.safe_load(open(R+'artifact-type-registry.yaml'))
 canon={k:v['canonical'] for k,v in yaml.safe_load(open(R+'aliases.yaml'))['aliases'].items()}
 auth={k:v.get('authority') for k,v in reg['types'].items()}
@@ -1648,13 +1648,13 @@ PY
 ```sh
 python3 - <<'PY'
 import yaml,collections,os,re
-d=yaml.safe_load(open('fa/registry/artifact-type-registry.yaml'))
+d=yaml.safe_load(open('datum/registry/artifact-type-registry.yaml'))
 t=d['types']
 print('canonical',len(t),'gap',len(d['gap_types']),'retired',len(d['retired_types']))  # 103/16/4
 print('authority',collections.Counter(v.get('authority') for v in t.values()))  # 68/22/13
 print('link_types',len(d['link_types']),'enums',
-      len(yaml.safe_load(open('fa/registry/enums.yaml'))['enums']),
-      'aliases',len(yaml.safe_load(open('fa/registry/aliases.yaml'))['aliases']))  # 23/17/180
+      len(yaml.safe_load(open('datum/registry/enums.yaml'))['enums']),
+      'aliases',len(yaml.safe_load(open('datum/registry/aliases.yaml'))['aliases']))  # 23/17/180
 der=[k for k,v in t.items() if v.get('authority')=='derived']
 print('derived with NO declared sections:',sum(1 for k in der if not t[k].get('sections')),'/',len(der))
 print('section_policy over all types:',collections.Counter(v.get('section_policy') for v in t.values()))
@@ -1671,16 +1671,16 @@ print('derived types with NO template (the §24-Q1 six):',[k for k in der if k n
 PY
 ```
 
-### The `fa` gate numbers carried from the HANDOFF (unchanged by this document)
+### The `datum` gate numbers carried from the HANDOFF (unchanged by this document)
 
 ```sh
-cd fa && go build -o fa . && cd ..
-./fa/fa init     --db /tmp/fadb
-./fa/fa import   --db /tmp/fadb ~/Dev/vsdd-factory/.factory   # bc 1959 · vp 80 · story 148
-./fa/fa validate --db /tmp/fadb                               # 776
-./fa/fa validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 7,487
-./fa/fa shadow   --db /tmp/fadb ~/Dev/vsdd-factory/.factory   # 658
-./fa/fa refs     --db /tmp/fadb --kind section --status dangling        # 30
+cd datum && go build -o datum . && cd ..
+./datum/datum init     --db /tmp/fadb
+./datum/datum import   --db /tmp/fadb ~/Dev/vsdd-factory/.factory   # bc 1959 · vp 80 · story 148
+./datum/datum validate --db /tmp/fadb                               # 776
+./datum/datum validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 7,487
+./datum/datum shadow   --db /tmp/fadb ~/Dev/vsdd-factory/.factory   # 658
+./datum/datum refs     --db /tmp/fadb --kind section --status dangling        # 30
 ```
 
 ### Churn (§1.2, §17.2)

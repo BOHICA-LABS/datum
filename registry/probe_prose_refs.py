@@ -24,7 +24,7 @@ ROOT = os.path.expanduser(sys.argv[1] if len(sys.argv) > 1 else "~/Dev/vsdd-fact
 def _load_kinds():
     import yaml
     here = os.path.dirname(os.path.abspath(__file__))
-    reg = yaml.safe_load(open(os.path.join(os.path.dirname(here), "fa", "registry",
+    reg = yaml.safe_load(open(os.path.join(os.path.dirname(here), "datum", "registry",
                                            "artifact-type-registry.yaml")))
     b = reg.get("prose_ref_boundary") or {}
     before, after = b.get("before", ""), b.get("after", "")
@@ -58,7 +58,7 @@ OWNER_RE = re.compile(r'\b(?:BC-\d+\.\d+\.\d+|VP-\d+|S-\d+\.\d+[A-Za-z0-9.\-]*|E
 def _load_vcite():
     import yaml
     here = os.path.dirname(os.path.abspath(__file__))
-    reg = yaml.safe_load(open(os.path.join(os.path.dirname(here), "fa", "registry",
+    reg = yaml.safe_load(open(os.path.join(os.path.dirname(here), "datum", "registry",
                                            "artifact-type-registry.yaml")))
     vc = (reg.get("prose_ref_kinds") or {}).get("version_cite") or {}
     return vc.get("pattern_prepositional", ""), vc.get("pattern", "")

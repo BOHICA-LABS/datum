@@ -35,7 +35,7 @@ CI, singleton by construction:
   1. clone the artifact ref
   2. enumerate refs/dolt/stage/*
   3. merge each, in deterministic order
-  4. fa validate                              ← ADMISSION CONTROL
+  4. datum validate                              ← ADMISSION CONTROL
   5. ONE push to the artifact branch
   6. delete the consumed refs (API), then re-dispatch only on progress
 ```
@@ -62,7 +62,7 @@ base,seed        w0,w0        w1,w1        w2,w2        shared,from-w0
 
 ```yaml
 concurrency:
-  group: fa-aggregate
+  group: datum-aggregate
   cancel-in-progress: false
 ```
 
@@ -151,7 +151,7 @@ it every single run. Measured by running the aggregation twice more with **nothi
 to do**: **17 s, then 8 s of pure waste**. At 20 stuck refs that dominates the job, and
 the backlog only grows, because a stuck ref stays until its writer resolves it.
 
-**Required `fa aggregate` feature: quarantine, not just retention.** Record an attempt
+**Required `datum aggregate` feature: quarantine, not just retention.** Record an attempt
 count per staging ref and back off (or move it to `refs/dolt/quarantine/*`) so a stuck
 writer cannot tax the whole fleet indefinitely. Retention is right; unbounded
 re-attempt is not.
@@ -182,7 +182,7 @@ Two things this corrected:
 - I estimated "~1-2 min dominated by runner startup". It is **~30 s** and startup was
   negligible in every sample.
 - I claimed the Go binary would remove 20-30 s of `dolt` install. It is **2 s**. The
-  real argument for `fa` is toolchain simplicity and one code path, **not** latency.
+  real argument for `datum` is toolchain simplicity and one code path, **not** latency.
 
 **Caveat that matters:** the runner queue was 0 s in all three samples, i.e. GitHub
 scheduled instantly on this repo. That is the volatile term — a busier org or a
@@ -196,26 +196,26 @@ needing sub-30-second visibility must not go through CI.
 - **Latency: ~30 s median, 44 s worst of 3** (§4b), with the runner queue as the
   volatile term. Fine at 45-minute gate cadence; **per-write visibility is gone.**
 - **CI is on the critical path.** Mitigated by the end state: the aggregator is
-  **`fa aggregate`**, a subcommand of the Go binary, so during an Actions outage any
+  **`datum aggregate`**, a subcommand of the Go binary, so during an Actions outage any
   dev runs the identical code path. Nothing is lost meanwhile — work sits in staging
   refs. This is why the aggregator must NOT be logic living in YAML.
 - **It centralises *coordination*** even though storage stays decentralised. What it
   avoids is a daemon anyone operates, a port, and a stateful SPOF; the trust anchor is
   the git remote the project already has.
-- **The prototype is throwaway.** `poc/workflows/fa-aggregate.yml` shells out to the
-  `dolt` CLI to learn the mechanics quickly. Once `fa` embeds Dolt the whole job is
-  "download `fa`, run `fa aggregate`" — no dolt install, and the same binary devs run.
+- **The prototype is throwaway.** `poc/workflows/datum-aggregate.yml` shells out to the
+  `dolt` CLI to learn the mechanics quickly. Once `datum` embeds Dolt the whole job is
+  "download `datum`, run `datum aggregate`" — no dolt install, and the same binary devs run.
 
 ---
 
 ## 6. Reproducing
 
 ```bash
-gh workflow enable fa-aggregate -R drbothen/dolt-artifact-spike-remote   # cron is off
+gh workflow enable datum-aggregate -R drbothen/datum (formerly dolt-artifact-spike)-remote   # cron is off
 .venv/bin/python -u poc/test_ci_aggregator.py        # 4/4, ~6 min
-# env: FA_CI_REPO  FA_CI_WRITERS=4  FA_CI_POLL=900  FA_CI_KEEP=1
+# env: DATUM_CI_REPO  DATUM_CI_WRITERS=4  DATUM_CI_POLL=900  DATUM_CI_KEEP=1
 ```
 
-The workflow lives at `poc/workflows/fa-aggregate.yml` here and is deployed to
+The workflow lives at `poc/workflows/datum-aggregate.yml` here and is deployed to
 `.github/workflows/` in the test remote. The suite sweeps its own refs at start and
 in a `finally` block.

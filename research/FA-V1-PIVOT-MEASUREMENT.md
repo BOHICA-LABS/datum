@@ -3,7 +3,7 @@ title: FA-V1-PIVOT-MEASUREMENT — the field-per-row pivot cost, measured, with 
 date: 2026-08-02
 purpose: close the L1-L2 design's ONE unmeasured assumption (its §9 Q9) with numbers, and derive the materialization fallback's missing trigger from them
 status: MEASURED — L2-A confirmed; the fallback is NOT needed by any type in any of the three corpora today
-repro: fa/pivot_probe_test.go (TestPivotCost · TestPivotStorage · TestWideRowCeiling) + registry/probe_field_mass.py
+repro: datum/pivot_probe_test.go (TestPivotCost · TestPivotStorage · TestWideRowCeiling) + registry/probe_field_mass.py
 ---
 
 # The field-per-row pivot, measured
@@ -20,9 +20,9 @@ its favour, one pointed in the wrong direction entirely.**
 ## How to re-run every number here
 
 ```sh
-cd fa
+cd datum
 CGO_ENABLED=1 go test -tags gms_pure_go -run TestWideRowCeiling -v .           # no corpus needed
-FA_PIVOT_CORPUS=~/Dev/vsdd-factory/.factory \
+DATUM_PIVOT_CORPUS=~/Dev/vsdd-factory/.factory \
   CGO_ENABLED=1 go test -tags gms_pure_go -run 'TestPivotCost|TestPivotStorage' -v -timeout 30m .
 cd .. && python3 registry/probe_field_mass.py
 ```

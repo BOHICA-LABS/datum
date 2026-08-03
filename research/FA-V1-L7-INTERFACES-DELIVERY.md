@@ -12,10 +12,10 @@ L7 is the layer V-J and V-K reshaped after the other four were written, so it is
 designed *with* their consequences rather than corrected by them. Two of those consequences are
 load-bearing and neither existed in any prior layer doc:
 
-1. **`fa` cannot verify a model claim, only record what the caller asserts.**
+1. **`datum` cannot verify a model claim, only record what the caller asserts.**
 2. **No op may be long-running.** A harness tool call cannot block for a 6,537-file migration.
 
-Everything below follows from those plus the standing rule that **`fa` is a tool, never an agent** —
+Everything below follows from those plus the standing rule that **`datum` is a tool, never an agent** —
 no LLM client, no API keys, no model config, no provider network calls.
 
 ---
@@ -26,30 +26,30 @@ no LLM client, no API keys, no model config, no provider network calls.
 |---|---|---|
 | **L7-A** | **One op set, three transports: CLI, MCP, CI. The transport is a THIN CODEC over L3 and holds no logic.** | Two surfaces that each interpret would drift, which is this repo's five-instance vocabulary-drift class. Transports are generated from the same registry as the ops (L3-1). |
 | **L7-B** | **Every response is a `Result` envelope with a stable machine field set, on stdout, always — including on refusal.** Human-readable text goes to stderr and is never parsed. | An agent that must regex a diagnostic is an agent that will misparse it. Separating the streams is what makes exit codes usable as control flow. |
-| **L7-C** | **Exit codes are the control-flow contract, and the vocabulary is CLOSED** (0–5, §2). Never collapse two codes. | Standing rule in this repo: never collapse exit 1 (gate failed) and exit 2 (`fa` failed). Extended to all six. |
-| **L7-D** | **No op is long-running. Every op is bounded by a declared unit budget and returns a CONTINUATION when it hits it.** `fa` emits the *next* unit; the harness drives the loop. | V-K. A 6,537-file migration is thousands of round trips or it is nothing. |
-| **L7-E** | **Every mutating op carries an idempotence key supplied by the CALLER**; `fa` refuses to mint one for a non-idempotent op (`TOKEN-REQUIRED`). | Harnesses retry. L3-4 §7 already established this; L7 makes it a transport-level requirement so no surface can omit it. |
+| **L7-C** | **Exit codes are the control-flow contract, and the vocabulary is CLOSED** (0–5, §2). Never collapse two codes. | Standing rule in this repo: never collapse exit 1 (gate failed) and exit 2 (`datum` failed). Extended to all six. |
+| **L7-D** | **No op is long-running. Every op is bounded by a declared unit budget and returns a CONTINUATION when it hits it.** `datum` emits the *next* unit; the harness drives the loop. | V-K. A 6,537-file migration is thousands of round trips or it is nothing. |
+| **L7-E** | **Every mutating op carries an idempotence key supplied by the CALLER**; `datum` refuses to mint one for a non-idempotent op (`TOKEN-REQUIRED`). | Harnesses retry. L3-4 §7 already established this; L7 makes it a transport-level requirement so no surface can omit it. |
 | **L7-F** | **Attestation is typed `evidence_basis`, non-nullable, with `validate_by` mandatory whenever the basis is not `executed`.** | T-1, and V-K consequence 1. V-I's original defect was an unverifiable claim treated as a gate; recording an assertion honestly is progress, recording it as proof repeats the bug. |
-| **L7-G** | **Every gate carries a WITNESS: a stored known-bad input it provably rejects. `fa gate register` refuses a gate with no witness.** | T-2 (ADD-CHECK-FIRST). Closes the three "green check that never ran" findings *and* the two prism findings with one rule, at registration time rather than by review. |
-| **L7-H** | **Op-surface completeness is GATED: every op × every reachable exit code has a golden-file capture.** | T-3. `fa` has the exit vocabulary and the rule against collapsing codes, but no coverage gate over it. This is Stage 6's "name the states, then render each one" applied to a tool surface. |
+| **L7-G** | **Every gate carries a WITNESS: a stored known-bad input it provably rejects. `datum gate register` refuses a gate with no witness.** | T-2 (ADD-CHECK-FIRST). Closes the three "green check that never ran" findings *and* the two prism findings with one rule, at registration time rather than by review. |
+| **L7-H** | **Op-surface completeness is GATED: every op × every reachable exit code has a golden-file capture.** | T-3. `datum` has the exit vocabulary and the rule against collapsing codes, but no coverage gate over it. This is Stage 6's "name the states, then render each one" applied to a tool surface. |
 | **L7-I** | **Error payloads are designed against the A1–A4 rubric** — every refusal names the ladder step, the registry rule that governs it, and a LEGAL NEXT ACTION. | T-4. An error message for an agent is an instruction, not a diagnostic. |
 | **L7-J** | **MCP is generated, not hand-written, and is capability-gated to the caller's role.** The tool list an agent sees IS its permission set. | ~800 ops would drown a human but is an asset for an agent (V-K). Generating the manifest keeps it from drifting from the CLI. |
-| **L7-K** | **The harness supplies identity — role token, session/trace id, asserted model — and `fa` records it as caller-asserted, never verified.** | `fa` cannot distinguish agents sharing a process and a uid. Established by the earlier access-control work; V-K makes it the declared mechanism. |
+| **L7-K** | **The harness supplies identity — role token, session/trace id, asserted model — and `datum` records it as caller-asserted, never verified.** | `datum` cannot distinguish agents sharing a process and a uid. Established by the earlier access-control work; V-K makes it the declared mechanism. |
 | **L7-L** | **CI is a THIRD role, not a special case:** a non-interactive caller with its own role token, the same ops, and no ability to approve anything. | Prevents "CI can do what an agent cannot" becoming an unaudited bypass of invariant 18. |
 | **L7-M** | **Long-running work GCs periodically.** The migration driver issues a collect step every N units. | **Measured, not assumed:** EAV bulk load runs at **306.6× journal write amplification** — a populated store was 147 MB of which 143 MB was one uncollected journal file. Without this a migration writes hundreds of MB of journal for single-digit MB of data. |
 
 ---
 
-## 1. The shape: `fa` emits work, the agent interprets, `fa` records
+## 1. The shape: `datum` emits work, the agent interprets, `datum` records
 
-V-K inverts the control flow from what "AI-assisted ingest" suggests. `fa` never calls an AI.
+V-K inverts the control flow from what "AI-assisted ingest" suggests. `datum` never calls an AI.
 
 ```
-  harness/agent ──▶ fa next --kind classify --limit 20     "what needs interpreting?"
-  fa            ──▶ WORK UNIT + a CURSOR                   the files, their content, candidates
-  agent         ──▶ (interprets — the part fa cannot do)
-  harness/agent ──▶ fa record classify --cursor <c> ...     the answer + evidence + confidence
-  fa            ──▶ validates · versions · audits · REPLAYS thereafter
+  harness/agent ──▶ datum next --kind classify --limit 20     "what needs interpreting?"
+  datum            ──▶ WORK UNIT + a CURSOR                   the files, their content, candidates
+  agent         ──▶ (interprets — the part datum cannot do)
+  harness/agent ──▶ datum record classify --cursor <c> ...     the answer + evidence + confidence
+  datum            ──▶ validates · versions · audits · REPLAYS thereafter
 ```
 
 The replay property is what keeps a non-deterministic classifier compatible with invariant 15: the
@@ -67,9 +67,9 @@ code so a caller can branch on the number alone without reading the name.
 |---|---|---|---|
 | **0** | the op succeeded | continue | — |
 | **1** | **the op was well-formed but the DATA is wrong** | fix the payload and retry | `NO-SUCH-ARTIFACT` · `UNKNOWN-FIELD` · `BAD-ENUM` · `BAD-REF-TARGET` · `BAD-REF-TYPE` · `MISSING-REQUIRED` · `PLACEHOLDER` · `SECTION-POLICY` · `IDENTITY-IN-CONTENT` · `DERIVABLE-VALUE` · `BAD-KEY` · `TOKEN-REQUIRED` |
-| **2** | **`fa` itself failed, or the request is unanswerable** | do NOT retry; report to the human | `UNKNOWN-TYPE` · `NO-PROJECT` · `PARTITION-LOSSY` |
+| **2** | **`datum` itself failed, or the request is unanswerable** | do NOT retry; report to the human | `UNKNOWN-TYPE` · `NO-PROJECT` · `PARTITION-LOSSY` |
 | **3** | **refused by policy** | do not retry; do not probe | `DENIED-ROLE` · `DENIED-AUTHORITY` · `DENIED-PROJECT` · `DENIED-ASYMMETRY` |
-| **4** | **the schema is insufficient** — a proposal was filed, nothing was written | re-submit the echoed op stream after the schema lands | `SCHEMA-INSUFFICIENT` (`fa propose field`) |
+| **4** | **the schema is insufficient** — a proposal was filed, nothing was written | re-submit the echoed op stream after the schema lands | `SCHEMA-INSUFFICIENT` (`datum propose field`) |
 | **5** | **concurrent conflict** | re-read, rebase the intent, retry with the SAME idempotence key | `CONFLICT` · `CONFLICT-DIVERGENT` |
 | **6** | ⭐ **NEW — incomplete by design: a bounded op hit its unit budget** | call again with the returned cursor | `CONTINUATION` (§3) |
 
@@ -92,14 +92,14 @@ makes "not finished" impossible to read as "finished".
 
 Every bounded op declares a **unit budget** — artifacts, files, or field rows — never a wall-clock
 timeout. A time budget makes the same call return different amounts on different machines, so a
-migration's progress would stop being reproducible, and reproducibility is what `fa migrate verify`
+migration's progress would stop being reproducible, and reproducibility is what `datum migrate verify`
 rests on.
 
 ```
-$ fa migrate step --project rivetry --cohort B --limit 200
+$ datum migrate step --project rivetry --cohort B --limit 200
 { "status":"CONTINUATION", "done":200, "remaining":4331,
   "cursor":"eyJjb2hvcnQiOiJCIiwiYWZ0ZXIiOiJCQy0yLjA2LjAxMCJ9",
-  "next":"fa migrate step --project rivetry --cohort B --limit 200 --cursor eyJ…",
+  "next":"datum migrate step --project rivetry --cohort B --limit 200 --cursor eyJ…",
   "gc_due": false }
 exit 6
 ```
@@ -113,7 +113,7 @@ Four properties, each with a reason:
 | **idempotent** | `--cursor` + the caller's idempotence key | a retried step must not double-apply |
 | **progress-reporting** | `done` / `remaining` in every response | so a human or agent can tell stall from slow, and so **no silent cap** is possible |
 
-**`fa` emits the NEXT invocation verbatim** in `next`. That is deliberate: it removes the agent's need
+**`datum` emits the NEXT invocation verbatim** in `next`. That is deliberate: it removes the agent's need
 to reconstruct pagination arguments correctly, which is exactly the sort of mechanical detail an LLM
 gets subtly wrong.
 
@@ -132,7 +132,7 @@ rather than asserted.
 
 ### ⭐ GC is part of the loop (L7-M)
 
-`gc_due` goes true every N steps, and `fa migrate step` refuses to proceed past a due collection —
+`gc_due` goes true every N steps, and `datum migrate step` refuses to proceed past a due collection —
 because the measurement showed a 143 MB journal over ~1 MB of data at **306.6× write amplification**.
 A migration that never collects converts a small corpus into a large store, and the harness has no way
 to know it should ask.
@@ -157,7 +157,7 @@ One shape for every op, every transport, success and refusal alike.
   "field": "lifecycle_status",
   "submitted": "done",
   "legal_values": ["active","deprecated","retired","fulfilled","draft","withdrawn"],
-  "next_action": "resubmit with one of legal_values, or `fa propose enum-value` to extend it",
+  "next_action": "resubmit with one of legal_values, or `datum propose enum-value` to extend it",
   "message": "…human prose, ALSO on stderr, never to be parsed…"
 }
 ```
@@ -176,7 +176,7 @@ is checked against four dimensions, and a skipped dimension is a stated decision
 |---|---|---|---|
 | **A1** | **trust calibration** — state capabilities, performance, and **limits** | every op declares what it does NOT guarantee; a `caller-asserted` row surfaces as such in every read | `evidence_basis` in the envelope (L7-F) |
 | **A2** | **explainability / show your work** | a refusal names the ladder step and the registry rule, not just a message | `ladder_step` + `rule` |
-| **A3** | **human-in-the-loop before impactful action** | `fa propose field` (exit 4) IS approve/reject/refine; conflicts are refused, never merged | exit 4 + invariant 21 |
+| **A3** | **human-in-the-loop before impactful action** | `datum propose field` (exit 4) IS approve/reject/refine; conflicts are refused, never merged | exit 4 + invariant 21 |
 | **A4** | **error / uncertainty / refusal handling with a recovery path** | every refusal carries `next_action` | `next_action` |
 
 ### ⚠ The A4 tension, stated rather than papered over
@@ -192,10 +192,10 @@ dead end.
 
 ```json
 { "status":"DENIED-ASYMMETRY", "exit":3,
-  "next_action":"this op is outside your role's perimeter; request adjudication via `fa perimeter explain --role <self>` (which describes YOUR permissions and never mentions any subject)" }
+  "next_action":"this op is outside your role's perimeter; request adjudication via `datum perimeter explain --role <self>` (which describes YOUR permissions and never mentions any subject)" }
 ```
 
-⚠ **`fa perimeter explain` must be proven non-leaking**, because "describe your own permissions" is
+⚠ **`datum perimeter explain` must be proven non-leaking**, because "describe your own permissions" is
 one careless join away from "enumerate what exists". Gated by a test that runs it under every role and
 asserts the output is a pure function of the role. Recorded as Q5.
 
@@ -203,12 +203,12 @@ asserts the output is a pure function of the role. Recorded as Q5.
 
 ## 6. Attestation: caller-asserted, never verified (L7-F)
 
-`fa` records what the harness says and types it honestly. Three tiers, from T-1 — richer than the
+`datum` records what the harness says and types it honestly. Three tiers, from T-1 — richer than the
 binary invariant 22, and richer than V-K's two-way split:
 
 | `evidence_basis` | meaning | `validate_by` | may satisfy a gate? |
 |---|---|---|---|
-| `executed` | `fa gate exec` produced it | n/a | **yes** — invariant 22's only qualifying tier |
+| `executed` | `datum gate exec` produced it | n/a | **yes** — invariant 22's only qualifying tier |
 | `caller-asserted` | the harness stated it (model identity, session, a manual step) | **required** | only where the gate registry declares `manual: true` with a named owner |
 | `advisory-unreviewed` | an agent's judgement, recorded, not adjudicated | **required** | **no** |
 | `prepared-unvalidated` | authored for a human to run later | **required** | **no** |
@@ -218,7 +218,7 @@ name its validation trigger is refused at write time. This is the same move L5�
 abolished `gate_status: deferred` in favour of deferral rows carrying an owner and an expiry — applied
 to *evidence* instead of to *deferrals*.
 
-This is what makes V-I's growth target a config change later rather than a redesign: `fa` records the
+This is what makes V-I's growth target a config change later rather than a redesign: `datum` records the
 asserted model on every agent-attributable op now, typed as an assertion, and the diversity criterion
 stays in the gate registry as `manual: true` with an owner so it appears in every gate report as an
 open gap rather than disappearing.
@@ -227,7 +227,7 @@ open gap rather than disappearing.
 
 ## 7. Gate witnesses — ADD-CHECK-FIRST (L7-G)
 
-> **`fa gate register` REFUSES a gate that has no witness.**
+> **`datum gate register` REFUSES a gate that has no witness.**
 
 A witness is a stored known-bad input the gate provably rejects, plus a known-good input it accepts.
 Registration runs both and records the outcome. A gate that passes its own known-bad witness is not
@@ -247,13 +247,13 @@ readable as one that passed.
 
 ## 8. Op-surface completeness (L7-H)
 
-The gate `fa` does not have and needs:
+The gate `datum` does not have and needs:
 
 > For **every generated op**, every **reachable** exit code has a **golden-file capture** of the exact
 > `Result` envelope, captured deterministically. Reachability is declared per op; an exit code declared
 > unreachable must have a stated reason.
 
-Rationale is T-3: `fa` has the exit vocabulary and the never-collapse rule but **no coverage gate over
+Rationale is T-3: `datum` has the exit vocabulary and the never-collapse rule but **no coverage gate over
 either**. Naming the states in prose is necessary and not sufficient; each needs its rendered evidence.
 
 Determinism requirements, lifted from the same source's capture discipline and already this repo's
@@ -270,7 +270,7 @@ a **51,566-byte** ledger field, a **1.57 MB** body, a **214,554-line** table, an
 
 ### 9.1 CLI — the universal fallback
 
-`fa <noun> <verb> [--flags]`, machine JSON on stdout, prose on stderr, exit code as contract. Must work
+`datum <noun> <verb> [--flags]`, machine JSON on stdout, prose on stderr, exit code as contract. Must work
 under any harness, so **no harness-specific assumptions** (V-K). `--json` is the default, not a flag.
 
 ### 9.2 MCP — the rich surface, generated (L7-J)
@@ -288,7 +288,7 @@ under any harness, so **no harness-specific assumptions** (V-K). `--json` is the
 
 ### 9.3 CI — a third role (L7-L)
 
-Same ops, own role token, non-interactive, **cannot approve**. `fa gate exec` in CI is the same op with
+Same ops, own role token, non-interactive, **cannot approve**. `datum gate exec` in CI is the same op with
 the same evidence typing; CI's asserted identity is recorded like any other caller's.
 
 ---
@@ -310,7 +310,7 @@ Not engineering. Listed first because schema generation is meaningless without i
 
 ### Phase 1 — L1/L2: the store the registry generates
 **Exit criteria**
-- [ ] `fa migrate schema` generates `artifact` + `artifact_field` + `artifact_ref` + body/section +
+- [ ] `datum migrate schema` generates `artifact` + `artifact_field` + `artifact_ref` + body/section +
       the catalog mirror + **119 per-type views** from the registry, with **zero hand-written DDL**
 - [ ] every generated view is queryable and returns the expected population (the pivot probe's Q9a
       check, generalised from 1 view to 119)
@@ -346,7 +346,7 @@ Not engineering. Listed first because schema generation is meaningless without i
 
 ### Phase 4 — L5/L6: gates, convergence, engine
 **Exit criteria**
-- [ ] `fa gate exec` is the **sole** writer of the evidence table; no flag accepts evidence bytes
+- [ ] `datum gate exec` is the **sole** writer of the evidence table; no flag accepts evidence bytes
 - [ ] **every registered gate has a witness** (L7-G) — registration refuses without one
 - [ ] `unevaluable = error = block` everywhere; **no fail-open**; vacuity guard mandatory
 - [ ] `deferred` abolished; deferral rows carry owner + expiry
@@ -371,7 +371,7 @@ Not engineering. Listed first because schema generation is meaningless without i
 - [ ] retry-safety proven by **replaying every step twice** with the same idempotence key and
       asserting the store is identical
 - [ ] `evidence_basis` non-nullable; `validate_by` required for every non-`executed` basis
-- [ ] `DENIED-ASYMMETRY` proven non-leaking under every role, including `fa perimeter explain`
+- [ ] `DENIED-ASYMMETRY` proven non-leaking under every role, including `datum perimeter explain`
 - [ ] `gc_due` enforced; a full-corpus migration's journal stays bounded (measured against the
       306.6× amplification baseline)
 
@@ -382,7 +382,7 @@ D ledgers → E tail → F derived → G live state last. Project order: **rivet
 **Exit criteria, per `(project, type)` pair**
 - [ ] the **seven named stage-1 gates** pass, with **CONSERVATION at zero tolerance, no thresholds**
 - [ ] every transformation carries its mandatory `before`, so revert is total rather than best-effort
-- [ ] `fa migrate verify` **refuses on a moved corpus pin**
+- [ ] `datum migrate verify` **refuses on a moved corpus pin**
 - [ ] per-form counts reported; **nothing dropped silently**
 - [ ] the pair can be **abandoned** and the markdown still authored (proven, not assumed)
 
@@ -390,7 +390,7 @@ D ledgers → E tail → F derived → G live state last. Project order: **rivet
 **Exit criteria**
 - [ ] invariant 15 green over the **whole** corpus, per-artifact per-field
 - [ ] the 62 hooks, 5 bash helpers and 7 hand-maintained indexes are **retired**, not integrated
-- [ ] `.factory/**` markdown is **generated** and its writers all call `fa`
+- [ ] `.factory/**` markdown is **generated** and its writers all call `datum`
 - [ ] the production-grade bar (spine §6) is met **with numbers**, not adjectives
 
 ---
@@ -401,7 +401,7 @@ D ledgers → E tail → F derived → G live state last. Project order: **rivet
 |---|---|
 | L3–L4 | **exit 6 (`CONTINUATION`) joins the closed exit vocabulary.** Every op that can exceed a unit budget declares it. |
 | L5 | `evidence`/`attestation` gain non-nullable `evidence_basis` + conditional `validate_by` (L7-F). Gate registration gains a **witness** requirement (L7-G). Gate reports must omit skipped checks from the clean list. |
-| L6 | the scheduler is a **caller-driven loop**, not a daemon: `fa` never runs work on its own clock. |
+| L6 | the scheduler is a **caller-driven loop**, not a daemon: `datum` never runs work on its own clock. |
 | migration | reshaped into a **cursor-driven step function** with periodic GC — the biggest un-designed consequence of V-K, now designed. |
 
 ---
@@ -413,14 +413,14 @@ D ledgers → E tail → F derived → G live state last. Project order: **rivet
    widening here, or should incompleteness ride on exit 0 with a mandatory field?* My read: the
    distinct code, because the failure mode of the alternative is a silent partial migration.
 2. **Cursor opacity.** An opaque cursor cannot be hand-edited (good) but cannot be inspected when a
-   migration stalls (bad). *Do we ship a `fa cursor explain`, and does that re-introduce a leak?*
+   migration stalls (bad). *Do we ship a `datum cursor explain`, and does that re-introduce a leak?*
 3. **The 200-artifact unit budget is derived from a READ workload.** Every latency in
    `FA-V1-PIVOT-MEASUREMENT.md` is a read. *Re-measure once the write path exists; do not carry 200
    forward as a constant.*
 4. **Who owns the witness corpus?** L7-G needs a known-bad input per gate. *Is that a fixture tree in
    the repo, or rows in the store? A fixture tree is a second home for data; rows in the store make
    the witness itself subject to migration.*
-5. **`fa perimeter explain` non-leakage** — is "describe your own permissions" provably a pure function
+5. **`datum perimeter explain` non-leakage** — is "describe your own permissions" provably a pure function
    of the role, given the role's permissions are registry rows that mention types?
 6. **MCP manifest shape leakage** — safe only if no op enumerates manifests. *Confirm nothing does.*
 7. **Batching vs chunking.** L7-D chunks one op; V-K also asks for **batchable** ops (many small writes

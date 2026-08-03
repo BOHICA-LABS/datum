@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""#671's phase-1 exit criterion: can `fa` reproduce the known F-* findings?
+"""#671's phase-1 exit criterion: can `datum` reproduce the known F-* findings?
 
-THE QUESTION. `fa` parses FRONTMATTER ONLY. #671 insists the real drift lives in BODY PROSE
+THE QUESTION. `datum` parses FRONTMATTER ONLY. #671 insists the real drift lives in BODY PROSE
 (ADR-NNN section cites, BC version cells copied into story tables). Whoever is right decides
 whether the type registry needs prose-reference link types BEFORE 24 projects migrate onto it.
 So: take the findings the adversary actually reported and classify each by WHAT A PARSER WOULD
@@ -32,7 +32,7 @@ adversarial findings are SEMANTIC judgements about spec completeness that no par
 kind can reach, and folding those into "process" would have overstated what prose extraction
 buys.
   A REGISTRY-ELIMINATES  derived-data staleness; impossible once the artifact is derived
-  B FRONTMATTER-REACHABLE fa today, or with a declared field/enum/link
+  B FRONTMATTER-REACHABLE datum today, or with a declared field/enum/link
   C PROSE-REFERENCE       needs body-prose extraction — #671's territory
   D EXTERNAL-STATE        needs a fact from outside .factory (PR state, SHA, CI, source)
   E PROCESS-UNREACHABLE   about how a gate was RUN, not about data
@@ -82,7 +82,7 @@ RULES = [
 ]
 NAMES = {
     "A": "REGISTRY-ELIMINATES   derived data; impossible once the artifact is derived",
-    "B": "FRONTMATTER-REACHABLE  fa today, or with a declared field/enum/link",
+    "B": "FRONTMATTER-REACHABLE  datum today, or with a declared field/enum/link",
     "C": "PROSE-REFERENCE        needs body-prose extraction (#671's claim)",
     "D": "EXTERNAL-STATE         needs a fact from outside .factory",
     "E": "PROCESS-UNREACHABLE    about how a gate was RUN, not about data",
@@ -255,7 +255,7 @@ def main():
         if not t: continue
         addressable = cc["A"] + cc["B"]
         print(f"\n{label} (n={t}):")
-        print(f"  registry+fa as designed already covers : {addressable:5d}  {addressable*100.0/t:5.1f}%"
+        print(f"  registry+datum as designed already covers : {addressable:5d}  {addressable*100.0/t:5.1f}%"
               f"   (A {cc['A']} derived-data + B {cc['B']} frontmatter)")
         print(f"  REQUIRES prose extraction (#671)       : {cc['C']:5d}  {cc['C']*100.0/t:5.1f}%")
         print(f"  out of reach of ANY parser             : {cc['E']+cc['F']:5d}  "

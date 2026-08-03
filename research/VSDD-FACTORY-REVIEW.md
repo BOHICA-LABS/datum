@@ -1,9 +1,9 @@
 ---
-title: VSDD-FACTORY-REVIEW — how the factory is supposed to operate, and what `fa` must therefore provide
+title: VSDD-FACTORY-REVIEW — how the factory is supposed to operate, and what `datum` must therefore provide
 date: 2026-08-02
-purpose: a full operational review of ~/Dev/vsdd-factory — phases, agents, artifacts, state, gates, modes — compiled into a feature list for `fa`
+purpose: a full operational review of ~/Dev/vsdd-factory — phases, agents, artifacts, state, gates, modes — compiled into a feature list for `datum`
 method: six parallel READ-ONLY reviews, each reading the skills/agents/workflows/hooks AND the live .factory corpus, every claim cited to file:line
-status: COMPLETE — all 6 areas landed, consolidated into 32 `fa` features across 5 tiers (Tier 0 = migration/cutover, the prerequisite)
+status: COMPLETE — all 6 areas landed, consolidated into 32 `datum` features across 5 tiers (Tier 0 = migration/cutover, the prerequisite)
 corpus_pin: vsdd-factory .factory @ 0aaba144 (read-only; 0 files modified)
 ---
 
@@ -786,26 +786,26 @@ admission that the 3-clean-pass rule is "structurally impossible under prose-onl
 
 ---
 
-# ⭐ CONSOLIDATED `fa` FEATURE LIST
+# ⭐ CONSOLIDATED `datum` FEATURE LIST
 
 Deduplicated across all six reviews. Ordered by leverage — how much of the measured failure mass each
-one removes. **Tier 0 comes first because it is the prerequisite: the goal is that `fa` is the SOLE HOME
-of every artifact — new projects start in `fa`, existing projects migrate in — and Tiers 1-4 all assume
+one removes. **Tier 0 comes first because it is the prerequisite: the goal is that `datum` is the SOLE HOME
+of every artifact — new projects start in `datum`, existing projects migrate in — and Tiers 1-4 all assume
 that has already happened.** Every "eliminates" is a defect one of the reviews verified in this corpus.
 
 The single most important observation: **the factory's design intent is consistently sharp, and
 almost every failure is that intent expressed in the wrong substrate** — prose where a schema was
 needed, a hook where a query was needed, bash-over-git where a transaction was needed, and an agent's
-self-report where a derivation was needed. `fa` should not reimplement the factory's judgment. It
+self-report where a derivation was needed. `datum` should not reimplement the factory's judgment. It
 should give that judgment a substrate that can hold it.
 
 ---
 
-## Tier 0 — getting the artifacts INTO `fa`, and keeping them there
+## Tier 0 — getting the artifacts INTO `datum`, and keeping them there
 
-⚠ **Tiers 1–4 describe what `fa` must do once artifacts live in it. This tier is the prerequisite,
-and it is where the current build is thinnest.** The goal is that `fa` is the *sole home* of every
-artifact — new projects start in `fa` and never grow a markdown corpus; existing projects migrate in.
+⚠ **Tiers 1–4 describe what `datum` must do once artifacts live in it. This tier is the prerequisite,
+and it is where the current build is thinnest.** The goal is that `datum` is the *sole home* of every
+artifact — new projects start in `datum` and never grow a markdown corpus; existing projects migrate in.
 Measured against that goal today:
 
 | | |
@@ -817,17 +817,17 @@ Measured against that goal today:
 | distinct `document_type` values / modeled | 70 / **18** |
 
 Plus: only `bc`, `vp` and `story` carry a `body` column; there is **no `section` table** (D-A's
-ordinal partition is computed in memory and discarded); there is **no `fa render`**; invariant 15 is
-declared and unbuilt; and `fa` self-describes as *"phase 1: read-only shadow"* — **it has no write
+ordinal partition is computed in memory and discarded); there is **no `datum render`**; invariant 15 is
+declared and unbuilt; and `datum` self-describes as *"phase 1: read-only shadow"* — **it has no write
 path at all.** So the store is currently lossy for ~31% of the corpus and has no way back out.
 
 ### M1. Lossless capture for EVERY type — verbatim body + stored section partition
 Every artifact keeps its body bytes; D-A's ordinal section partition becomes a real table rather than
 an in-memory value. Acceptance: **100% of observed `document_type` values have a home**, and every
 one stores its body. *Today: 18 of 70 types modeled, 3 tables carry a body.* Until this holds,
-"move every artifact into `fa`" means losing 461 files outright and field-extracting 940 more.
+"move every artifact into `datum`" means losing 461 files outright and field-extracting 940 more.
 
-### M2. `fa render` and the round-trip gate — the settled decision that was never built
+### M2. `datum render` and the round-trip gate — the settled decision that was never built
 D-B: store gitignored, **rendered markdown committed** as the review surface and the offline backup,
 with **invariant 15 `import(render(store)) == store` gated byte-exact**. This is what keeps humans,
 `gh pr diff`, GitHub review, and every existing reader working after the move — and it is the only
@@ -835,12 +835,12 @@ honest proof the migration is lossless. `rendered/` currently holds one hand-mad
 *This is the highest-priority missing piece in the whole list:* without it, migration is
 irreversible and unverifiable.
 
-### M3. The write path — `fa new|set|edit|retire`, schema-validated at write time
-`fa` can import, validate and shadow; it has never written an artifact. Every Tier 1–4 feature
+### M3. The write path — `datum new|set|edit|retire`, schema-validated at write time
+`datum` can import, validate and shadow; it has never written an artifact. Every Tier 1–4 feature
 assumes this exists. Writes validate against F5's schema, mint ids via F11, take a lease via F4, land
 in a transaction via F2, and emit an audit row via F18.
 
-### M4. `fa init` as the greenfield entry point
+### M4. `datum init` as the greenfield entry point
 A new project starts with a store and a schema — no orphan branch, no worktree, no markdown corpus to
 migrate later. This replaces `repo-initialization`'s `factory-artifacts` orphan branch +
 `.factory/` worktree setup, and with it the whole class of "which `.factory` am I in" failures
@@ -848,12 +848,12 @@ migrate later. This replaces `repo-initialization`'s `factory-artifacts` orphan 
 
 ### M5. Staged, per-TYPE cutover — never big-bang
 Reuse the ladder the registry already declares for derived types, applied to *migration* per artifact
-type: **`shadow` → `dual-write` → `authoritative` → `markdown retired`**. `fa shadow` already
+type: **`shadow` → `dual-write` → `authoritative` → `markdown retired`**. `datum shadow` already
 implements stage 1 and reports 658 disagreements, which is exactly the evidence stage 2 should be
 gated on. A type advances only on evidence; nothing flips wholesale. This also means an in-flight
 project is never blocked on a full migration — it can move BCs before it moves burst logs.
 
-### M6. Migration acceptance gate — `fa migrate verify`
+### M6. Migration acceptance gate — `datum migrate verify`
 Completeness is a measurement, not a declaration: every file accounted for (migrated / declared
 out-of-scope / rejected-with-reason), **byte-exact round trip for 100% of bodies**, count parity per
 type, the 18,826-finding conformance baseline preserved across the move, and **zero unmodeled
@@ -862,24 +862,24 @@ demonstrated that a 6.75% sample can pass a 20% floor because nothing computed t
 
 ### M7. Compatibility for everything that reads `.factory/**` today
 62 registered hooks, the `gh`/CI surface, and ~34 agent definitions read those paths. Each either
-reads the committed render (M2) or calls `fa`. `fa path resolve <type> <ids>` becomes the only way an
+reads the committed render (M2) or calls `datum`. `datum path resolve <type> <ids>` becomes the only way an
 agent learns where anything lives — which is also what closes F17's ~28 unregistered homes and the
 225 unmatched files, because the path stops being something an agent types.
 
 ### M8. Write interception, or the store and the files silently diverge
-While both exist, `Edit`/`Write` on artifact paths must be denied and only `fa` permitted (D2 already
-anticipated "deny Bash, allow only `fa`"). Without this, dual-write drifts and the migration's own
-round-trip gate starts failing for reasons unrelated to `fa`.
+While both exist, `Edit`/`Write` on artifact paths must be denied and only `datum` permitted (D2 already
+anticipated "deny Bash, allow only `datum`"). Without this, dual-write drifts and the migration's own
+round-trip gate starts failing for reasons unrelated to `datum`.
 
 ### M9. Multi-project hosting
-`fa` already imports three corpora (vsdd-factory, prism, rivetry) one at a time. "New projects start
-with `fa`" means it hosts many: one shared registry — the single canonical copy already `go:embed`'d
+`datum` already imports three corpora (vsdd-factory, prism, rivetry) one at a time. "New projects start
+with `datum`" means it hosts many: one shared registry — the single canonical copy already `go:embed`'d
 and read by the Python tooling — with a store per project, and every query scoped by project (F7).
 
 ### M10. A retirement ledger
 Name, per cutover stage, which of the 62 hooks / 5 bash helpers / 7 hand-maintained INDEX files /
 `sprint-state.yaml` / `wave-state.yaml` get **deleted**, and what replaces each. A migration that
-only adds `fa` while leaving the markdown machinery live doubles the number of sources of truth
+only adds `datum` while leaving the markdown machinery live doubles the number of sources of truth
 instead of collapsing them — and the review found the corpus already has 5 competing authorities on
 where artifacts live.
 
@@ -901,7 +901,7 @@ against a live v2.65. **This single change retires TD-VSDD-053, TD-VSDD-044,
 `verify-sha-currency.sh`, the entire burst protocol, and every hand-typed provenance string.**
 
 ### F2. Transactions: all-or-nothing across N artifacts, with idempotence keys
-`fa txn begin / write / commit --key <id>`. Replay returns the prior result. One transaction spans
+`datum txn begin / write / commit --key <id>`. Replay returns the prior result. One transaction spans
 multiple scopes and repos.
 
 *Eliminates:* `compact-state` appending to five files sequentially so a failure at #4 leaves #1–3
@@ -911,7 +911,7 @@ and no CAS helper for the second branch; and `state-update`/`compact-state` comm
 pushing.
 
 ### F3. Optimistic concurrency with typed conflicts — and no force path at all
-`fa write --if-version n`; mismatch returns a `Conflict` naming the artifact, both versions, and the
+`datum write --if-version n`; mismatch returns a `Conflict` naming the artifact, both versions, and the
 conflicting writer. The store has no force, no auto-merge, no auto-rebase.
 
 *Eliminates:* the load-bearing concurrency bug — `factory-cas-push.sh` reads its
@@ -920,7 +920,7 @@ conflicting writer. The store has no force, no auto-merge, no auto-rebase.
 promises "Remote state MUST NOT be silently clobbered."
 
 ### F4. Store-side leases, scoped to path sets, with server-side expiry
-`fa lease acquire --scope <glob> --ttl`. The lease lives in the store, never inside a protected
+`datum lease acquire --scope <glob> --ttl`. The lease lives in the store, never inside a protected
 artifact. Every write presents the token; an expired token is rejected at write time. Fail-closed by
 default. `--force` breaks are audited inside the same transaction as the break.
 
@@ -943,7 +943,7 @@ spellings of one `document_type`**, which is a live gate bypass because
 silently skips the structure gate; a retired enum value (`origin: recovered`) hard-coded into three
 gates against a census of zero; 17 severity tokens, **21 verdict tokens in a field whose declared
 domain is 2** (with 130 uses holding a *severity*), and 11 closure tokens against 5 declared. Also
-`fa` must not exempt indexes from structure checks — that exemption is what hid four STORY-INDEX
+`datum` must not exempt indexes from structure checks — that exemption is what hid four STORY-INDEX
 schemas and a `Depends-On` typo.
 
 ---
@@ -951,7 +951,7 @@ schemas and a `Depends-On` typo.
 ## Tier 2 — derivation. Stop maintaining what can be computed.
 
 ### F6. Indexes and counts derived, never maintained
-`fa index build bc|vp|story|arch|epic`; `fa count` owns every stated total. One canonical writer.
+`datum index build bc|vp|story|arch|epic`; `datum count` owns every stated total. One canonical writer.
 
 *Eliminates:* **six BC totals**, a Summary table contradicting its own column sum, 5 of 10 wrong
 subsystem counts, 1 unindexed BC, **37 phantom STORY-INDEX rows**, 5 of 17 wrong epic rollups, a
@@ -970,8 +970,8 @@ stories while every count still agreed**. It is also the missing carrier for fea
 hook-blocked, and the real artifact is a markdown table at another path.
 
 ### F8. Derivation edges with version-sets as the staleness key; staleness computed, not stored
-`fa derive --from --to`; `fa stale [--explain]` walks the DAG. Distinguish `stale` / `unverified` /
-`unresolvable`, and keep `fa ack --reason` strictly separate from `fa derive`.
+`datum derive --from --to`; `datum stale [--explain]` walks the DAG. Distinguish `stale` / `unverified` /
+`unresolvable`, and keep `datum ack --reason` strictly separate from `datum derive`.
 
 *Eliminates:* a **7-char truncated MD5 of a concatenation** as the staleness key — order-insensitive,
 so swapping two inputs' contents is invisible; and STATE.md exempting itself via an unrecognised
@@ -981,7 +981,7 @@ existing good instincts verbatim: refuse partial input sets, cluster-triage befo
 the honest admission that acking a hash is not re-deriving content.
 
 ### F9. Structured traceability as edges, with completeness as a query
-Promote `(traces to BC-7.06.001 postcondition 1)` out of H3 prose into a typed edge. `fa trace` walks
+Promote `(traces to BC-7.06.001 postcondition 1)` out of H3 prose into a typed edge. `datum trace` walks
 L1→L2→L3→L4→story→AC→VP→test→PR→demo in both directions.
 
 *Eliminates:* AC→BC readable by no tool (12+ stories carry no trace string at all); AC→test being a
@@ -1012,7 +1012,7 @@ silently consumes.
 ## Tier 3 — making gates real.
 
 ### F12. Findings as rows: one ID namespace, declared enums, full lifecycle
-`fa finding add|list --scope`, with severity/category/confidence as closed enums, status through
+`datum finding add|list --scope`, with severity/category/confidence as closed enums, status through
 `open → … → resolved|suppressed`, first-seen dates, and `closes` links.
 
 *Eliminates:* **~14 ID conventions** where the format hook validates one — the dominant `F-*` family
@@ -1025,7 +1025,7 @@ write-denied reviewers being told to write files they cannot write. This is the 
 `finding_count`, `severity_distribution` and novelty become derived.
 
 ### F13. Convergence computed from finding rows, never claimed
-`fa converge status|check|trajectory`. Novelty from the store's own duplicate-linkage, not the
+`datum converge status|check|trajectory`. Novelty from the store's own duplicate-linkage, not the
 adversary's self-report. Monotonicity a hard fail. One termination rule. Reviews resolved by
 `document_type`, never by filename glob.
 
@@ -1042,10 +1042,10 @@ the 3-clean-pass rule appearing in five prose locations and **zero** loop exit c
 Keep verbatim what already works: brownfield's **strict-binary** rule that only the literal token
 `NITPICK` closes a pass and *"the agent has no authority to declare convergence — only the protocol
 does"*, with no fixed maximum, plus the verbatim-carryover, contradiction-mandate and
-retraction-registry mechanisms. Encode all four in `fa` rather than in a prompt.
+retraction-registry mechanisms. Encode all four in `datum` rather than in a prompt.
 
 ### F14. Gate registry + per-criterion result rows with mandatory evidence links
-`fa gate record --status --evidence`; `fa gate block <transition>`. `pass` requires ≥1 resolvable
+`datum gate record --status --evidence`; `datum gate block <transition>`. `pass` requires ≥1 resolvable
 evidence reference; `skip` requires a reason. Gate definitions live once and are referenced.
 
 *Eliminates:* 21- and 27-criterion gates that are prose strings with no evaluator and no record of
@@ -1057,12 +1057,12 @@ which criterion passed on what evidence; a wave gate satisfied by the *word* "Ga
 `holdout-evaluations/` containing only `.gitkeep`; an extraction-validation floor shipping at
 **6.75% against a required 20% because nothing computes the ratio**; the mutation gate ("exactly 80 —
 no rounding") retired by "deferred per wave gate consensus"; and 16 of 18 policies with
-`lint_hook: null`. Add `fa gate exec` so evidence is a `(command, stdout, exit, sha)` tuple **`fa`
+`lint_hook: null`. Add `datum gate exec` so evidence is a `(command, stdout, exit, sha)` tuple **`datum`
 produced** — that retires the self-attesting `$ grep -c … / 18 / PASS` transcript pattern and the
 six-level POLICY 5 cure recursion chasing it.
 
 ### F15. Baselines and ratchets: fail only on *new* violations
-`fa baseline snapshot`; `fa check --since`; `fa ratchet tighten`. Plus time-series retention.
+`datum baseline snapshot`; `datum check --since`; `datum ratchet tighten`. Plus time-series retention.
 
 *Eliminates:* the binary choice that forced `validate-consistency` Checks 8/9 to be **permanently
 non-blocking** ("these checks never flip the report's PASS/FAIL"); `regression-state.json` being a
@@ -1075,9 +1075,9 @@ store.
 ## Tier 4 — access, identity, and operations.
 
 ### F16. Verified caller identity, a role→capability manifest, and walls as return codes
-`fa` receives an unforgeable role token; a single machine-readable manifest replaces 34 prose
-`## Tool Access` sections. `fa read` returns `DENIED_BY_WALL` instead of bytes. Walls are keyed to
-*artifact type*, not path spelling. `fa walls verify` audits every dispatch site of a walled role.
+`datum` receives an unforgeable role token; a single machine-readable manifest replaces 34 prose
+`## Tool Access` sections. `datum read` returns `DENIED_BY_WALL` instead of bytes. Walls are keyed to
+*artifact type*, not path spelling. `datum walls verify` audits every dispatch site of a walled role.
 
 *Eliminates:* the tool-profile source of truth (`openclaw.json`) **not existing**, so the audit
 meant to catch profile mismatches cannot run and **29 of 34 agents run with all tools** including
@@ -1090,8 +1090,8 @@ Note `holdout-evaluator` is granted `Bash` while "denied" `Grep` — denial of t
 capability; only a store-side read gate closes that.
 
 ### F17. Scoped writes by artifact type, single-writer ownership, write-without-commit
-Agents never name a `.factory/` path — `fa` computes it from the registry. `fa` rejects a write to a
-type owned by another role. `fa commit` is restricted.
+Agents never name a `.factory/` path — `datum` computes it from the registry. `datum` rejects a write to a
+type owned by another role. `datum commit` is restricted.
 
 *Eliminates:* **~28 referenced-but-unregistered artifact homes** that are consequently hard-blocked —
 `planning` (84 refs), `discovery` (69), `phase-0-ingestion` (39, with 20 real files already there),
@@ -1132,8 +1132,8 @@ conditional steps in `depends_on` making the wave gate and Phase 7 **unsatisfiab
 products**.
 
 ### F20. Checkpoints and crash recovery from the log, never from a filesystem re-scan
-`fa checkpoint create|rehydrate|status`; write-ahead log; `fa txn list --incomplete`; `fa recover`;
-`fa fsck`.
+`datum checkpoint create|rehydrate|status`; write-ahead log; `datum txn list --incomplete`; `datum recover`;
+`datum fsck`.
 
 *Eliminates:* `wave-handoff` **never pushing** while its exit-code table claims a push failure mode,
 so CAP-032 losslessness holds only on one machine; a mid-burst crash having no recovery path in any of
@@ -1149,7 +1149,7 @@ sentinel, warn-on-missing-member, hard-error-on-missing-manifest, the explicit n
 its literal postcondition→mechanism table. It is the best-specified subsystem in the corpus. Move its
 anti-fabrication checks (40-char-hex, no-hardcode/no-cache, three-state `precompact_flush_sha` that
 hard-blocks rather than writing a bad value, non-empty `active_bcs`, CWE-116 interpolation guard) into
-`fa`, where an agent cannot skip the step that runs them.
+`datum`, where an agent cannot skip the step that runs them.
 
 ### F21. Agent handles instead of filesystem paths
 An agent receives a scoped handle; it never resolves `.factory` against ambient cwd.
@@ -1161,25 +1161,25 @@ solely because naive git resolution read "the wrong `.factory` (the exact #169 r
 the write it describes as "silently creates artifacts in the wrong place".
 
 ### F22. Operations the workflows already assume and nothing provides
-- **`fa workflow validate|plan|run`** understanding all six real step types. Today the validator
+- **`datum workflow validate|plan|run`** understanding all six real step types. Today the validator
   permits three and requires `task`, so it **rejects nearly every real step**, and `run-phase`
   cannot execute any phase workflow at all. Needs cycle detection for the mutual
   `planning ↔ greenfield` recursion and both gate-block shapes.
-- **`fa schedule`** — both greenfield and feature say "**Schedule** post-feature validation" at
+- **`datum schedule`** — both greenfield and feature say "**Schedule** post-feature validation" at
   7/30/90 days; there is no scheduler and no schedule store, so nothing will ever fire. Discovery
   declares five cadences behind one run id.
-- **`fa pr`** — story ⇄ PR ⇄ CI ⇄ merge as one join. `pr-manager` is denied `exec`, so every
+- **`datum pr`** — story ⇄ PR ⇄ CI ⇄ merge as one join. `pr-manager` is denied `exec`, so every
   `gh pr view` is a sub-agent dispatch, and dependency-ordered merge is an N-dispatch join with **no
   persisted story→PR mapping**. Merge prerequisites must be *verdicts*, not filenames: today the hook
   checks three files exist and satisfies "security review conducted" via a regex over a PR
   description that pr-manager writes itself.
-- **`fa cost`** — the five-tier budget response up to HARD STOP reads `cost-summary.md`, which does
+- **`datum cost`** — the five-tier budget response up to HARD STOP reads `cost-summary.md`, which does
   not exist and is unregistered. Budget-driven control flow has no data source.
-- **`fa attest`** — `phase-4-holdout-evaluation.lobster` **blocks** on "different model family
+- **`datum attest`** — `phase-4-holdout-evaluation.lobster` **blocks** on "different model family
   (GPT-5.4, not Claude)", a claim nothing can verify and which every agent's `model: opus` frontmatter
   falsifies. The 23 `model_tier:` keys have no resolver, and the config they route through does not
   exist. Model diversity is either checkable or it is decoration.
-- **`fa doctor`** — resolve the manifest, every declared read/write target, every walled role's
+- **`datum doctor`** — resolve the manifest, every declared read/write target, every walled role's
   dispatch sites, and every referenced hook plugin. This one command would have surfaced most of what
   six reviews found by hand.
 
@@ -1187,7 +1187,7 @@ the write it describes as "silently creates artifacts in the wrong place".
 
 ## What to keep exactly as-is
 
-`fa` should preserve, not redesign: the **three adversary perimeters** with typed
+`datum` should preserve, not redesign: the **three adversary perimeters** with typed
 `deferred_findings` targeted at a receiving gate; **brownfield's strict-binary novelty rule** and its
 anti-fabrication clause ("fabricating findings is strictly worse than stopping"); the **coverage audit
 that novelty decay structurally cannot replace** ("make it prove coverage with greps" — it found blind

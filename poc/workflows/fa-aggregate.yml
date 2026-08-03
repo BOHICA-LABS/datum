@@ -1,7 +1,7 @@
 # PROTOTYPE — throwaway. This shells out to the `dolt` CLI purely to learn the
-# GitHub mechanics quickly. The real implementation is `fa aggregate`, a subcommand
+# GitHub mechanics quickly. The real implementation is `datum aggregate`, a subcommand
 # of the Go binary that embeds Dolt (dolthub/driver/v2), which needs no dolt install
-# here at all: the whole job becomes "download fa, run fa aggregate".
+# here at all: the whole job becomes "download fa, run datum aggregate".
 #
 # What this exists to prove:
 #   1. can GITHUB_TOKEN push refs/dolt/* ?
@@ -11,11 +11,11 @@
 #   4. does the self-redispatch defence stop work being STRANDED when GitHub cancels
 #      a pending run? (docs: at most one run may be pending; extras are cancelled)
 #   5. does a conflicting writer get isolated without blocking the others?
-name: fa-aggregate
+name: datum-aggregate
 
 on:
   repository_dispatch:
-    types: [fa-aggregate]
+    types: [datum-aggregate]
   workflow_dispatch:
   # PRODUCTION SHOULD ENABLE THIS — it is the third layer of the strand defence and
   # the only thing that retries a conflicted ref after a writer resolves it. It is
@@ -28,7 +28,7 @@ on:
 # process ever advances the artifact branch pointer -> zero contention, and none of
 # the lock-ref costs (no TTL, no break-glass, no unique-sha discipline).
 concurrency:
-  group: fa-aggregate
+  group: datum-aggregate
   cancel-in-progress: false
 
 permissions:
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Install dolt (PROTOTYPE ONLY — `fa` embeds it)
+      - name: Install dolt (PROTOTYPE ONLY — `datum` embeds it)
         run: |
           curl -sL https://github.com/dolthub/dolt/releases/latest/download/install.sh | sudo bash
           dolt version
@@ -58,8 +58,8 @@ jobs:
         run: |
           REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
           export DOLT_ROOT_PATH="$RUNNER_TEMP/doltroot"; mkdir -p "$DOLT_ROOT_PATH"
-          git config --global user.email "fa-aggregate@ci"
-          git config --global user.name  "fa-aggregate"
+          git config --global user.email "datum-aggregate@ci"
+          git config --global user.name  "datum-aggregate"
 
           # ---- 1. enumerate the staging refs. This is the whole input set.
           mapfile -t STAGE < <(git ls-remote "$REMOTE" 'refs/dolt/stage/*' \
@@ -82,8 +82,8 @@ jobs:
             BOOTSTRAP=1
           fi
           cd a
-          dolt config --local --add user.email "fa-aggregate@ci"
-          dolt config --local --add user.name  "fa-aggregate"
+          dolt config --local --add user.email "datum-aggregate@ci"
+          dolt config --local --add user.name  "datum-aggregate"
           dolt remote add artifact --ref "$ARTIFACT_REF" "$REMOTE"
           # the push target must EXIST. A bootstrap clone carries whatever branch the
           # first writer published, which need not be `main`.
@@ -134,7 +134,7 @@ jobs:
           dolt add -A && dolt commit -m "aggregate ${#CONSUMED[@]} writers" || true
 
           # ---- 4. ADMISSION CONTROL: validate before the artifact branch ever sees
-          #         it. In `fa` this is `fa validate` (gates as SQL).
+          #         it. In `datum` this is `datum validate` (gates as SQL).
           ROWS=$(dolt sql -q "SELECT COUNT(*) FROM work" -r csv | tail -1)
           DUPES=$(dolt sql -q "SELECT COUNT(*) FROM (SELECT k FROM work GROUP BY k HAVING COUNT(*)>1) x" -r csv | tail -1)
           echo "validate: rows=$ROWS duplicate-keys=$DUPES"
@@ -193,6 +193,6 @@ jobs:
             echo "::warning::not re-dispatching: $DELFAIL deletions failed, a re-run would loop"
           elif [ "$LEFT" -gt "$STUCK" ]; then
             echo "re-dispatching to drain them"
-            gh api "repos/${REPO}/dispatches" -f event_type=fa-aggregate --silent \
+            gh api "repos/${REPO}/dispatches" -f event_type=datum-aggregate --silent \
               || echo "redispatch failed (conflicted refs will be swept by cron)"
           fi

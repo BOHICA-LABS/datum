@@ -34,14 +34,14 @@ exclusion nothing to bite on.
 
 ```
 <project>/
-├── .factory-db/            # everything fa owns
-│   ├── fa.yaml             # ONE config file — the whole zone map
+├── .factory-db/            # everything datum owns
+│   ├── datum.yaml             # ONE config file — the whole zone map
 │   ├── open/               # a Dolt database (trust zone)
 │   └── walled/             # a Dolt database (trust zone)
 └── .factory/               # rendered markdown (generated, committed)
 ```
 
-`fa.yaml` in full:
+`datum.yaml` in full:
 
 ```yaml
 version: 1
@@ -57,9 +57,9 @@ zones:
 
 ### 2.2 The UX rule: nobody ever types a zone name
 
-`fa get HS-001` and `fa get BC-1.01.001` are the same command. fa routes
+`datum get HS-001` and `datum get BC-1.01.001` are the same command. datum routes
 **id → artifact type → zone** (Z2). Verified for `BC-`, `VP-`, `S-`, `HS-`, `ADR-`,
-`NFR-`. Adding an artifact type is **one line** in `fa.yaml` (Z8); adding a whole zone
+`NFR-`. Adding an artifact type is **one line** in `datum.yaml` (Z8); adding a whole zone
 is three.
 
 A role without access gets a refusal that names the zone, the role, the config key, and
@@ -67,11 +67,11 @@ says the wall is deliberate — so an agent does not "fix" it by retrying (Z3):
 
 ```
 'HS-001' lives in the 'walled' zone, which role 'implementer' may not read.
-This is an information-asymmetry wall, not an error — see fa.yaml zones.walled.visible_to
+This is an information-asymmetry wall, not an error — see datum.yaml zones.walled.visible_to
 ```
 
 Every error names the fix rather than the internals: an unknown id lists valid prefixes;
-an uninitialized store says `fa init` (Z9).
+an uninitialized store says `datum init` (Z9).
 
 ### 2.3 Two hard implementation rules
 
@@ -93,9 +93,9 @@ an uninitialized store says `fa init` (Z9).
 
 ## 3. Agent identity — where this gets hard
 
-Zones bound *directories*. Something must decide **which agent is asking**. `FA_ROLE`
+Zones bound *directories*. Something must decide **which agent is asking**. `DATUM_ROLE`
 is self-declared, so on its own it is a hint, not a boundary (ID1: the same process
-sets `FA_ROLE=holdout-evaluator` and resolves the walled zone).
+sets `DATUM_ROLE=holdout-evaluator` and resolves the walled zone).
 
 Three tiers were tested. **The results include one prediction I got wrong.**
 
@@ -105,7 +105,7 @@ Z5 proved the OS enforces this properly: with the walled directory at mode `000`
 kernel refuses to even **spawn** a process there — stronger than dolt failing after
 start. But ID2: this harness runs every agent as the **same uid** (501), and the process
 is not root, so it cannot drop privileges. **Tier 2 requires the harness to run each
-agent as its own user or container.** It is not available to `fa`.
+agent as its own user or container.** It is not available to `datum`.
 
 ### 3.2 Tier 3 — per-role DB credentials: sound at the database, defeated locally
 
@@ -129,7 +129,7 @@ channel tested is readable by siblings:**
 | Environment variable | **LEAKS.** `ps eww` / `ps -E` expose a same-uid sibling's full environment (ID3) |
 | File, mode `0600` | **LEAKS.** `0600` protects against other *users*, not other agents running as you (ID4) |
 
-ID5b is the attack end-to-end: a sibling read `FA_DB_PASSWORD=pw-eval` out of
+ID5b is the attack end-to-end: a sibling read `DATUM_DB_PASSWORD=pw-eval` out of
 `ps eww`, logged in as `evaluator`, and read the walled row.
 
 **I predicted macOS would hide process environments. It does not.** That corrected
@@ -147,8 +147,8 @@ opening.
 This is the same pattern Chrome uses for renderer handles and CI runners use for
 privileged sockets.
 
-**The catch:** the *harness* must spawn agents with the fd. `fa` cannot do this for
-itself. It is a **requirement on the harness**, not a feature `fa` can ship alone.
+**The catch:** the *harness* must spawn agents with the fd. `datum` cannot do this for
+itself. It is a **requirement on the harness**, not a feature `datum` can ship alone.
 
 ---
 
@@ -162,7 +162,7 @@ itself. It is a **requirement on the harness**, not a feature `fa` can ship alon
 
 **Ship tier 1 with the zone-directory layout.** It is honest parity with the current
 design — the factory's wall is *already* enforced by the harness's tool profile rather
-than by the OS, so this is not a regression — and it keeps the no-daemon property. `fa`'s
+than by the OS, so this is not a regression — and it keeps the no-daemon property. `datum`'s
 role check earns its place by preventing accidents and producing actionable errors.
 
 **Escalate deliberately, not by default:**
@@ -232,11 +232,11 @@ There IS still a route to per-table, but the enforcement point has to move OUT o
 database and INTO the harness:
 
 1. Deny `Bash` for the walled agent entirely (no `dolt`, no `mysql`, no `cat`).
-2. Allow only `fa` as a tool.
-3. Have a **`PreToolUse` hook inject the true role** into the `fa` invocation, so the role
+2. Allow only `datum` as a tool.
+3. Have a **`PreToolUse` hook inject the true role** into the `datum` invocation, so the role
    is *not* an argument the agent controls.
 
-Then `fa` is the sole gate, holds the credential itself, and the agent cannot forge its
+Then `datum` is the sole gate, holds the credential itself, and the agent cannot forge its
 identity or go around it. That is testable and worth building **only if per-table
 granularity is genuinely required** — it is strictly more machinery than the
 zone-directory design.
@@ -279,7 +279,7 @@ and the hard requirement that a walled agent has no unrestricted `Bash`.
      settings, not language semantics.
 2. **Cross-zone integrity tooling.** With zones split, the holdout→BC link is no longer
    FK-enforced (A6) and needs a validator.
-3. **Broker alternative untested.** A local `fa` daemon holding all credentials and
+3. **Broker alternative untested.** A local `datum` daemon holding all credentials and
    authenticating callers by peer identity was not tested; in a same-uid fleet peer uid
    does not discriminate, so it would still need fd inheritance or a per-agent socket.
 4. **Credential rotation and lease expiry** for tier 3 are undesigned.

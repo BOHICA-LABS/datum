@@ -1,4 +1,4 @@
-# dolt-artifact-spike
+# datum (formerly dolt-artifact-spike)
 
 Research spike: can [Dolt](https://github.com/dolthub/dolt) back a tool that is the **only**
 interface to all vsdd-factory artifacts, replacing the `factory-artifacts` orphan git branch?
@@ -33,7 +33,7 @@ granularity per-directory vs per-table · phase-1 scope.
 | `research/ASSESSMENT.md` | The feasibility assessment — findings, gaps, phased recommendation |
 | `poc/schema.sql` | Core schema (BCs, VPs, stories, subsystems, lock) |
 | `poc/graph.sql` | Full relationship graph — 10 node types, 9 edge tables |
-| `poc/fa.py` | `fa` — the sole-interface CLI (init/import/count/get/history/validate/lock/render) |
+| `poc/datum.py` | `datum` — the sole-interface CLI (init/import/count/get/history/validate/lock/render) |
 | `poc/graph_import.py` | Loads the graph from live frontmatter; reports every dangling ref |
 | `poc/test_spike.py` | 13 tests — store-level failure modes |
 | `poc/test_graph.py` | 8 tests — traversal + referential integrity |
@@ -61,7 +61,7 @@ granularity per-directory vs per-table · phase-1 scope.
 
 **Read [`research/SPEC.md`](research/SPEC.md) first** — it is the deliverable: the full
 capability surface with every capability traced to the test that proves it, the eight
-invariants `fa` must enforce (each one a silent-data-loss risk if violated), the CLI
+invariants `datum` must enforce (each one a silent-data-loss risk if violated), the CLI
 surface, phasing, non-goals, and the honest list of what is still unproven.
 
 ## Two devs, two machines, multiple agents each — it works
@@ -77,7 +77,7 @@ Dolt's cell merge reconciles divergence. 9/9 (`poc/test_two_devs.py`).
   survive, no conflict.** A markdown store gets a frontmatter conflict here.
 - A lease contended by both fleets resolves to one holder both machines agree on.
 
-**Four rules it imposes** (each one measured, and each belongs in `fa`, not in agent prose):
+**Four rules it imposes** (each one measured, and each belongs in `datum`, not in agent prose):
 
 1. **Every agent must abort/resolve on conflict.** An unguarded conflicting pull leaves
    the clone half-merged, and then *every* commit by *any* agent on that machine fails —
@@ -115,7 +115,7 @@ Why it beats the alternatives:
 
 **One operational rule:** cost is per *invocation* (~140–270 ms), not per write. A
 1,959-BC import is **531 s** one-statement-at-a-time versus **13.4 s** batching 300
-statements per lock hold — so `fa` must take the mutex once per unit of work and do all
+statements per lock hold — so `datum` must take the mutex once per unit of work and do all
 that unit's writes in one Dolt session.
 
 Limits: one host / one filesystem (several clones need push-as-CAS below), and adding a
@@ -196,7 +196,7 @@ beads calls this the "zombie-merge bug"; Dolt issue
 `.venv/` and every `poc/*/` data dir are **gitignored and disposable**. Recreate them:
 
 ```bash
-cd ~/Dev/scrap/dolt-artifact-spike
+cd ~/Dev/datum
 
 # 1. Dolt (2.2.3 verified). NOTE: 2.2.x REMOVED --user/--password from sql-server.
 brew install dolt && dolt version
@@ -208,8 +208,8 @@ python3 -m venv .venv && .venv/bin/pip -q install pymysql
 # 3. The 5 suites that need a shared server: init + load the live corpus
 mkdir -p poc/db && (cd poc/db && dolt init --name spike --email spike@local)
 (cd poc/db && dolt sql-server --host 127.0.0.1 --port 3308 &) && sleep 7
-.venv/bin/python poc/fa.py init
-.venv/bin/python poc/fa.py import ~/Dev/vsdd-factory/.factory
+.venv/bin/python poc/datum.py init
+.venv/bin/python poc/datum.py import ~/Dev/vsdd-factory/.factory
 .venv/bin/python poc/graph_import.py ~/Dev/vsdd-factory/.factory
 ```
 
@@ -231,8 +231,8 @@ brew install dolt                                                  # 2.2.3 verif
 
 # The POC's own suites use a server on 3308 purely for convenience.
 (cd poc/db && dolt sql-server --host 127.0.0.1 --port 3308 &)       # no --user in 2.2.x
-.venv/bin/python poc/fa.py init
-.venv/bin/python poc/fa.py import ~/Dev/vsdd-factory/.factory
+.venv/bin/python poc/datum.py init
+.venv/bin/python poc/datum.py import ~/Dev/vsdd-factory/.factory
 .venv/bin/python poc/graph_import.py ~/Dev/vsdd-factory/.factory   # graph + findings
 
 .venv/bin/python -u poc/test_spike.py            # 13/13  store

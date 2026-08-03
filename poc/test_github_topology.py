@@ -42,7 +42,7 @@ POC = Path(__file__).parent
 ROOT = POC / "gt"
 SELF = str(Path(__file__).resolve())
 REMOTE = os.environ.get("FA_GH_REMOTE",
-                        "https://github.com/drbothen/dolt-artifact-spike-remote.git")
+                        "https://github.com/drbothen/datum (formerly dolt-artifact-spike)-remote.git")
 RUN = os.environ.get("FA_GT_RUN") or f"gt-{int(time.time())}"
 DATA_REF = f"refs/dolt/{RUN}/data"
 TIMEOUT = int(os.environ.get("FA_GH_TIMEOUT", 300))

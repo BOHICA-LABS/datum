@@ -7,7 +7,7 @@ purpose: the only shipped Dolt-backed product we can copy from — what it does 
 
 # beads and prose
 
-The question this answers: if `fa` is to own **all** factory artifacts including prose,
+The question this answers: if `datum` is to own **all** factory artifacts including prose,
 has anyone shipped that on Dolt, and what did it cost them?
 
 ## 1. Prose lives IN the database
@@ -26,7 +26,7 @@ plus `close_reason TEXT`, `payload TEXT`, `waiters TEXT`, `metadata JSON`, and a
 `comments` table (`text TEXT NOT NULL`, FK to the issue).
 
 So "prose in Dolt" is not speculative — it is a shipped product's core design. Note that
-**`fa` already does this too**: `bc.body`, `vp.body` and `story.body` are `LONGTEXT` and
+**`datum` already does this too**: `bc.body`, `vp.body` and `story.body` are `LONGTEXT` and
 the importer stores every record's full prose (the spike proved a 211 KB body round-trips,
 L8). Prose *storage* was never the gap.
 
@@ -55,7 +55,7 @@ interchange"*, explicitly lossy: *"Dolt-native backups preserve full commit hist
 JSONL export does not."*
 
 beads simply **gave up git-diffable review of issue content**. That option is not open to
-us — the factory's review is PR diffs on markdown — so `fa render` (or `fa diff` piped to
+us — the factory's review is PR diffs on markdown — so `datum render` (or `datum diff` piped to
 a PR comment) is a requirement beads never had to satisfy. No precedent to copy here.
 
 ## 4. The database is gitignored; the DB is the truth

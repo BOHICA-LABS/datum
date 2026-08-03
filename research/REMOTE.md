@@ -1,7 +1,7 @@
 ---
 title: The real remote — measured against github.com
 date: 2026-07-31
-status: 21/21 — 10 remote mechanics (poc/test_github_remote.py) + 11 ported topology scenarios (poc/test_github_topology.py), against https://github.com/drbothen/dolt-artifact-spike-remote
+status: 21/21 — 10 remote mechanics (poc/test_github_remote.py) + 11 ported topology scenarios (poc/test_github_topology.py), against https://github.com/drbothen/datum (formerly dolt-artifact-spike)-remote
 verdict: push-as-CAS works over the network; it costs ~10 s per acquire, a pull ~2.3 s, and one data ref serialises every instance
 ---
 
@@ -13,7 +13,7 @@ partial-failure recovery, and what actually appears in the repo untested — rat
 the highest-severity remaining gap in both [ASSESSMENT §4.4](ASSESSMENT.md) and
 [GAP-MATRIX §6](GAP-MATRIX.md). This closes it.
 
-**Remote:** `https://github.com/drbothen/dolt-artifact-spike-remote` (private).
+**Remote:** `https://github.com/drbothen/datum (formerly dolt-artifact-spike)-remote` (private).
 Each run uses a unique data ref (`refs/dolt/run-<ts>/…`) and deletes it afterwards,
 so runs never collide and the repo does not accumulate. Credentials come from the
 git credential helper; **no token is written to disk or into a URL**.
@@ -111,7 +111,7 @@ non-fast-forward message telling them to integrate first. S5's limitation is
 unchanged and now expensive: **the loser learns only after doing its work**, and
 over the network that is ~15 s of wasted round trips rather than 640 ms.
 
-### 3.4 An embedded `fa` needs no `dolt` binary (G8)
+### 3.4 An embedded `datum` needs no `dolt` binary (G8)
 
 `DOLT_FETCH` (45 ms) and `DOLT_PUSH` (7.7 s) both ran **in-process** through
 `dolthub/driver/v2` against the GitHub remote. Combined with B8 (branch, checkout,
@@ -189,7 +189,7 @@ another agent on that clone can neither commit nor pull. But the two failures do
   message**, and it blames staging rather than the conflict.
 
 So D8 stands, sharpened: the diagnosability problem is specific to the *pull* path
-on dolt 2.2.3. `fa doctor` should therefore check for a half-merge explicitly rather
+on dolt 2.2.3. `datum doctor` should therefore check for a half-merge explicitly rather
 than relying on the error text an agent happens to hit first.
 
 ### 5.2 The counter bug is one line of retry logic, and it reports success
@@ -240,9 +240,9 @@ practical argument for `--ref`-per-instance (invariant 12).
 ```bash
 .venv/bin/python -u poc/test_github_remote.py       # 10/10, ~9 min  (mechanics)
 .venv/bin/python -u poc/test_github_topology.py     # 11/11, ~12 min (ported scenarios)
-# env: FA_GH_REMOTE (default drbothen/dolt-artifact-spike-remote)
-#      FA_GH_CLONES=3  FA_GH_ROUNDS=5  FA_GH_TIMEOUT=300  FA_GH_KEEP=1
-#      FA_GT_CLONES=8 (H11)  FA_GT_ONLY=h3,h6 (partial re-run while iterating)
+# env: DATUM_GH_REMOTE (default drbothen/datum (formerly dolt-artifact-spike)-remote)
+#      DATUM_GH_CLONES=3  DATUM_GH_ROUNDS=5  DATUM_GH_TIMEOUT=300  DATUM_GH_KEEP=1
+#      DATUM_GT_CLONES=8 (H11)  DATUM_GT_ONLY=h3,h6 (partial re-run while iterating)
 ```
 
 Both suites create per-run `refs/dolt/<run>/*` refs and delete them in a `finally`

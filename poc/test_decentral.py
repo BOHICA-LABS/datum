@@ -55,7 +55,7 @@ from clonelock import clone_write_lock  # noqa: E402
 POC = Path(__file__).parent
 ROOT = POC / "dc"
 REMOTE = os.environ.get("FA_GH_REMOTE",
-                        "https://github.com/drbothen/dolt-artifact-spike-remote.git")
+                        "https://github.com/drbothen/datum (formerly dolt-artifact-spike)-remote.git")
 RUN = os.environ.get("FA_DC_RUN") or f"dc-{int(time.time())}"
 N = int(os.environ.get("FA_DC_N", 20))
 N_WORK = int(os.environ.get("FA_DC_WORK", 3))

@@ -28,7 +28,7 @@ systematic assumption that runs through every layer and is falsified by measurem
 **Severity: highest. Four independent instances, all measured this session.**
 
 V-F says *"every project using the factory migrates"* and multi-tenancy is a v1 requirement. But
-`fa`'s catalog and universe loaders resolve data by **vsdd-factory's directory layout and filename
+`datum`'s catalog and universe loaders resolve data by **vsdd-factory's directory layout and filename
 conventions**, so a project that organises differently is not read — and the resulting absence is
 reported as *the corpus's* defect.
 
@@ -53,7 +53,7 @@ reported as *the corpus's* defect.
 ### Why this is a DESIGN finding and not four bugs
 
 1. **It inverts the finding's blame.** A missing universe turns every legitimate reference into a
-   dangling one. prism's 114 "missing epic" findings are `fa` failing to read a file that exists.
+   dangling one. prism's 114 "missing epic" findings are `datum` failing to read a file that exists.
    This is the measured class *"a normalisation rule aimed at the WRONG COLUMN manufactures exactly
    what it was added to prevent"* (292 self-inflicted findings), now at the scale of a whole universe.
 2. **It defeats X1, the anti-instance-nine conservation gate.** X1 checks
@@ -82,7 +82,7 @@ references it is a finding. That alone converts all four instances from silent t
 
 L1–L2 §2.1: the catalog mirror is *"gated by a content hash:
 `hash(catalog rows) == hash(embedded registry)`, **asserted at every store open**, failing
-`fa doctor` on mismatch."*
+`datum doctor` on mismatch."*
 
 The registry is `go:embed`'d into **one shared binary**. The mirror is **per-project** (one store per
 project). Therefore:
@@ -109,7 +109,7 @@ records the version; only the *gate* is stated as equality. Keep the hash as a *
 ## stale TWICE during this one session
 
 X4's pass condition: *"the `(project, type)` slice of **the 18,826 baseline** is reproduced by
-`fa validate --registry` with delta 0."*
+`datum validate --registry` with delta 0."*
 
 Measured, this session, on read-only corpora:
 
@@ -238,7 +238,7 @@ my misreading.
 | candidate | why withdrawn |
 |---|---|
 | **"103 vs 119 types is a contradiction"** | Not a contradiction. The registry has **103 types + 16 `gap_types` + 4 `retired_types`**, verified by parsing it; `119 = 103 + 16`, and L1–L2 §"gap type (16, `pending_template: true`)" explicitly gives gap types *"a home, gated at `info`, until a template exists"*, with the reason stated. Consistent and deliberate. |
-| **"the catalog mirror is a second home for the registry, violating invariant 17"** | Explicitly handled: mirror is `authority: derived`, regenerated at `fa migrate`, hash-gated, with the registry staying the single canonical copy embedded *and* read by the Python tooling. Invariant 17 is read through `authority` and names the enforcement. *(The hash gate has a different problem — see F2 — but the two-homes objection is answered.)* |
+| **"the catalog mirror is a second home for the registry, violating invariant 17"** | Explicitly handled: mirror is `authority: derived`, regenerated at `datum migrate`, hash-gated, with the registry staying the single canonical copy embedded *and* read by the Python tooling. Invariant 17 is read through `authority` and names the enforcement. *(The hash gate has a different problem — see F2 — but the two-homes objection is answered.)* |
 | **"enum/alias counts drift between docs"** | Checked by parsing the registry: **17 enums** (5 doc mentions, all "17") and **180 aliases**. No drift. |
 
 ---

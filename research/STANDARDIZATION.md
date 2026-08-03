@@ -16,7 +16,7 @@ nothing needs re-deriving.
 
 ## 0. What changed, and what it invalidates
 
-The vision (user, 2026-07-31): **`fa` is the source of truth for everything that goes into
+The vision (user, 2026-07-31): **`datum` is the source of truth for everything that goes into
 `factory-artifacts`** — *"all the prose and everything, from product brief, to the discrete
 tasks inside story executions and everything in between."* Markdown becomes a render for
 humans.
@@ -133,8 +133,8 @@ closed**; projects add names, never categories.
 
 | layer | lives in | contents | precedent |
 |---|---|---|---|
-| **Core** | `fa`, versioned with the binary | the VSDD spine + merge-safety semantics | CROSS-CORPUS §2/§8 derives it: `specs/{architecture, behavioral-contracts, verification-properties, domain-spec, prd-supplements}` · `cycles` · `stories` · `code-delivery` · `logs` · `planning`; ids `BC-S.SS.NNN` and `ADR-NNN` |
-| **Project profile** | declared data in the corpus, validated by `fa` | per type: key · required fields · enums · link types · section schema · shape · authority · gate severity | `artifact-path-registry.yaml` (ADR-016) already does *paths* and stops one level short |
+| **Core** | `datum`, versioned with the binary | the VSDD spine + merge-safety semantics | CROSS-CORPUS §2/§8 derives it: `specs/{architecture, behavioral-contracts, verification-properties, domain-spec, prd-supplements}` · `cycles` · `stories` · `code-delivery` · `logs` · `planning`; ids `BC-S.SS.NNN` and `ADR-NNN` |
+| **Project profile** | declared data in the corpus, validated by `datum` | per type: key · required fields · enums · link types · section schema · shape · authority · gate severity | `artifact-path-registry.yaml` (ADR-016) already does *paths* and stops one level short |
 | **Escape hatch** | `metadata JSON` per record | project-, orchestrator- or integration-specific data | beads' rule verbatim: *"prefer the `metadata` field before proposing new first-class columns"* — and it still needed 62 migrations |
 
 **Core membership test:** *does it have a merge-safety consequence?* "Append-only ledger
@@ -144,7 +144,7 @@ what makes `burst-log.md` collide. "Does this product need a threat model" is no
 **The risk of over-free profiles**, named so it is not forgotten: every project invents its
 own dialect and cross-project agents stop working — the drift problem moved up a level.
 Three guards: profiles **extend** a core they cannot override; the **category set is
-closed**; and a profile is itself an artifact `fa` validates and gates.
+closed**; and a profile is itself an artifact `datum` validates and gates.
 
 ---
 
@@ -160,9 +160,9 @@ So the open question was never the language — it is **who queries, holding wha
 
 | consumer | interface | why |
 |---|---|---|
-| `fa` internals | SQL | already working |
+| `datum` internals | SQL | already working |
 | **agents** | **semantic verbs with stable JSON output** | an LLM composing joins across 25 tables returns plausible-but-wrong answers with no error — the exact failure class this project exists to eliminate. Verbs are testable contracts, gateable per zone, stable across schema change |
-| humans, ad hoc | `fa sql --read-only` | exploration shouldn't need a feature request |
+| humans, ad hoc | `datum sql --read-only` | exploration shouldn't need a feature request |
 
 The work is therefore the **verb catalogue and its output schemas**, drafted in SPEC §5
 (`trace`, `coverage`, `context <wave-N>`, `history`, `asof`, `diff`) plus `impact` from
@@ -171,38 +171,38 @@ consumer appears; #671 independently agreed *"No GraphQL server is required."*
 
 **Accepted consequence:** every new question needs a new verb. That is a feature — it
 forces each query to be named, tested and baselined — but the catalogue needs an explicit
-"how to add a verb" path or people route around it via `fa sql`.
+"how to add a verb" path or people route around it via `datum sql`.
 
 ---
 
-## 5. What "fa owns everything" costs, measured
+## 5. What "datum owns everything" costs, measured
 
 Recorded because this gap analysis was delivered in conversation only.
 
-**File coverage today:** `fa` ingests **2,191 of 3,145 files (~70%)** of vsdd-factory's
+**File coverage today:** `datum` ingests **2,191 of 3,145 files (~70%)** of vsdd-factory's
 corpus and **0% of the other 954** — `cycles/` 621, `code-delivery/` 148, `logs/` 34
 `.jsonl`, `specs/architecture/` 36 ADR documents (only headings are read), `semport/` 21,
 `phase-0-ingestion/` 20, `legacy-design-docs/` 13, plus 9 loose root files (`STATE.md`,
 `policies.yaml`, `tech-debt-register.md`, `sidecar-learning.md`, `regression-state.json`,
 `reference-manifest.yaml`, `po-obligations.md`, `release-config.yaml`, `current-cycle`).
 
-**Type coverage today:** of the **46 registry artifact types**, `fa` models **10** — and
+**Type coverage today:** of the **46 registry artifact types**, `datum` models **10** — and
 for 6 of those 10 (`capability`, `domain_invariant`, `nfr`, `fr`, `adr`, `epic`) it stores
 only the **id and name scraped from a heading**, not the document. Only `bc`, `vp`,
 `story`, `subsystem` are real records with bodies.
 
-**The authority inversion is the bulk of the work** (all absent from `fa` today, all
+**The authority inversion is the bulk of the work** (all absent from `datum` today, all
 proven in the POC or designed):
 
 | needed | status |
 |---|---|
-| write path `create`/`amend`/`retire`/`rm` with validation | POC W1–W9; absent from `fa` |
+| write path `create`/`amend`/`retire`/`rm` with validation | POC W1–W9; absent from `datum` |
 | `render` + `render --check` for the whole corpus | one generated file in the POC |
 | conflict policy D1 — `conflict` table, 4 subcommands, `doctor` check | designed, unbuilt |
 | `lease` (push-as-CAS); retire the `STATE.md` YAML lock + its CWE-367 | phase 2 |
 | zone **enforcement** — `permissions.deny`, `PreToolUse` hooks, per-agent `allowed-tools`, no unrestricted `Bash` for a walled agent | directories exist; **no enforcement written** |
 | instance/wave branches, graduate/abandon | phase 4 |
-| `sync` + real `aggregate` plumbing + quarantine wiring | policy only (`fa/quarantine.go`) |
+| `sync` + real `aggregate` plumbing + quarantine wiring | policy only (`datum/quarantine.go`) |
 | migrating every writer: `state-manager`, `register-artifact`, `wave-handoff`, `state-burst`, the `create-*` skills, the 4 INDEX generators; retiring `verify-sha-currency.sh` and `validate-index-cite-refresh` | untouched |
 | retiring the branch + the no-Dolt markdown fallback (L3) | untouched |
 
@@ -214,17 +214,17 @@ proven in the POC or designed):
   adds 15.8 MB, mean 26 KB/doc, largest 615 KB — and **beads' mitigation is unavailable to
   us**: it decays closed issues ~70% by summarisation and *discards the original*, which
   an authoritative spec corpus forbids.
-- **Invariant 8 becomes absolute:** markdown written *only* by `fa render`, with
+- **Invariant 8 becomes absolute:** markdown written *only* by `datum render`, with
   `render --check` in CI, or there are two truths and strictly more drift than today.
 
-**One correction to the pessimism:** *"`fa` as truth costs you diffs"* was too strong.
+**One correction to the pessimism:** *"`datum` as truth costs you diffs"* was too strong.
 Dolt's diff is semantic and queryable — a one-word change at byte 1,280 of a 4.6 KB body
 showed as **one modified row of 1,959**, `dolt_diff_bc` exposes `from_body`/`to_body`, and
 `--diff-mode in-place` does **sub-cell** diffing. The real limit is narrower: that
 presentation is **terminal-only** (redirected with `--color always` → **zero ESC bytes**,
 leaving `theTHE` ambiguous), so it never reaches CI or a PR. But the **data is complete**,
-so `fa diff` computing a unified diff from `from_body`/`to_body` is ~50 lines. **⇒ `render`
-is not the sole critical path; `fa diff` + a PR surface is an equal route**, and it plays
+so `datum diff` computing a unified diff from `from_body`/`to_body` is ~50 lines. **⇒ `render`
+is not the sole critical path; `datum diff` + a PR surface is an equal route**, and it plays
 to Dolt's strengths. beads chose neither and gave up reviewable content diffs; we don't
 have to copy that.
 
@@ -235,8 +235,8 @@ have to copy that.
 **Mechanism, all of it already built or already present:**
 
 1. Declare the profile (canonical vocabulary + alias map).
-2. `fa validate` reports deviations as findings.
-3. `fa baseline write` dates and itemises them — the gate goes on **without blocking every
+2. `datum validate` reports deviations as findings.
+3. `datum baseline write` dates and itemises them — the gate goes on **without blocking every
    PR on day one**, which is [DECISIONS](DECISIONS.md) D3's whole point.
 4. Ratchet: new findings fail, fixed ones are reported for removal.
 5. Graduate per type using the path registry's **existing** `enforcement_level:
@@ -304,18 +304,18 @@ sync are precisely the current failure mode."*
 
 | its claim | assessment |
 |---|---|
-| "not git-diffable" | **TRUE**, and the spike agrees — it is exactly why `fa render` and `fa diff` matter (§5) |
+| "not git-diffable" | **TRUE**, and the spike agrees — it is exactly why `datum render` and `datum diff` matter (§5) |
 | "no GraphQL" | true and irrelevant; #671 itself says *"No GraphQL server is required"* |
-| "a second replica needing sync" | **does not apply to phase 1 as built** — `fa`'s store is rebuilt from files per run and thrown away, the same lifecycle as its in-memory graph. The objection bites at the **authority inversion**, not here |
+| "a second replica needing sync" | **does not apply to phase 1 as built** — `datum`'s store is rebuilt from files per run and thrown away, the same lifecycle as its in-memory graph. The objection bites at the **authority inversion**, not here |
 
 **A hard constraint decides more than the design debate does:** #671 wants an in-tree Rust
 crate consumed by `factory-dispatcher` hooks. **Dolt has no C API and no Rust bindings**
 ([dolt#8953](https://github.com/dolthub/dolt/issues/8953) open); only DoltLite is
 embeddable from Rust, and it is a different engine and on-disk format. So if the thing must
-live in the Rust workspace inside dispatcher hooks, `fa`'s access path is **structurally
+live in the Rust workspace inside dispatcher hooks, `datum`'s access path is **structurally
 unavailable** to it.
 
-**Scope it covers that `fa` does not** — and this is most of its value claim:
+**Scope it covers that `datum` does not** — and this is most of its value claim:
 **body-prose references** (`ADR-NNN §Decision N`, `file.rs::test_fn`, BC version cells
 copied into story tables), **composite sub-artifact IDs** (`AC-NNN`, `PC-N`, `EC-NNN` —
 file-scoped, not globally unique), the **4-index version-cite ledger**, generated indexes,
@@ -330,15 +330,15 @@ hand-rolled string scanning. Its conclusion — *"nothing actually parses the re
 graph"* — is the same one CROSS-CORPUS reaches from vocabulary drift.
 
 **DISPOSITION under the new vision: they are a FORK IN THE ROAD, not complements.** #671 is
-derived-data-only and keeps markdown authoritative **forever**; the vision has `fa` own the
+derived-data-only and keeps markdown authoritative **forever**; the vision has `datum` own the
 artifacts. Both cannot be true. Before the vision changed they were arguably complementary
-(#671 validates the present, `fa` remembers the past); now a choice is required, and the
-choice has been made in `fa`'s favour — so #671 should be answered on the issue rather than
+(#671 validates the present, `datum` remembers the past); now a choice is required, and the
+choice has been made in `datum`'s favour — so #671 should be answered on the issue rather than
 left open and silently contradicted.
 
 **One thing from #671 still worth doing regardless, and NOT yet done:** its phase-1 exit
 criterion is *"reproduces known F-* findings from recent adversarial passes without
-hand-tuning."* `fa` reproduced the prototype's 82 findings rule-for-rule and found 71 more,
+hand-tuning."* `datum` reproduced the prototype's 82 findings rule-for-rule and found 71 more,
 but **has never been checked against the F-* findings from those adversarial passes**. That
 comparison is cheap and decides whether a frontmatter-only parser is sufficient or whether
 the prose-reference extraction #671 insists on is where the real drift lives.

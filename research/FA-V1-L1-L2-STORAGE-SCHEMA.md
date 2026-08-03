@@ -8,12 +8,12 @@ inputs: research/FA-V1-DESIGN.md (spine, 8 settled decisions, invariants 15–23
   research/SCALE.md (contention) · research/CROSS-CORPUS.md (10 corpora) ·
   research/ACCESS-CONTROL.md (zones/identity) · research/GAP-MATRIX.md ·
   research/VSDD-FACTORY-REVIEW.md (F1–F22, the measured coverage table) · HANDOFF.md (session state) ·
-  fa/schema.go (the current 34-table shadow schema) · fa/registry/*.yaml (119 types, 17 enums, 180 aliases)
+  datum/schema.go (the current 34-table shadow schema) · datum/registry/*.yaml (119 types, 17 enums, 180 aliases)
 scope: L1 STORAGE and L2 SCHEMA only. L3 semantic ops, L4 projections, L5 policy, L6 engine,
   L7 interfaces and the migration/cutover plan are separate documents.
 ---
 
-# `fa` v1 — L1 storage and L2 schema
+# `datum` v1 — L1 storage and L2 schema
 
 ## 0. What is binding, and what this document is allowed to decide
 
@@ -35,7 +35,7 @@ counts as a finished decision:
 | # | Decision | Discharges |
 |---|---|---|
 | **L1-A** | **One store per project**, each store a `.factory-db/` inside that project's own repo, with **zones as inner directories**. Projects are the OUTER physical dimension; zones the INNER. One shared registry, carried in the binary. | V-F · inv 9 · inv 12 · inv 19 · D-B |
-| **L1-B** | **Version is a store-assigned monotonic integer per artifact key, and is NOT stored on the artifact row.** It is the ledger's `MAX(version)`. `fa show --at <v>` resolves version → txn → Dolt commit → `AS OF`. | inv 17 · inv 23 · D-C |
+| **L1-B** | **Version is a store-assigned monotonic integer per artifact key, and is NOT stored on the artifact row.** It is the ledger's `MAX(version)`. `datum show --at <v>` resolves version → txn → Dolt commit → `AS OF`. | inv 17 · inv 23 · D-C |
 | **L1-C** | **Verbatim body bytes and an ordinal section partition live in TWO tables shared by all types** — never a `body` column on a typed table. Partition membership is per-shape and declared, not omitted. | inv 16 · D-A |
 | **L1-D** | **The Dolt commit IS the write-ahead log.** One SQL transaction + one Dolt commit per unit of work, with the `txn` row written inside it. Recovery discards; replay is the caller's job via `idem_key`. Cross-store units are explicitly non-atomic and use a two-phase intent record. | inv 6 · inv 4 · inv 18 · F2 · F20 |
 | **L1-E** | **Two-level store-side leases**: instance-local for narrow scopes, published for cross-instance scopes. Random 128-bit token presented on every write, fail-closed, store-side expiry clock. **No force path**; revocation is a human-authorized audited write to the lease table that touches no artifact. | inv 1 · inv 11 · inv 21 · F4 |
@@ -60,17 +60,17 @@ counts as a finished decision:
 ### The decision
 
 ```
-~/.config/fa/projects.yaml            # name -> root. The ONLY place a path is written down.
+~/.config/datum/projects.yaml            # name -> root. The ONLY place a path is written down.
 <project-root>/.factory-db/
-    fa.yaml                           # store identity: project name, registry version, zone map
+    datum.yaml                           # store identity: project name, registry version, zone map
     open/                             # a Dolt data dir  (zone: most agents)
     walled/                           # a Dolt data dir  (zone: holdout/adversary artifacts)
 <project-root>/.factory/              # rendered markdown, COMMITTED (D-B)
 ```
 
 - **Project = an outer physical boundary** (a directory tree bound to one git remote).
-- **Zone = an inner physical boundary** (`fa/store.go:28–40`, invariant 9 / A2–A3).
-- **Registry = one copy, in the binary** (`fa/registry.go:28–29`). Shared by construction; there is
+- **Zone = an inner physical boundary** (`datum/store.go:28–40`, invariant 9 / A2–A3).
+- **Registry = one copy, in the binary** (`datum/registry.go:28–29`). Shared by construction; there is
   no per-project registry to drift.
 - There is **no `project` column** on artifact rows. The project is the store.
 
@@ -113,7 +113,7 @@ open here.
   One project's live churn must not be able to invalidate another project's baseline or wedge its
   clone (invariant 2's half-merge blast radius, SPEC.md:212–215).
 
-With one store per project, `schema_migrations` (fa/schema.go:300–305) is per-project by
+With one store per project, `schema_migrations` (datum/schema.go:300–305) is per-project by
 construction, so a project can sit at registry version *N* while another is at *N+1*.
 
 **4. Write containment.** Multi-tenancy here is single-user, so cross-project *confidentiality* is
@@ -139,9 +139,9 @@ Consequences, each with its mechanism:
 
 | Consequence | Mechanism |
 |---|---|
-| A mis-targeted import silently merging two corpora | `fa.yaml` declares the store's project; `fa import` refuses a render whose declared project ≠ the store's. One check, one place. |
+| A mis-targeted import silently merging two corpora | `datum.yaml` declares the store's project; `datum import` refuses a render whose declared project ≠ the store's. One check, one place. |
 | Cross-project questions ("BCs across all projects") | An explicit `--all-projects` fan-out that opens N stores and returns **per-project rows, never one collapsed number**. A zone opens in ~25 ms in-process and one process can hold multiple handles (DECISIONS.md:104–107), so 24 registered projects × 2 zones is a bounded, measurable cost — **to be measured, not assumed**. |
-| Attribution in fan-out output | The project is stamped by the query layer from `fa.yaml`, so it appears in output without being stored per row. |
+| Attribution in fan-out output | The project is stamped by the query layer from `datum.yaml`, so it appears in output without being stored per row. |
 
 ### Rejected
 
@@ -160,16 +160,16 @@ Consequences, each with its mechanism:
   when the post-image differs from the pre-image over the canonical serialization.
 - **`version` is not a column on the artifact row.** The current version is
   `MAX(version)` over the `artifact_version` ledger for that key. Storing it would be storing a
-  count — the exact class of `total_bcs` / the four-way BC total (fa/schema.go:9–11), and a
+  count — the exact class of `total_bcs` / the four-way BC total (datum/schema.go:9–11), and a
   violation of invariant 17.
-- **History addressing:** `fa show --at <version>` → ledger row → `dolt_commit` → read `AS OF` that
+- **History addressing:** `datum show --at <version>` → ledger row → `dolt_commit` → read `AS OF` that
   commit. Dolt's point-in-time read is already proven (SPEC.md:128, test L6).
 - The counter's scope is **(type, key)** — not global, not per-type, not the commit.
 
 ### Why per-artifact rather than the commit ordinal
 
 The corpus's version cites are per-artifact and human-written: **1,612 plain-form `NAME vX.Y` cites
-plus 39 prepositional**, over 2,768 documents (registry yaml:465), and `fa import` currently loads
+plus 39 prepositional**, over 2,768 documents (registry yaml:465), and `datum import` currently loads
 **2,197 version cites** (HANDOFF.md:35). A global commit ordinal makes every one of them
 unreadable, and it makes the registry's own `pinned-to-a-version-that-never-existed` check
 (registry yaml:498–502) — explicitly "the clearest case where the store earns its keep" — a graph
@@ -193,10 +193,10 @@ CREATE TABLE artifact_version (
 A Dolt commit records *that bytes changed*; it does not record the version number, the semantic
 operation, the lease, or the role. Those are not derivable from any other stored value, so the
 ledger is not an invariant-17 violation — the same argument `corpus_assertion` already makes for
-itself as "the one deliberate exception" (fa/schema.go:14–16), except here no exception is needed.
+itself as "the one deliberate exception" (datum/schema.go:14–16), except here no exception is needed.
 
 Note this **retires the authored `version VARCHAR(16) NOT NULL DEFAULT 'v1.0'` columns** on `bc`
-(fa/schema.go:53) and `vp` (fa/schema.go:68). Those are hand-typed identity in content, i.e. exactly
+(datum/schema.go:53) and `vp` (datum/schema.go:68). Those are hand-typed identity in content, i.e. exactly
 what invariant 23 forbids.
 
 ### The cost this creates, and the table that pays it
@@ -226,7 +226,7 @@ A write whose post-image is byte-identical to the pre-image **does not bump the 
 produce a Dolt commit**. This is what makes W5 (idempotent re-import, identical HEAD, zero
 working-set churn) hold for the write path too, and it is the same discipline `import_run` already
 encodes by keying on a content fingerprint and deliberately carrying no clock and no path
-(fa/schema.go:308–322).
+(datum/schema.go:308–322).
 
 ## 1.3 L1-C · Body and section storage
 
@@ -241,8 +241,8 @@ encodes by keying on a content fingerprint and deliberately carrying no clock an
 | distinct `document_type` / modeled | 70 / **18** |
 
 (VSDD-FACTORY-REVIEW.md:787–798.) Only `bc`, `vp`, `story` and `holdout_scenario.expectation` carry
-a body (fa/schema.go:51, 67, 88, 335) and **there is no section table** — D-A's partition is
-computed in memory and discarded (fa/registry.go:288–325).
+a body (datum/schema.go:51, 67, 88, 335) and **there is no section table** — D-A's partition is
+computed in memory and discarded (datum/registry.go:288–325).
 
 ### The decision
 
@@ -275,8 +275,8 @@ CREATE TABLE artifact_section (
   input* — **eight instances** (FA-V1-DESIGN.md:144–146) — and a charset round-trip is a ninth
   waiting to happen.
 - The partition generator already exists and is already lossless-by-test: `SplitSections` keeps line
-  terminators so a missing final newline survives (fa/registry.go:327–342), is fence-aware, and
-  `SectionsLossless` (fa/registry.go:344–351) asserts `concat(sections) == body`. Measured **0
+  terminators so a missing final newline survives (datum/registry.go:327–342), is fence-aware, and
+  `SectionsLossless` (datum/registry.go:344–351) asserts `concat(sections) == body`. Measured **0
   mismatches over 6,537 markdown files** (registry yaml:56–58).
 - **The gate:** `concat(section.body ORDER BY ord) == artifact_body.body`, byte-exact, per artifact,
   run at write time *and* as a corpus sweep. It is a SQL/Go parity check, not an inspection.
@@ -361,7 +361,7 @@ CALL DOLT_ADD('-A'); CALL DOLT_COMMIT(-m …)
 
 - **Why one transaction:** invariant 6, measured at **17×** (15.7 s → 0.9 s for a 1,959-BC import)
   and "also exactly the boundary atomicity requires" (SPEC.md:230–238). `Store.Begin` already exists
-  for this reason (fa/store.go:187–195).
+  for this reason (datum/store.go:187–195).
 - **Why the `txn` row goes inside:** writing it afterwards is the retired two-commit /
   SHA-backfill pattern (F1, VSDD-FACTORY-REVIEW.md:866–877; the `state-burst` skill explicitly
   refuses "reintroduction of the retired two-commit pattern"). Inside the transaction, there is
@@ -371,10 +371,10 @@ CALL DOLT_ADD('-A'); CALL DOLT_COMMIT(-m …)
   read exactly: "a duplicate-key error on retry means *already applied* and must fall through, not
   bail — bailing strands the earlier commit" (SPEC.md:219–222).
 - **Recovery is discard, not replay.** Because data and marker land atomically, an interrupted unit
-  leaves only a dirty working set. `fa recover`: if the working set is dirty, record a
-  `txn_abandoned` audit row, then `CALL DOLT_RESET('--hard')` to the last commit. `fa doctor` must
+  leaves only a dirty working set. `datum recover`: if the working set is dirty, record a
+  `txn_abandoned` audit row, then `CALL DOLT_RESET('--hard')` to the last commit. `datum doctor` must
   probe **writability, not openability** — a second opener silently becomes read-only and fails much
-  later with `cannot update manifest` (fa/store.go:11–14). This closes the measured
+  later with `cannot update manifest` (datum/store.go:11–14). This closes the measured
   "mid-burst crash has no recovery path in any of three windows" and the `git reset --soft HEAD`
   no-op (VSDD-FACTORY-REVIEW.md:1114–1121).
 - **Merge is never auto-resolved** (invariant 21, DECISIONS D1): a conflicting pull gets
@@ -390,8 +390,8 @@ Two Dolt commits cannot be atomic. So:
   D2 gave up, ACCESS-CONTROL.md:88–89 / GAP-MATRIX.md:157).
 - **Mechanism:** a two-phase **intent record**. The anchor store commits an `xstore_intent` row
   holding the idem_key and the full operation list; the participant store's write cites the intent
-  and carries the same idem_key. `fa doctor` reports any intent whose participant leg is missing;
-  `fa recover` re-applies that leg, which is safe precisely because the idem_key makes it
+  and carries the same idem_key. `datum doctor` reports any intent whose participant leg is missing;
+  `datum recover` re-applies that leg, which is safe precisely because the idem_key makes it
   idempotent.
 - **Honest cost:** there is a window in which the intent exists and the participant leg does not.
   It is *detectable* and *repairable*, not *invisible* — which is the whole difference from
@@ -408,7 +408,7 @@ tables have the same hazard in a narrower window; a field-per-row model widens i
 
 **Mandatory gate:** after any merge, every artifact touched by the merge is re-validated against the
 catalog, and a merge producing an invalid artifact is **refused, not resolved** — invariant 21's own
-wording. This is a designed step, not a hope, and it is the reason `fa merge` cannot be a thin
+wording. This is a designed step, not a hope, and it is the reason `datum merge` cannot be a thin
 wrapper over `DOLT_MERGE`.
 
 ## 1.5 L1-E · Store-side leases
@@ -515,7 +515,7 @@ CREATE TABLE audit (
 - **Written inside the data transaction**, so invariant 18's "no bypass path" is structural rather
   than promised. **Parity gate:** for every `txn`, `count(audit ops in {create,update,retire,
   derive,ingest}) == count(artifact_version rows)`. Any mismatch is a store bug, reported by
-  `fa doctor`.
+  `datum doctor`.
 - **Read-denies record `{role, type, zone, at}` and NOT the key.** Recording the key would make the
   audit a side channel that reveals which walled id was asked for. The precedent is explicit: the
   cross-zone validator "reports counts and ids of dangling cross-zone refs only — never walled
@@ -533,12 +533,12 @@ CREATE TABLE audit (
 
 **Retention is a declared reachability predicate over the reference graph, not a time bound.**
 
-`fa retain --window <N>` computes the version set that must remain resolvable:
+`datum retain --window <N>` computes the version set that must remain resolvable:
 
 1. every **current** version of every artifact;
 2. every version cited by a reference whose `pin_policy` is `pinned` or `as_of` — this is a *query*,
    because the registry declares `pin_policy` per link type (registry yaml:200–219,
-   `PinPolicyFor` at fa/registry.go:241–249);
+   `PinPolicyFor` at datum/registry.go:241–249);
 3. every version inside the retention window;
 4. every version named by a `version_alias` row.
 
@@ -551,7 +551,7 @@ The registry's own rule is that *a cite naming a version the target never had IS
 regardless of pin policy* (registry yaml:498–502). A time-bound retention would delete cited
 versions and turn correct documents into findings — the exact failure mode
 `resolve-as-of` exists to prevent. So compaction must be **derived from the same graph the checker
-reads**, and gated by that checker: `fa retain` runs the pinned-cite resolution gate **before** the
+reads**, and gated by that checker: `datum retain` runs the pinned-cite resolution gate **before** the
 gc and refuses to proceed on any failure. Measure, then act.
 
 ### Pruned is not never-existed
@@ -560,7 +560,7 @@ gc and refuses to proceed on any failure. Measure, then act.
 -- a row in artifact_version with op='prune' and dolt_commit = '' (the commit is gone)
 ```
 
-`fa show --at 7` on a pruned version answers *"pruned by retention policy R after <date>"*, never
+`datum show --at 7` on a pruned version answers *"pruned by retention policy R after <date>"*, never
 *"never existed"*. Conflating them manufactures findings, and it is the same `dangling` vs
 `unresolvable` discipline the registry already mandates (registry yaml:520–524).
 
@@ -580,12 +580,12 @@ times.
 
 ### L1-0 · The engine property set (V-L)
 
-The real risk is defending *"Dolt"* because this repository is named `dolt-artifact-spike`. So the
+The real risk is defending *"Dolt"* because this repository is named `datum (formerly dolt-artifact-spike)`. So the
 requirements are declared, and the engine is swappable against them.
 
 | # | required property | why it is load-bearing (all measured or invariant-pinned) |
 |---|---|---|
-| **P1** | **versioned, with a durable version identity** | invariants 15/18; `store_version` in every L7 response; `fa migrate verify` refuses on a moved pin |
+| **P1** | **versioned, with a durable version identity** | invariants 15/18; `store_version` in every L7 response; `datum migrate verify` refuses on a moved pin |
 | **P2** | **branch + merge** | D-B (gitignored store, committed render); the PR/CI join; migration abandonable at any stage |
 | **P3** | **cell-level merge** | two agents editing DIFFERENT fields of one record must not conflict (D2/M3) |
 | **P4** | **SQL-queryable, including RECURSIVE CTEs** | gates are queries; and per V-L, **traversal is a query** — measured: reachability 1–13 ms, whole-graph closure 356 ms |
@@ -654,7 +654,7 @@ CREATE TABLE artifact_field (
     REFERENCES artifact (type, key_hash) ON DELETE CASCADE
 )
 
--- per-type generated view, emitted by `fa migrate` from the catalog. NOT hand-written.
+-- per-type generated view, emitted by `datum migrate` from the catalog. NOT hand-written.
 CREATE VIEW v_behavioral_contract AS
 SELECT a.key_json AS bc_id, a.path, a.cycle_id,
        MAX(CASE WHEN f.field='subsystem'        THEN f.v_text END) AS subsystem,
@@ -673,7 +673,7 @@ DDL coordination, and no risk of E6's "two devs adding the same column different
 (SPEC.md:185) at the artifact level.
 
 **2. It is the only shape in which coverage is *definitional*.** "18 of 70 types modeled" → 119 of
-119 is not 101 engineering tasks; it is a consequence of `fa migrate` reading the registry. That is
+119 is not 101 engineering tasks; it is a consequence of `datum migrate` reading the registry. That is
 the single strongest argument, and it is the acceptance criterion M1 already states
 (VSDD-FACTORY-REVIEW.md:800–804).
 
@@ -733,10 +733,10 @@ CREATE TABLE cat_alias  (alias, canonical, set_json, retire_after, PRIMARY KEY(a
 ```
 
 **This is a mirror, so it must not be able to drift.** It is `authority: derived`, regenerated at
-`fa migrate`, and **gated by a content hash**: `hash(catalog rows) == hash(embedded registry)`,
-asserted at every store open, failing `fa doctor` on mismatch. The registry stays the single
-canonical copy in `fa/registry/` — embedded *and* read by the Python tooling
-(fa/registry.go:5–10) — precisely so there is no second copy to drift; the mirror is a projection of
+`datum migrate`, and **gated by a content hash**: `hash(catalog rows) == hash(embedded registry)`,
+asserted at every store open, failing `datum doctor` on mismatch. The registry stays the single
+canonical copy in `datum/registry/` — embedded *and* read by the Python tooling
+(datum/registry.go:5–10) — precisely so there is no second copy to drift; the mirror is a projection of
 it, and the hash gate is the parity proof.
 
 ## 2.2 L2-B · Typed natural keys, `id_alias`, `reserved_key`
@@ -763,7 +763,7 @@ also kills `"P1"` vs `P1` (measured 44 vs 17 inside one corpus, enums.yaml:293�
 `STORY-INDEX.md` vs `story-index.md` case drift that would break on Linux CI.
 
 Storage: `artifact.key_json` (canonical) + `key_hash` for index width — the current schema already
-had to check the 3,072-byte index limit by hand and says so (fa/schema.go:150–155). Typed components
+had to check the 3,072-byte index limit by hand and says so (datum/schema.go:150–155). Typed components
 also land as rows so prefix/range queries work:
 
 ```sql
@@ -781,7 +781,7 @@ rule — "it is a reference to a SET, so it resolves iff at least one `BC-7.03.*
 **Two types key from the filename today** — `behavioral-contract` and `verification-property`
 carry no `bc_id`/`vp_id` field (registry yaml:719, 792). Declaring those keys `required` generated
 **2,272 false findings on correct files** (registry yaml:125–134), which is why `RequiredFor` skips
-`key_source: filename` components (fa/registry.go:203–222). L2's job is to make that a **one-time
+`key_source: filename` components (datum/registry.go:203–222). L2's job is to make that a **one-time
 migration step**, not a permanent tolerance: import materializes the id into the record, and after
 cutover `key_source: filename` is no longer a legal declaration. Until the id is in the store, the
 1,852 measured BC renames are silent identity changes.
@@ -825,7 +825,7 @@ CREATE TABLE reserved_key (           -- the tombstone / reserved-id ledger
   1001–1015) — which then retire.
 - Resolution is `as_of` by default, which is the safe default: "it can under-report, but it cannot
   manufacture a finding against a correct historical document" (registry yaml:238–240,
-  fa/registry.go:241–249). `BC-1.12.008 → BC-3.05.004` was a *legitimate* renumbering.
+  datum/registry.go:241–249). `BC-1.12.008 → BC-3.05.004` was a *legitimate* renumbering.
 - `reserved_key.state = withdrawn` is the representation HANDOFF.md:112–114 lists as missing —
   a withdrawn-in-place row (`~~BC-2.02.013~~`).
 - `never_issued` covers reserved slots, e.g. the POLICY 11/12 slots that "the third custom policy
@@ -852,7 +852,7 @@ artifact-field enum is hard-closed.
 
 ### The write-path rule
 
-`CheckEnum` already returns the right four verdicts (fa/registry.go:251–272). L2 assigns each a
+`CheckEnum` already returns the right four verdicts (datum/registry.go:251–272). L2 assigns each a
 behaviour, and the assignment is the design:
 
 | verdict | write path | import path |
@@ -883,11 +883,11 @@ too. That makes D-D irreversible rather than aspirational — `delta` is present
 
 ### Two defects in the current schema this rule catches
 
-- `version_cite.verdict` (fa/schema.go:294) **stores a derived value**: the verdict is
+- `version_cite.verdict` (datum/schema.go:294) **stores a derived value**: the verdict is
   `f(pin_policy, cited_version, target history)`, and the registry says so — "a version cite is
   judged by its link's pin_policy, not by whether it matches today" (registry yaml:491–497). Under
   L2 the verdict is computed at gate time and never stored.
-- `finding.occurrences INT` (fa/schema.go:183) stores a count. It is defensible only if the things
+- `finding.occurrences INT` (datum/schema.go:183) stores a count. It is defensible only if the things
   counted are not rows; if they are, it violates design rule 1. Resolve during migration — declare
   the exception with a reason, or make the occurrences rows.
 
@@ -924,7 +924,7 @@ not an id`, 4 `story.functional_requirements not an id`, 2 `bc.replacement holds
 
 **No FK on the target.** Deliberate, and the current schema already made this call for the right
 reason: "the corpus traces to ids that do not exist, and an FK would refuse the import and DESTROY
-the finding" (fa/schema.go:249–252). The integrity is bought back by `state` plus a gate, not by the
+the finding" (datum/schema.go:249–252). The integrity is bought back by `state` plus a gate, not by the
 database. Cross-zone targets (holdout → BC) get the same treatment, which is D2's accepted cost with
 its already-mandated remedy — the cross-zone validator as "a required deliverable, not an optional
 extra" (DECISIONS.md:131–137).
@@ -952,7 +952,7 @@ being ungreppable.
 ### Symmetric pairs, and cite verdicts
 
 - `symmetric_with` pairs (`depends_on`/`blocks`, `supersedes`/`superseded_by`) are **stored once**;
-  the reverse is a generated view. "The 58 `direction` findings in fa's baseline are one class with
+  the reverse is a generated view. "The 58 `direction` findings in datum's baseline are one class with
   one fix: store a single dependency direction, not 58 corrected entries" (registry yaml:231–233).
   The store must *refuse* a write to the derived direction.
 - `carries_version` links (`index_cite` → `floating`, `reviewed_version` → `pinned`) store
@@ -974,13 +974,13 @@ has no `artifact_field` rows at all: it is a VIEW.** There is nothing to author.
 
 | authority | n | write surface | structural mechanism |
 |---|---|---|---|
-| `authored` | 82 | `fa <verb>` by a role the manifest permits | refused for derived/ingested types |
+| `authored` | 82 | `datum <verb>` by a role the manifest permits | refused for derived/ingested types |
 | `derived` | 23 | **none** — the derivation engine only | the type is a view by default; if materialized, only `txn.op='derive'` may write it and the parity gate must hold |
-| `ingested` | 14 | `fa ingest` only, requiring `source` = (tool, version, invocation) | rows are marked non-authoritative for gates that require authored judgement |
+| `ingested` | 14 | `datum ingest` only, requiring `source` = (tool, version, invocation) | rows are marked non-authoritative for gates that require authored judgement |
 
 The five highest-churn paths in the corpus are all derived — STORY-INDEX 381 commits, BC-INDEX 218,
 ARCH-INDEX 151, VP-INDEX 140, cycles/INDEX 98 — and storing them "is the direct cause of the count
-drift `fa validate` reports (ARCH-INDEX says 1949, BC-INDEX frontmatter says 1955, disk says 1959)"
+drift `datum validate` reports (ARCH-INDEX says 1949, BC-INDEX frontmatter says 1955, disk says 1959)"
 (enums.yaml:337–343). As views, they cannot disagree with their source because they *are* their
 source.
 
@@ -1000,7 +1000,7 @@ in `stories/v1.0-legacy/` and STORY-INDEX deliberately omits them (verified as e
 41 == 41). Generating from every record would have **resurrected 41 retired stories while every
 count still agreed** — "a defect no count, id-set or cell check would catch" — and story 4 hit the
 identical class independently, where `findings_total` counts only the findings a pass OWNS, not the
-412 it re-states (HANDOFF.md:45–52, fa/schema.go:205–209). Today that scope lives in Go
+412 it re-states (HANDOFF.md:45–52, datum/schema.go:205–209). Today that scope lives in Go
 (`shadowSpecs`); it belongs beside `derivation_stage`.
 
 So the registry gains, per derived type:
@@ -1036,10 +1036,10 @@ The reasoning is already settled by measurement: SQL does every hard part, so "t
 the language, it is WHO QUERIES HOLDING WHAT — an LLM composing joins across 25 tables returns
 plausible-but-wrong answers with NO error" (registry yaml:242–253).
 
-`fa sql --read-only` stays available for exploration — deliberately, "so nobody has to fake a verb to
+`datum sql --read-only` stays available for exploration — deliberately, "so nobody has to fake a verb to
 ask a one-off question" — but its output is **non-citable as gate evidence**. Invariant 22 requires
-machine-produced evidence, and `fa gate exec` produces a `(command, stdout, exit, sha)` tuple that
-`fa` itself produced (VSDD-FACTORY-REVIEW.md:1036–1038).
+machine-produced evidence, and `datum gate exec` produces a `(command, stdout, exit, sha)` tuple that
+`datum` itself produced (VSDD-FACTORY-REVIEW.md:1036–1038).
 
 ### The `status` / `lifecycle_status` collision, which L2 cannot settle alone
 
@@ -1087,7 +1087,7 @@ CREATE TABLE field_claim (
 )
 ```
 
-- `fa registry claim <namespace> <name>` runs the census over every registered project and **refuses
+- `datum registry claim <namespace> <name>` runs the census over every registered project and **refuses
   on `taken_different_meaning`**, printing the colliding corpus, count and sample values.
 - New registry check `[1x]`: every name in `cat_field` / `cat_enum` / `cat_type` / `cat_link` has a
   `field_claim` row whose `censused_projects` ⊇ the registered project set *at claim time*. A claim
@@ -1097,16 +1097,16 @@ CREATE TABLE field_claim (
   `project`, `cycle`, `body`, `key`, `txn`, `lease`, `audit`. A project field colliding with one of
   these is refused at claim time.
 - **This design already had to apply the rule to itself.** "Quarantine" is taken: `quarantine` in
-  this binary is the staging-ref policy for `fa aggregate`
-  (`refs/dolt/quarantine/*`, fa/quarantine.go:32–34). Hence §2.8's capture table is `unmodeled_file`,
+  this binary is the staging-ref policy for `datum aggregate`
+  (`refs/dolt/quarantine/*`, datum/quarantine.go:32–34). Hence §2.8's capture table is `unmodeled_file`,
   not `quarantine`.
 
 ## 2.8 L2-H · Coverage: every type has a home; the tail is not special
 
-Coverage is **definitional** under L2-A: `fa migrate` reads 119 catalog rows and every one of them
+Coverage is **definitional** under L2-A: `datum migrate` reads 119 catalog rows and every one of them
 gets identity, body, sections, fields, and refs. There is no per-type table to write, so
 "18 of 70 → 100%" is not 101 tasks. What remains is the *disposition ladder* for an observed
-`document_type`, which `Resolve` already implements (fa/registry.go:174–198):
+`document_type`, which `Resolve` already implements (datum/registry.go:174–198):
 
 | resolution | disposition |
 |---|---|
@@ -1138,7 +1138,7 @@ would encode the drift permanently under the appearance of fixing it" (aliases.y
 to `unmodeled_file` and are adjudicated — alias the head, gate the tail.
 
 **14% of files (461) have no table today.** Under L2 they resolve to one of the rows above, and
-`fa doctor` reports the count in each bucket per project. That number becoming zero is the migration
+`datum doctor` reports the count in each bucket per project. That number becoming zero is the migration
 gate, not a design assumption.
 
 ---
@@ -1191,7 +1191,7 @@ GENERATED VIEWS (one per type, emitted from cat_*; never hand-written)
   v_<type> ...                                          -- 119 of them
   v_<link>_reverse ...                                  -- derived direction of each symmetric pair
 
-WALLED ZONE (separate directory; no cross-zone FK — bought back by `fa validate --cross-zone`)
+WALLED ZONE (separate directory; no cross-zone FK — bought back by `datum validate --cross-zone`)
   the same tables, holding only walled types (holdout-scenario, adversarial-finding, evaluation)
 ```
 
@@ -1217,7 +1217,7 @@ WALLED ZONE (separate directory; no cross-zone FK — bought back by `fa validat
 | **19** declared scope predicate | project = store selection; `cat_type.scope_axes`; `cat_verb.scope_axes` mandatory; derived types blocked without `scope_predicate` (§2.5, §2.6) |
 | **20** write-time validation | typed key parsers, `CheckEnum` refusing `illegal`/`migratable`, target-type checking, forbidden fields (§2.2–§2.4) |
 | **21** no force path | lease revocation writes no artifact and discards no version; merges refused, never resolved (§1.4, §1.5) |
-| **22** gate evidence | `audit.evidence_ref` → the `(cmd,stdout,exit,sha)` tuple; `fa sql` output non-citable (§2.6) |
+| **22** gate evidence | `audit.evidence_ref` → the `(cmd,stdout,exit,sha)` tuple; `datum sql` output non-citable (§2.6) |
 | **23** store-assigned identity, never in content | `version` from the ledger; `path` derived; the authored `version`/`input-hash`/SHA fields are refused (§1.2, §2.5) |
 
 ---
@@ -1255,10 +1255,10 @@ Every gate is a query or an independent recomputation. Nothing here is discharge
 
 | Choice | Gate |
 |---|---|
-| L1-A | `fa doctor --all-projects`: every registered store's `fa.yaml` project == its `registry_state`; an import of project X's render into project Y's store is refused; cross-project fan-out returns per-project rows and refuses to collapse |
-| L1-B | `version == COUNT(*)` in the ledger for every key; every `artifact_version.dolt_commit` resolves; `fa show --at v` for every version of a sampled 100 artifacts; every one of the 2,197 imported cites resolves through `version_alias` |
+| L1-A | `datum doctor --all-projects`: every registered store's `datum.yaml` project == its `registry_state`; an import of project X's render into project Y's store is refused; cross-project fan-out returns per-project rows and refuses to collapse |
+| L1-B | `version == COUNT(*)` in the ledger for every key; every `artifact_version.dolt_commit` resolves; `datum show --at v` for every version of a sampled 100 artifacts; every one of the 2,197 imported cites resolves through `version_alias` |
 | L1-C | `concat(section ORDER BY ord) == body` byte-exact for **100%** of bodies (today: 0 mismatches over 6,537 files, so any regression is visible); per-shape exemption list asserted non-empty-by-declaration; `blob-with-path` rows have no body and a resolvable path |
-| L1-D | planted crash at each of 6 points in the sequence → `fa recover` leaves the store at the last commit with a `txn_abandoned` row; replay of a committed `idem_key` writes nothing and returns the prior result; a cross-store intent with a missing leg is reported by `fa doctor` and repaired by `fa recover` |
+| L1-D | planted crash at each of 6 points in the sequence → `datum recover` leaves the store at the last commit with a `txn_abandoned` row; replay of a committed `idem_key` writes nothing and returns the prior result; a cross-store intent with a missing leg is reported by `datum doctor` and repaired by `datum recover` |
 | L1-E | N writers, one scope → exactly one holder (re-run the measured 3-clone shape); an expired token is refused at write; a write not covered by a held lease is refused and names the missing scope; **no code path calls a force primitive** (grep-gated in CI) |
 | L1-F | per-txn parity `audit ops == version ledger ops`; a read-deny row contains no key (asserted by schema + test); every gate `pass` row has a resolvable `evidence_ref` (invariant 22) |
 | L1-G | before gc, every `pinned`/`as_of` cite resolves; after gc, the same set still resolves; a pruned version reports `pruned`, never `never existed` |
@@ -1280,7 +1280,7 @@ Stated once, plainly, so it is not discovered later.
 1. **Cross-project atomicity is gone.** No unit of work spans projects. Acceptable because nothing
    in the corpus needs it; a `--all-projects` read is a fan-out, not a transaction.
 2. **Cross-zone atomicity is gone** (it already was, A6). Bought back by the intent record plus
-   `fa validate --cross-zone`, which was already a required deliverable.
+   `datum validate --cross-zone`, which was already a required deliverable.
 3. **A crashed lease holder blocks its scope until TTL.** Bounded by per-scope TTLs; revocation
    requires a human.
 4. **EAV loses database-level type enforcement.** Bought back by the `kind` column + write-time
@@ -1339,7 +1339,7 @@ it. This is a D-D adjudication, not a mechanism choice. *Which field survives pe
 cites). `version_alias` preserves resolution. *Confirm integers-with-an-alias-table, or should the
 render keep emitting a dotted `v1.<n>` form to keep human cites stable?*
 
-**Q6 — `finding.occurrences` (fa/schema.go:183).** A stored count. *Declare it a documented
+**Q6 — `finding.occurrences` (datum/schema.go:183).** A stored count. *Declare it a documented
 exception like `corpus_assertion`, or make the occurrences rows?* The same question applies to
 `security-review`'s per-severity counts, which the registry says become derived "once
 adversarial-finding rows exist" — and those rows now exist (2,211 of them).

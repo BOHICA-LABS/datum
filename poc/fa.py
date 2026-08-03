@@ -352,7 +352,7 @@ def cmd_render(a):
                         GROUP BY s.ss_id, s.name ORDER BY s.ss_id""")
     lines = [
         "---", "document_type: bc-index",
-        "generated: true  # DO NOT EDIT - rendered by `fa render`",
+        "generated: true  # DO NOT EDIT - rendered by `datum render`",
         f"total_bcs: {total}", "---", "",
         "# BC-INDEX", "",
         f"Total BCs: {total}", "",

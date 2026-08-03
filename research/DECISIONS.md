@@ -7,7 +7,7 @@ inputs: SPEC.md · GAP-MATRIX.md · ACCESS-CONTROL.md · ASSESSMENT.md · ACCESS
 
 # Decisions
 
-The spike left three things undecided and flagged them as blockers before any `fa`
+The spike left three things undecided and flagged them as blockers before any `datum`
 code (HANDOFF "TOP PRIORITY NEXT"). All three are settled here. Each decision
 states the evidence, the cost it accepts, and what would reopen it.
 
@@ -15,7 +15,7 @@ states the evidence, the cost it accepts, and what would reopen it.
 
 ## D1. Conflict-resolution policy
 
-**Decision: `fa` never auto-resolves. Conflicts are re-applied as semantic
+**Decision: `datum` never auto-resolves. Conflicts are re-applied as semantic
 operations by whoever loses the push race, and a conflict inside a leased scope is
 reported as a lease-scoping defect — not as a merge problem.**
 
@@ -26,7 +26,7 @@ cannot conflict at all, which shrinks the problem to something a policy can cove
 
 | Class | Tables | Can a conflict occur? |
 |---|---|---|
-| **A — derived** | counts, indexes, rendered markdown | **No.** Nothing is stored (design rule 1). A conflict here is an `fa` bug, not a user decision. |
+| **A — derived** | counts, indexes, rendered markdown | **No.** Nothing is stored (design rule 1). A conflict here is an `datum` bug, not a user decision. |
 | **B — append-only** | counters, id allocators, `spec_change` ledger, task/phase events, the conflict log itself | **No.** Distinct primary keys per row (invariant 3), so cell merges never collide. Verified 8/8 across machines (D5b) and again over GitHub (G6). |
 | **C — mutable record cells** | `bc.title/capability/version`, `story.status/wave`, `phase.verdict`, lease rows | **Yes.** This is the only genuine class. |
 
@@ -51,9 +51,9 @@ textual conflict. What is left is two agents writing the **same cell**.
    race has exactly one winner over a real remote, so "the loser" is always
    well-defined.
 4. **Resolve by re-applying intent, never by picking text.**
-   `fa conflict resolve <id> --reapply | --take-theirs | --take-mine` all land as
+   `datum conflict resolve <id> --reapply | --take-theirs | --take-mine` all land as
    ordinary **validated** writes on top of the winner's state. A resolution
-   therefore appears in `fa history`, passes the same create/amend validation as any
+   therefore appears in `datum history`, passes the same create/amend validation as any
    other write, and cannot bypass a gate. Cell-picking is not offered as a primitive.
 5. **Escalate on cross-actor collision.** If the conflicting cell was written by a
    different actor holding a lease on that scope, `--take-mine` is refused and the
@@ -61,7 +61,7 @@ textual conflict. What is left is two agents writing the **same cell**.
    authority is invented.
 6. **Diagnose the cause, not just the symptom.** Per-scope leases (invariant 11)
    exist precisely to prevent two actors editing one scope. So a class-C conflict
-   *inside* a leased scope means the lease scoping is wrong, and `fa` says so in the
+   *inside* a leased scope means the lease scoping is wrong, and `datum` says so in the
    error. Expect conflicts to be rare and to indicate a scoping bug; do not build a
    rich merge UI for them.
 7. **Time-box it.** A conflict row older than the lease TTL escalates automatically.
@@ -72,7 +72,7 @@ textual conflict. What is left is two agents writing the **same cell**.
 
 ### Cost accepted
 
-Manual resolution stays manual. `fa` gets one new table, four subcommands, and a
+Manual resolution stays manual. `datum` gets one new table, four subcommands, and a
 `doctor` check for a half-merged clone. No automatic three-way semantic merge is
 attempted; that is deliberate, because a wrong auto-resolution is silent data loss
 and this whole project exists to eliminate that class.
@@ -105,10 +105,10 @@ merely confirming it:
   process spawn per zone touched on the CLI path (SC6/Z7). In-process a zone opens
   in ~25 ms, and one process can hold **both** zone handles at once. Zone count is
   no longer a performance argument in either direction.
-- **An embedded `fa` needs no `dolt` binary at all** (B8 + G8: SQL, branch, merge,
+- **An embedded `datum` needs no `dolt` binary at all** (B8 + G8: SQL, branch, merge,
   and `DOLT_PUSH`/`DOLT_FETCH` all work in-process). That makes the enforcement
   shape practical: a walled agent needs neither `dolt` nor `mysql` on `PATH`, so
-  "deny `Bash`, allow only `fa`" stops being awkward. Today the wall leaks the
+  "deny `Bash`, allow only `datum`" stops being awkward. Today the wall leaks the
   moment a walled agent has `Bash` plus a `dolt` binary.
 
 ### The decision, concretely
@@ -120,17 +120,17 @@ merely confirming it:
   per-agent `allowed-tools`.
 - **Hard requirement:** a walled agent gets **no unrestricted `Bash`**. Denying
   `Read` while leaving `Bash` open is not a wall — `cat` walks through it.
-- Ids route to zones invisibly (`fa get HS-001` and `fa get BC-1.01.001` are the
+- Ids route to zones invisibly (`datum get HS-001` and `datum get BC-1.01.001` are the
   same command, Z2). Nobody types a zone name.
 - Per-table is **deferred, not rejected**. Reopen only if an agent needs *partial*
   visibility inside a zone (e.g. an evaluator that may read some specs); the route
-  is harness-side (deny `Bash`, allow only `fa`, inject the true role via a
+  is harness-side (deny `Bash`, allow only `datum`, inject the true role via a
   `PreToolUse` hook so the agent cannot forge it), not database `GRANT`s.
 
 ### Cost accepted, and the new work it creates
 
 Splitting zones removes cross-zone foreign keys (A6): a holdout scenario cannot FK
-to the BC it verifies. **`fa validate` therefore gains a cross-zone integrity pass
+to the BC it verifies. **`datum validate` therefore gains a cross-zone integrity pass
 as a required deliverable, not an optional extra.** It is the one guarantee this
 decision gives up, so it must be bought back in the tool. It runs privileged (it
 can see both zones) and reports *counts and ids of dangling cross-zone refs only* —
@@ -153,8 +153,8 @@ by measurement, and one addition without which the gate cannot be turned on.**
 
 | In | Out |
 |---|---|
-| `fa import <path>` — build a throwaway Dolt store from the markdown corpus | any write back to the corpus |
-| `fa validate [--strict]` — the gates as SQL (W8) | `fa render` (phase 3) |
+| `datum import <path>` — build a throwaway Dolt store from the markdown corpus | any write back to the corpus |
+| `datum validate [--strict]` — the gates as SQL (W8) | `datum render` (phase 3) |
 | a CI job that fails on violations | the lease (phase 2), zones, instance branches |
 | **a baseline allowlist of the 82 known findings** | any remote, any push, any daemon |
 
@@ -162,7 +162,7 @@ Markdown stays the single source of truth. Zero agent changes. Nothing pushes.
 
 ### ⚠ SUPERSEDED 2026-07-31: the end state is a single Go binary
 
-The user has settled the implementation: **`fa` is one Go binary and everything lands
+The user has settled the implementation: **`datum` is one Go binary and everything lands
 as its subcommands.** That retires the "no Go in phase 1" advice below, which was
 correct only while the language was an open question. What changes:
 
@@ -171,7 +171,7 @@ correct only while the language was an open question. What changes:
   are now simply the binary's costs (CGO, `-tags gms_pure_go` mandatory, 155 indirect
   deps, ~147 MB, its own pinned Dolt build); its wins come along too (~2x cold start,
   ~4,000x warm, real cross-statement transactions, `DOLT_PUSH` in-process).
-- The aggregator is **`fa aggregate`**, a subcommand — so the CI-outage fallback is
+- The aggregator is **`datum aggregate`**, a subcommand — so the CI-outage fallback is
   "any dev runs the same binary", not a parallel script implementation
   ([CI-AGGREGATOR.md](CI-AGGREGATOR.md)).
 - Phase 1's *scope* is unchanged (read-only shadow, import + validate, the dated
@@ -190,12 +190,12 @@ requirements on the binary rather than as an argument for Python.
   process is worth ~4,000x on reads.
 - **No network anywhere.** Phase 1 builds a local store from files and throws it
   away, so it never pays the measured **11.4 s** per lease acquire over GitHub
-  (REMOTE §2) and needs no remote at all. Blast radius is zero: if `fa` is wrong,
+  (REMOTE §2) and needs no remote at all. Blast radius is zero: if `datum` is wrong,
   a CI job is wrong — the corpus is untouched.
 
 ### The addition: a baseline allowlist
 
-`fa validate` finds **38 dangling references and 44 type violations in the corpus
+`datum validate` finds **38 dangling references and 44 type violations in the corpus
 today**. A gate with no baseline therefore blocks every PR on day one and will be
 switched off within a day. Phase 1 must ship with the current 82 findings recorded
 as an explicit, dated, itemised baseline that the gate tolerates and **refuses to
@@ -205,7 +205,7 @@ This is the difference between a gate that survives and a gate that gets disable
 ### Exit criterion into phase 2
 
 The baseline is at zero (or each remaining item is explicitly waived with a reason),
-**and** `fa validate` has caught at least one real regression in a real PR. Until a
+**and** `datum validate` has caught at least one real regression in a real PR. Until a
 gate has caught something, it has not earned authority over anything.
 
 ### What would reopen it

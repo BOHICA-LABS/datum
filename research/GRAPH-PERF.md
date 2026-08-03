@@ -53,8 +53,8 @@ design review would have caught this — only running it did.
 
 | | before | after |
 |---|---|---|
-| `fa graph metrics` (default) | 577 ms | **73 ms** |
-| `fa graph metrics --betweenness` | — | 322 ms |
+| `datum graph metrics` (default) | 577 ms | **73 ms** |
+| `datum graph metrics --betweenness` | — | 322 ms |
 | projection build alone | 85 ms | 85 ms |
 
 Both fixes contribute: sparse PageRank, and betweenness off unless asked for.
@@ -120,11 +120,11 @@ an unexplained second number is how the corpus ended up asserting four different
 
 ## A second silent failure, caught
 
-`fa graph diff --from no-such-ref` originally reported **`nodes 0 → 2421 (+2421 added)`** and
+`datum graph diff --from no-such-ref` originally reported **`nodes 0 → 2421 (+2421 added)`** and
 exited 0. Cause: `BuildGraph` tolerates a missing table (phase 1 does not populate every
 universe), and that tolerance turned an unresolvable ref into an *empty* projection, which
 diff then read as "everything is new". Fixed with a ref probe before building — a bad ref is
-now `fa` failing (exit **2**) — plus a guard that errors if no artifact universe resolves at
+now `datum` failing (exit **2**) — plus a guard that errors if no artifact universe resolves at
 all. Pinned by `TestBuildGraphRejectsBadRef`.
 
 ## ⭐ The hypothesis test that changed the plan
@@ -162,7 +162,7 @@ not yet know that centrality is a risk signal.
 
 Reproduce:
 ```sh
-fa graph centrality --db <store> > /tmp/cent.csv    # every node, all three measures
+datum graph centrality --db <store> > /tmp/cent.csv    # every node, all three measures
 # then the AUC computation in the session log against registry/fstar_findings.json
 ```
 
@@ -220,7 +220,7 @@ Real figures are in the table above.
 ## Reproduce
 
 ```sh
-cd fa
+cd datum
 CGO_ENABLED=1 go test -tags gms_pure_go -run XXX -bench 'BenchmarkAlgorithmsSeparately' -benchtime 3x ./...
 CGO_ENABLED=1 go test -tags gms_pure_go -run XXX -bench 'BenchmarkPageRankDenseVsSparse' -benchmem -benchtime 3x ./...
 CGO_ENABLED=1 go test -tags gms_pure_go -run XXX -bench 'BenchmarkWaves|BenchmarkArticulation|BenchmarkProjectionBuild' -benchtime 3x ./...

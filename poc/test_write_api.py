@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The mutation surface `fa` must expose to be the SOLE interface.
+"""The mutation surface `datum` must expose to be the SOLE interface.
 
 Everything before this pass tested reads, integrity and coordination. If markdown
 becomes a generated export, then EVERY artifact change goes through this write path,

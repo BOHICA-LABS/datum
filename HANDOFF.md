@@ -1,4 +1,4 @@
-# HANDOFF — dolt-artifact-spike
+# HANDOFF — datum (formerly dolt-artifact-spike)
 
 ## ⛔⛔⛔ STANDING USER DIRECTIVE — PRODUCTION GRADE FROM DAY 1 (set 2026-08-03)
 
@@ -10,7 +10,7 @@
 - **Do not defer.** No TODOs, no "filed as a follow-up", no "left for the migration" *unless the user
   says so explicitly*. If the right fix is bigger than the ticket, build the right fix.
 - **Do not narrow a fix to its symptom.** The assigned task was "three importer defects"; doing it
-  properly meant also fixing instance TEN (a silent 171,284-character loss in `fa`'s own frontmatter
+  properly meant also fixing instance TEN (a silent 171,284-character loss in `datum`'s own frontmatter
   parser) and the subsystem-catalog gap that was zeroing 269 of prism's BCs. Both were found *because*
   the work was taken to completion instead of to the ticket boundary.
 - **Every fix ships with its gate.** A fix without a test that would have caught it is not done. Prefer
@@ -24,12 +24,12 @@
 
 ## ⭐⭐⭐⭐⭐ CURRENT SNAPSHOT — 2026-08-03 (wrap at `b3d1bdc`) — READ THIS FIRST
 
-**Workstream:** `fa` v1 — the sole home for every artifact of every project using the vsdd-factory
+**Workstream:** `datum` v1 — the sole home for every artifact of every project using the vsdd-factory
 methodology. **v1 is DESIGNED (now L1–L7, all seven layers) and PARTLY BUILT.** This session moved the
 code for the first time in three sessions.
 
-**Repo:** `~/Dev/scrap/dolt-artifact-spike` · **local-only git, NO REMOTE** · clean at `b3d1bdc` ·
-8 commits this session. The 148 MB `fa/fa` binary is gitignored — rebuild it (kick-start below).
+**Repo:** `~/Dev/datum` · **local-only git, NO REMOTE** · clean at `b3d1bdc` ·
+8 commits this session. The 148 MB `datum/datum` binary is gitignored — rebuild it (kick-start below).
 
 **ONE-LINE RESUME:** read this block, then `research/FA-V1-DESIGN.md` (the spine — now **16** settled
 decisions), then the task list below.
@@ -40,11 +40,11 @@ decisions), then the task list below.
 |---|---|
 | `18cc040` | **assessed the persona-storyboard process** (read all 1,951 lines) → its fix-burst register is a **THIRD validation register**; 7 transfer candidates, 3 load-bearing |
 | `bfdb308` | ⭐ **closed the pivot cost** — the design's ONE unmeasured assumption — and **DERIVED the missing materialization trigger** |
-| `bfa2807` | ⭐ **fixed all three importer defects + INSTANCE TEN + the subsystem-catalog gap** → `fa import` now ingests **ALL THREE corpora** (was one) |
+| `bfa2807` | ⭐ **fixed all three importer defects + INSTANCE TEN + the subsystem-catalog gap** → `datum import` now ingests **ALL THREE corpora** (was one) |
 | `f1df615` | recorded the **STANDING DIRECTIVE** (top of this file) |
 | `2da3d57` | **L7 designed** — interfaces (CLI/MCP/CI) + a 7-phase delivery plan with per-phase exit criteria |
 | `71a651f` | **adversarial review** of the four layer designs — 8 findings CONFIRMED, 3 WITHDRAWN |
-| `02b4e00` | **RAN the storyboard process against `fa`** — 6 NEW gaps nothing else surfaced |
+| `02b4e00` | **RAN the storyboard process against `datum`** — 6 NEW gaps nothing else surfaced |
 | `b3d1bdc` | ⭐ **V-L SETTLED** — the engine question the first 15 decisions left open |
 
 ### ⭐ V-L — the engine is now settled, and defended by a PROPERTY SET not a product name
@@ -59,7 +59,7 @@ Asked directly whether to move to a graph database, the answer came out measured
   **accepts recursive CTEs**: reachability with correct shortest depths, cycles **terminate**, cycle
   **detection** works. Real graph (1,547 of 4,060 edges): depth 1 → **1 ms**, 3 → 2 ms, 6 → 6 ms,
   12 → 13 ms (fixpoint at 6); **whole-graph transitive closure ≤8 = 19,628 pairs in 356–392 ms**.
-- ⚠ **This CORRECTED an overclaim in our own code.** `fa graph`'s help said *"algorithms SQL cannot
+- ⚠ **This CORRECTED an overclaim in our own code.** `datum graph`'s help said *"algorithms SQL cannot
   do"* — true only for **articulation points** and **betweenness**, FALSE for traversal, and
   **`degree` (the best predictor, AUC 0.871) is a `GROUP BY`.** Help text fixed. The CSR engine's live
   justification narrows to articulation points + the 250k-node scale case; betweenness was already
@@ -73,11 +73,11 @@ Asked directly whether to move to a graph database, the answer came out measured
 
 | | |
 |---|---|
-| `fa` | **134 tests PASS, 0 fail**, ~15 s · **schema v5** · no network, no `dolt` binary |
-| `fa import` | ⭐ **all THREE corpora** — vsdd `bc=1959 vp=80 story=148` · prism `bc=269 vp=80 story=115 subsystem=22` (+7 collisions) · rivetry `bc=134 vp=55` (+**123** collisions) |
-| `fa validate --registry` | **7,502** (was 7,487; +15 = the new census/ledger/subsystem findings — reconciles exactly with import findings 106→121) |
-| `fa shadow` | **658 — UNCHANGED** |
-| `fa refs --kind section` | resolved **2035** · dangling **30** · unresolvable **1550** — **UNCHANGED** |
+| `datum` | **134 tests PASS, 0 fail**, ~15 s · **schema v5** · no network, no `dolt` binary |
+| `datum import` | ⭐ **all THREE corpora** — vsdd `bc=1959 vp=80 story=148` · prism `bc=269 vp=80 story=115 subsystem=22` (+7 collisions) · rivetry `bc=134 vp=55` (+**123** collisions) |
+| `datum validate --registry` | **7,502** (was 7,487; +15 = the new census/ledger/subsystem findings — reconciles exactly with import findings 106→121) |
+| `datum shadow` | **658 — UNCHANGED** |
+| `datum refs --kind section` | resolved **2035** · dangling **30** · unresolvable **1550** — **UNCHANGED** |
 | `validate_registry.py` | **18,936** (vsdd 6,951 · prism **10,953** · rivetry 1,032) ⚠ +105 vs session start is **prism corpus drift** (its concurrent session added 18 `DEFECT-*` files at 08:23–08:25), NOT our change |
 | ledger fields | **18 → 229 entries**, byte-exact reversible; largest **51,566 bytes / 116 entries** |
 | pivot | record read **1.0×** · filtered 2.9× · aggregate **21.7×** · full scan **152.9×** · trigger **190,000** field rows · largest type 49,121 (260 ms) = **3.9× headroom** |
@@ -128,11 +128,11 @@ L7 design · adversarial review · storyboard run) **+ V-L settled on request.**
    human devs running N instances of the factory coexist — state tracking, task/story claims,
    artifact attribution?
 
-   **The concrete question asked, and its measured answer:** *does `fa` read the git environment /
-   associate a username to state?* **No.** `commitName()`/`commitEmail()` (`fa/store.go`) read only
-   `FA_COMMIT_NAME`/`FA_COMMIT_EMAIL` and otherwise return the synthetic `fa <fa@local>`; nothing
+   **The concrete question asked, and its measured answer:** *does `datum` read the git environment /
+   associate a username to state?* **No.** `commitName()`/`commitEmail()` (`datum/store.go`) read only
+   `DATUM_COMMIT_NAME`/`DATUM_COMMIT_EMAIL` and otherwise return the synthetic `datum <datum@local>`; nothing
    reads `git config user.name`/`user.email`. ⚠ **Worse than synthetic — effectively UNSET:** a probe
-   showed the real data commit recorded **`committer="root" email="root@%"`**, with `fa <fa@local>`
+   showed the real data commit recorded **`committer="root" email="root@%"`**, with `datum <datum@local>`
    appearing only on Dolt's own "Initialize data repository" commit. **So attribution is a constant
    today, and invariant 18's "attributable" bar plus the production-grade bar's "Attributable" claim
    are both currently FALSE.**
@@ -158,18 +158,18 @@ L7 design · adversarial review · storyboard run) **+ V-L settled on request.**
    ⛔⛔ **CORRECTION (2026-08-03, after the user challenged this and I re-read the IMPLEMENTATION).
    MY FIRST WRITE-UP OF THIS TASK WAS WRONG ON THREE OF FOUR CLAIMS. The multi-dev coordination model
    is DESIGNED, MEASURED and largely SETTLED — it is NOT unmodelled, and `factory-lock` is not being
-   reimplemented in `fa`, it is being made UNNECESSARY.** What follows replaces the wrong version.
+   reimplemented in `datum`, it is being made UNNECESSARY.** What follows replaces the wrong version.
 
    **HOW IT ACTUALLY WORKS — D3 staging refs + CI as the singleton aggregator**
-   (`research/SCALE.md`, `research/CI-AGGREGATOR.md`, `poc/workflows/fa-aggregate.yml`,
-   `fa/quarantine.go`):
+   (`research/SCALE.md`, `research/CI-AGGREGATOR.md`, `poc/workflows/datum-aggregate.yml`,
+   `datum/quarantine.go`):
 
    ```
    each writer  ──▶ dolt push refs/dolt/stage/<id>    a ref IT ALONE OWNS, outbound HTTPS only
                 ──▶ fire repository_dispatch
    CI (singleton by construction):
      1 clone the artifact ref   2 enumerate refs/dolt/stage/*   3 merge each, deterministic order
-     4 `fa validate`  ← ADMISSION CONTROL, before the artifact branch ever sees it
+     4 `datum validate`  ← ADMISSION CONTROL, before the artifact branch ever sees it
      5 ONE push to the artifact ref   6 delete consumed refs VIA THE API, only after the push landed
    ```
 
@@ -178,13 +178,13 @@ L7 design · adversarial review · storyboard run) **+ V-L settled on request.**
      store, they share markdown through git" was simply wrong.)*
    - ✅ **Contention is ELIMINATED, not arbitrated.** SCALE.md rates D3 **"N (parallel,
      contention-free) → 1 push"**. The merge slot is supplied by the platform:
-     `concurrency: {group: fa-aggregate, cancel-in-progress: false}`, which the workflow's own comment
+     `concurrency: {group: datum-aggregate, cancel-in-progress: false}`, which the workflow's own comment
      says replaces *"the entire O1-B lock-ref mechanism and every lock-ref cost: **no TTL, no
      break-glass, no unique-sha discipline**."* **That is why `factory-lock`/`unlock` go away — not
      replaced by store-side leases, made UNNECESSARY.** No lease is needed at the branch level.
    - ✅ **MEASURED, not just designed:** CI-AGGREGATOR **4/4 standard + 5/5 stressed at 20 writers,
      ~30 s median**, against real GitHub Actions; REMOTE.md **21/21** against a real github.com remote.
-     `fa/quarantine.go` implements the stuck-ref policy today (pure, clock-free, tested): bounded
+     `datum/quarantine.go` implements the stuck-ref policy today (pure, clock-free, tested): bounded
      re-attempts, then MOVE to `refs/dolt/quarantine/*` — **never delete, a quarantined ref still
      holds a writer's work.**
    - ⚠ **My "54 attempts with disjoint rows" citation was MISLEADING.** That figure is from the
@@ -198,8 +198,8 @@ L7 design · adversarial review · storyboard run) **+ V-L settled on request.**
      re-dispatch fires **only on measurable progress**.
 
    **WHAT IS GENUINELY OPEN — and it is IDENTITY, which is worse than I first said:**
-   - `fa` sets `fa <fa@local>` by default; the real data commit recorded **`committer="root"
-     email="root@%"`**. The aggregator sets `user.name=fa-aggregate` / `user.email=fa-aggregate@ci`.
+   - `datum` sets `datum <datum@local>` by default; the real data commit recorded **`committer="root"
+     email="root@%"`**. The aggregator sets `user.name=datum-aggregate` / `user.email=datum-aggregate@ci`.
    - ⚠⚠ **The ONLY place a writer's identity exists is the staging ref NAME
      `refs/dolt/stage/<id>` — and step 6 DELETES that ref after consuming it.** So unless identity is
      written into the ROW DATA or set correctly on the writer's OWN commits, it is destroyed by
@@ -212,18 +212,18 @@ L7 design · adversarial review · storyboard run) **+ V-L settled on request.**
      `refs/dolt/stage/<id>` is exactly where the human+session axes would come from. What generates
      `<id>` today is unknown — the workflow only globs `refs/dolt/stage/*`.
 
-   **PHASE GAP, real:** `fa aggregate` is **"phase 2 plumbing pending"**;
-   `poc/workflows/fa-aggregate.yml` is explicitly a **throwaway prototype** shelling out to the `dolt`
-   CLI ("the real implementation is `fa aggregate`, a subcommand of the Go binary");
-   `fa/workflows/fa-validate.yml` is phase-1 and states **"NO REMOTE, NO PUSH, NO DAEMON"**. So the
-   MODEL is proven and the `fa`-NATIVE implementation is not written. **This repo has no remote.**
+   **PHASE GAP, real:** `datum aggregate` is **"phase 2 plumbing pending"**;
+   `poc/workflows/datum-aggregate.yml` is explicitly a **throwaway prototype** shelling out to the `dolt`
+   CLI ("the real implementation is `datum aggregate`, a subcommand of the Go binary");
+   `datum/workflows/datum-validate.yml` is phase-1 and states **"NO REMOTE, NO PUSH, NO DAEMON"**. So the
+   MODEL is proven and the `datum`-NATIVE implementation is not written. **This repo has no remote.**
 
    **Sub-tasks, corrected:** (a) **test whether authorship survives aggregation** — it decides
    everything below; (b) the three-axis identity triple on every write, `caller-asserted`, failing
    CLOSED, and decide where `<id>` comes from; (c) get identity into the ROW DATA if the DAG does not
    carry it; (d) task/story CLAIMS — the one coordination primitive the aggregator model does NOT
    address (it serialises MERGES, not who is allowed to work on what); (e) pipeline-state per dev or
-   per project (V-H helps: STATE.md is a position report, not truth); (f) build `fa aggregate` as the
+   per project (V-H helps: STATE.md is a position report, not truth); (f) build `datum aggregate` as the
    Go-native subcommand, retiring the prototype workflow.
 
 **TWO DECISIONS TO SETTLE BEFORE BUILDING (do not assume):**
@@ -257,16 +257,16 @@ From the adversarial review (`research/FA-V1-ADVERSARIAL-REVIEW.md`), highest fi
    in one session. Cite artifact + version.
 5. F5 (risk #6's sign is inverted) · F7 (the 10⁵ / 2,362-BC figures) · F4 (cite gate-shaped latencies).
 
-From the storyboard run (`storyboard/v0.1.0-fa/WORKFLOW-INVENTORY.md` §7) — **G-4..G-9 are NEW and
+From the storyboard run (`storyboard/v0.1.0-datum/WORKFLOW-INVENTORY.md` §7) — **G-4..G-9 are NEW and
 share one shape: a state entered with NO ROUTE BACK OUT.**
 - **G-4** timing side channel on `DENIED-ASYMMETRY` — undefended and unmentioned in ANY design doc
 - **G-5** a cursor must carry its project, or cross-tenant leakage returns via L7's new chunking
 - **G-6** erasure has NO anti-persona (premature deletion; a vacuously-passing count assertion)
-- **G-7** `fa` cannot detect an **abandoned** `CONTINUATION`
+- **G-7** `datum` cannot detect an **abandoned** `CONTINUATION`
 - **G-8** a recorded classification is replayed forever; no `reclassify` / re-open path
 - **G-9** exit 2 is the only handoff leaving the machine and **who receives it is unrouted**
 
-Also queued: add "surface unpushed/dirty worktrees" to `fa fsck` (F20).
+Also queued: add "surface unpushed/dirty worktrees" to `datum fsck` (F20).
 
 ### ⛔⛔ BLOCKED ON THE USER — Phase 0, and it gates schema generation
 
@@ -293,7 +293,7 @@ zero porcelain output. Check file counts and mtimes, not just `git status`.
 ### ⭐ THE RESUME PROMPT — paste this whole block into a fresh session
 
 ```text
-READ FIRST — ~/Dev/scrap/dolt-artifact-spike/HANDOFF.md. Read (a) the STANDING DIRECTIVE at the
+READ FIRST — ~/Dev/datum/HANDOFF.md. Read (a) the STANDING DIRECTIVE at the
 very top, then (b) the CURRENT SNAPSHOT — 2026-08-03 block. Together they are a complete,
 self-sufficient zero-context resume: the 8 commits, the 16 settled decisions, every re-runnable
 number, what is outstanding, and what is blocked on me. Ignore the 2026-08-02 block's resume
@@ -303,9 +303,9 @@ STANDING DIRECTIVE, which outranks any instinct to descope: production grade fro
 the time to do it right. DO NOT DEFER unless I tell you to. Do not narrow a fix to its symptom.
 Every fix ships with its gate, preferably over the REAL corpora rather than a fixture.
 
-WHAT THIS PROJECT IS: `fa` becomes the SOLE HOME of every artifact for EVERY project using the
+WHAT THIS PROJECT IS: `datum` becomes the SOLE HOME of every artifact for EVERY project using the
 vsdd-factory methodology. v1 is DESIGNED across all seven layers L1-L7 and PARTLY BUILT — the
-importer now ingests all three corpora, but there is still NO write path, NO `fa render`, and NO
+importer now ingests all three corpora, but there is still NO write path, NO `datum render`, and NO
 section table.
 
 THE TASK — personas re-based on the FACTORY AGENTS, then their queries and their CRUD:
@@ -326,7 +326,7 @@ THE TASK — personas re-based on the FACTORY AGENTS, then their queries and the
  4. FINISH the storyboard stages that were mapped but not executed. Honest state: only ONE
     journey exists, Stages 6/6.5/7/8 were mapped not run, and the cube says 0 of 42 workflows
     are evidenced — so by the runbook's own rule every workflow currently fails its evidence gate.
- 5. MODEL AND TEST MULTI-DEV / MULTI-INSTANCE. fa does NOT read git identity today, and attribution
+ 5. MODEL AND TEST MULTI-DEV / MULTI-INSTANCE. datum does NOT read git identity today, and attribution
     is effectively UNSET (a probe showed committer="root" email="root@%" on the real data commit), so
     invariant 18's "attributable" bar is currently FALSE. Should it read git identity? Yes, but as
     ONE OF THREE AXES — human (git, forgeable, PROVENANCE ONLY) / agent role (the harness's role
@@ -340,8 +340,8 @@ THE TASK — personas re-based on the FACTORY AGENTS, then their queries and the
     aggregator DELETES it after consuming. So test FIRST whether writer authorship survives the
     merge DAG — that decides whether the fix is at the writer or needs a row-level written_by. Also
     open: task/story CLAIMS (the aggregator serialises MERGES, not who may work on what), and
-    building `fa aggregate` as a Go-native subcommand (today it is a throwaway prototype workflow
-    shelling out to the dolt CLI; fa is "phase 2 plumbing pending" and this repo has NO remote).
+    building `datum aggregate` as a Go-native subcommand (today it is a throwaway prototype workflow
+    shelling out to the dolt CLI; datum is "phase 2 plumbing pending" and this repo has NO remote).
 
 TWO DECISIONS TO SETTLE WITH ME FIRST, do not assume: (a) derive each agent's needs from its
 AGENT FILE or from WHAT THE CORPUS SHOWS IT DID — they will disagree, and the disagreement is
@@ -369,7 +369,7 @@ OPERATING PRINCIPLES — every one earned by a real error here:
   - CHECK YOUR FIX'S PREDICTION, don't tune. Reading ONE case beat tuning twice more this
     session (instance ten, then the escaped-quote truncation).
   - A parser that silently loses input is the most repeated defect class here — TEN instances,
-    two of them inside fa itself. Print per-form counts; report malformed; never drop.
+    two of them inside datum itself. Print per-form counts; report malformed; never drop.
   - A hand-maintained vocabulary drifts from another one. Read vocabulary FROM the registry.
   - A green check that never ran is not evidence — and a test that LOGS a failure instead of
     failing is that same defect (I shipped one this session and had to fix it).
@@ -384,19 +384,19 @@ no WIP, nothing running.
 ### Kick-start (shell only)
 
 ```sh
-cd ~/Dev/scrap/dolt-artifact-spike/fa
-CGO_ENABLED=1 go build -tags gms_pure_go -o fa .      # BOTH flags mandatory
+cd ~/Dev/datum/datum
+CGO_ENABLED=1 go build -tags gms_pure_go -o datum .      # BOTH flags mandatory
 CGO_ENABLED=1 go test -tags gms_pure_go ./...          # 134 PASS, 0 fail, ~15 s
 cd .. && python3 registry/validate_registry.py         # exit 0 · 18,936 (prism drifts — re-measure)
 for c in vsdd-factory prism rivetry; do                # ALL THREE now import (exit 0)
-  rm -rf /tmp/fa_$c && ./fa/fa init --db /tmp/fa_$c >/dev/null
-  ./fa/fa import --db /tmp/fa_$c ~/Dev/$c/.factory
+  rm -rf /tmp/fa_$c && ./datum/datum init --db /tmp/fa_$c >/dev/null
+  ./datum/datum import --db /tmp/fa_$c ~/Dev/$c/.factory
 done
-./fa/fa validate --db /tmp/fa_vsdd-factory --registry ~/Dev/vsdd-factory/.factory   # 7,502
-./fa/fa shadow   --db /tmp/fa_vsdd-factory ~/Dev/vsdd-factory/.factory              # 658
+./datum/datum validate --db /tmp/fa_vsdd-factory --registry ~/Dev/vsdd-factory/.factory   # 7,502
+./datum/datum shadow   --db /tmp/fa_vsdd-factory ~/Dev/vsdd-factory/.factory              # 658
 # the measurement probes (opt-in; they need a corpus)
-cd fa && CGO_ENABLED=1 go test -tags gms_pure_go -run TestWideRowCeiling -v .
-FA_PIVOT_CORPUS=~/Dev/vsdd-factory/.factory CGO_ENABLED=1 go test -tags gms_pure_go \
+cd datum && CGO_ENABLED=1 go test -tags gms_pure_go -run TestWideRowCeiling -v .
+DATUM_PIVOT_CORPUS=~/Dev/vsdd-factory/.factory CGO_ENABLED=1 go test -tags gms_pure_go \
   -run 'TestPivotCost|TestPivotStorage' -v -timeout 30m .
 CGO_ENABLED=1 go test -tags gms_pure_go -run TestGraphInSQL -v .   # the V-L evidence
 cd .. && python3 registry/probe_field_mass.py
@@ -407,7 +407,7 @@ cd .. && python3 registry/probe_field_mass.py
 `research/FA-V1-DESIGN.md` (**the spine — 16 settled decisions, incl. §5e V-L**) →
 `research/FA-V1-ADVERSARIAL-REVIEW.md` (**what is wrong with the design, F1 first**) →
 `research/FA-V1-L7-INTERFACES-DELIVERY.md` (the 7 phases + exit criteria) →
-`storyboard/v0.1.0-fa/` (the persona work to re-base) →
+`storyboard/v0.1.0-datum/` (the persona work to re-base) →
 `research/FA-V1-PIVOT-MEASUREMENT.md` · `research/STORYBOARD-METHOD-ASSESSMENT.md` → the layer docs.
 
 ---
@@ -415,13 +415,13 @@ cd .. && python3 registry/probe_field_mass.py
 ## SESSION SNAPSHOT — 2026-08-02 (wrap at `1d2024b`) — superseded by 2026-08-03 above
 
 **THE PROJECT CHANGED SHAPE THIS SESSION.** It is no longer "can Dolt back a tool that shadows the
-factory's artifacts". The user set the goal: **`fa` becomes the SOLE HOME of every artifact for EVERY
-project using the vsdd-factory methodology — new projects start in `fa`, existing projects migrate in
+factory's artifacts". The user set the goal: **`datum` becomes the SOLE HOME of every artifact for EVERY
+project using the vsdd-factory methodology — new projects start in `datum`, existing projects migrate in
 — and v1 must be production grade.** This session did the operational review and the v1 DESIGN.
 **No v1 implementation exists yet, by direction ("for now, we are just designing").**
 
-Repo: `~/Dev/scrap/dolt-artifact-spike`, **local-only git, NO remote**, clean at `1d2024b`.
-The 148 MB `fa/fa` binary is gitignored — rebuild it (kick-start below).
+Repo: `~/Dev/datum`, **local-only git, NO remote**, clean at `1d2024b`.
+The 148 MB `datum/datum` binary is gitignored — rebuild it (kick-start below).
 
 | commit | what |
 |---|---|
@@ -432,19 +432,19 @@ The 148 MB `fa/fa` binary is gitignored — rebuild it (kick-start below).
 | `157917e` | **L1–L2 storage/schema** (1,350 lines) + ratified its 3 corrections to the spine |
 | `bc4f6cd` | **L5–L6 policy/engine** (1,562 lines) + **six corrections to my own review's numbers** |
 | `76f41cb` | **L3–L4 ops/projections** (1,696 lines) — invalidated part of my production-grade bar |
-| `726e419` | **migration + factory change spec** (724 + 639) — and **instance NINE is live in `fa`** |
+| `726e419` | **migration + factory change spec** (724 + 639) — and **instance NINE is live in `datum`** |
 | `1d2024b` | **validation against an independent prism register** + round-2 decisions V-G/V-H/V-I |
 
 ### ⛔⛔ THE ONE THING TO FIX FIRST — instance NINE of silent input loss, live in OUR code
 
-`reVPFile = regexp.MustCompile("^(VP-\\d+)")` at **`fa/corpus.go:138`** is **case-sensitive** and is
+`reVPFile = regexp.MustCompile("^(VP-\\d+)")` at **`datum/corpus.go:138`** is **case-sensitive** and is
 used as the **filter** in `walkMD` at `:373`. prism names all **80** of its verification properties
 `vp-001-*.md`. Non-matching files are skipped **with no error**, so **prism's entire L4 layer imports
 as zero rows and nothing reports it.** Verified directly, not relayed.
 
 Two more, also verified: **prism cannot be imported at all** (hard abort, `VARCHAR(220)` overflow on
-`prose_ref.target`, `fa/schema.go:277`) and **rivetry cannot** (duplicate `VP-001` from its 211
-`.DELTA-ARCHIVE` sidecars, 143 key collisions). **`fa import` today ingests ONE of THREE corpora.**
+`prose_ref.target`, `datum/schema.go:277`) and **rivetry cannot** (duplicate `VP-001` from its 211
+`.DELTA-ARCHIVE` sidecars, 143 key collisions). **`datum import` today ingests ONE of THREE corpora.**
 And duplicate keys are handled **three incompatible ways** — `bc` files a finding, `story` silently
 keeps the first file, `vp` crashes.
 
@@ -452,20 +452,20 @@ keeps the first file, `vp` crashes.
 
 | | |
 |---|---|
-| **V-A** | `fa` is the SOURCE OF TRUTH; markdown is a **rendered view** |
+| **V-A** | `datum` is the SOURCE OF TRUTH; markdown is a **rendered view** |
 | **V-B** | v1 scope is the **whole operational substrate** — store, gates, engine, scheduler, PR/CI join, cost, attestation |
 | **V-C** | the canonical type set is **designed**; the corpus migrates onto it; variant spellings become unrepresentable |
 | **V-D** | vsdd-factory writable **on a branch, local commits only, ASK before push** |
-| **V-E** | this workstream builds **`fa` only**; factory changes are DOCUMENTED (`research/FA-V1-FACTORY-CHANGES.md`), not made |
+| **V-E** | this workstream builds **`datum` only**; factory changes are DOCUMENTED (`research/FA-V1-FACTORY-CHANGES.md`), not made |
 | **V-F** | **every project migrates** — vsdd 6,951 findings / prism 10,843 / rivetry 1,032. Multi-tenancy is a v1 requirement |
 | **V-G** | **review identity: backfill the 4 declared key fields at migration.** Path is one-time EVIDENCE during backfill, never identity after (keeps D-C) |
 | **V-H** | **Spec Supremacy WINS.** STATE.md is a position report. Cohort G migrates as rebuildable operational data. `CLAUDE.md`'s precedence table gets corrected |
 | **V-I** | **model-family diversity RETIRED as a gate for now, explicitly KEPT as a capability to grow into.** See the spine §5b — it is written out in full on purpose |
-| **V-J** | ⭐ **`fa` IS RUN WITH AN AI, and the AI is the PARSER for messy input.** See the spine §5c |
+| **V-J** | ⭐ **`datum` IS RUN WITH AN AI, and the AI is the PARSER for messy input.** See the spine §5c |
 
 ### ⭐ V-J is the newest and it corrected a posture running through all four layer designs
 
-`fa` is not a tool a human drives against tidy input. **Two boundaries, opposite postures:** the
+`datum` is not a tool a human drives against tidy input. **Two boundaries, opposite postures:** the
 **INGEST** boundary is tolerant and interpretive — the AI reads the mess and says what it is — while the
 **WRITE** boundary stays strict and closed, which is the whole reason the mess cannot come back. I had
 been applying write-boundary strictness to ingestion, which is what produced most of the "declare it out
@@ -487,17 +487,17 @@ file is stops being the mechanism).
 **DOES NOT CHANGE:** all invariants 15–23 stand · `unevaluable = block` still holds **for gates** — an
 AI interprets INPUT, it never manufactures EVIDENCE (invariant 22 untouched) · no AI write path bypasses
 validation; AI output is a *proposal* through the same ops and the same 14-step ladder, which is exactly
-what L3–L4's `fa propose field` (exit 4) already is · and **the conservation gate gets STRICTER, not
+what L3–L4's `datum propose field` (exit 4) already is · and **the conservation gate gets STRICTER, not
 looser**, because a non-deterministic classifier makes silent loss easier and instance nine already
 proves the exposure.
 
-| **V-K** | ⭐ **SETTLED: the AI runs OUTSIDE. `fa` is a TOOL for an LLM harness (Claude Code, Codex, …), via CLI or MCP.** Spine §5d |
+| **V-K** | ⭐ **SETTLED: the AI runs OUTSIDE. `datum` is a TOOL for an LLM harness (Claude Code, Codex, …), via CLI or MCP.** Spine §5d |
 
-### ⭐ V-K — `fa` is a tool, never an agent
+### ⭐ V-K — `datum` is a tool, never an agent
 
-**No LLM client, no API keys, no model config, no provider network calls in `fa`.** The control flow is
-**inverted** from what "AI-assisted ingest" suggests: `fa` never calls an AI for help — **`fa` emits
-work, the agent interprets, `fa` records the answer**, and replays it thereafter. That preserves
+**No LLM client, no API keys, no model config, no provider network calls in `datum`.** The control flow is
+**inverted** from what "AI-assisted ingest" suggests: `datum` never calls an AI for help — **`datum` emits
+work, the agent interprets, `datum` records the answer**, and replays it thereafter. That preserves
 deterministic / testable / offline-capable / no-provider-dependency, and keeps model choice and cost with
 the caller.
 
@@ -508,18 +508,18 @@ the caller.
   anywhere.** MCP is the rich surface, CLI the universal fallback.
 - **The harness supplies identity** — role token (F16), session/trace id, model identity for V-I. The
   earlier access-control work already proved an unforgeable role can ONLY come from the harness injecting
-  it (a `PreToolUse`-style hook), because `fa` cannot distinguish agents sharing a process and a uid.
+  it (a `PreToolUse`-style hook), because `datum` cannot distinguish agents sharing a process and a uid.
   V-K makes that the declared mechanism.
 
 **⚠ TWO CONSEQUENCES NOT YET IN ANY LAYER DESIGN — both belong in L7:**
 
-1. **`fa` cannot VERIFY a model claim, only record what the caller ASSERTS.** Attestation rows must be
+1. **`datum` cannot VERIFY a model claim, only record what the caller ASSERTS.** Attestation rows must be
    typed **caller-asserted, never verified**, and queries must distinguish them. This matters because
    V-I's original defect was *an unverifiable claim treated as a gate* — recording an assertion honestly
    is progress; recording it as proof repeats the bug somewhere new.
 2. **Tool-call ergonomics are now a hard constraint, and this is the load-bearing one.** A harness tool
    call **cannot block for a 6,537-file migration**, so **no op may be long-running**: work must be
-   **chunked, resumable, progress-reporting and batchable**, with `fa` emitting the NEXT unit rather than
+   **chunked, resumable, progress-reporting and batchable**, with `datum` emitting the NEXT unit rather than
    doing the whole job. Plus **harnesses RETRY tool calls, so every op needs an idempotence key**
    (F2/M-series already specify this). A migration expressed as thousands of round trips only works if
    each one is small, ordered, resumable and idempotent. **This reshapes the entire migration surface and
@@ -538,7 +538,7 @@ Under V-A + V-C most of the ~40 review defects are **not fixed — they become U
 ~14 finding ID families, the SHA-transcription class, epic-ids-in-capability-fields: all impossible
 once enums close at write time, counts are projections, and **no op accepts a path, an id, or a
 count.** That is story 7's argument generalized: **eliminate rather than detect.** The honest residue
-`fa` CANNOT make impossible is semantic correctness — measured at **26.3% of class C**.
+`datum` CANNOT make impossible is semantic correctness — measured at **26.3% of class C**.
 
 ### ⭐ Validated against an INDEPENDENT register (`research/FA-V1-VALIDATION-PRISM-SESSION.md`)
 
@@ -555,10 +555,10 @@ external dep to be missing. **Nothing in that register tests the engine, so L6 i
 
 | | |
 |---|---|
-| `fa` | **124 tests** (+9 benchmarks), ~7 s, no network, no `dolt` binary. Schema v4. |
+| `datum` | **124 tests** (+9 benchmarks), ~7 s, no network, no `dolt` binary. Schema v4. |
 | `validate_registry.py` | exit **0** · **18,826** findings (vsdd 6,951 · prism 10,843 · rivetry 1,032) |
-| `fa validate` / `--registry` / `shadow` | **776** / **7,487** / **658** — all unchanged by the prose-ref work |
-| `fa refs --kind section` | resolved **2035** · dangling **30** · unresolvable **1550** · total 3,615 |
+| `datum validate` / `--registry` / `shadow` | **776** / **7,487** / **658** — all unchanged by the prose-ref work |
+| `datum refs --kind section` | resolved **2035** · dangling **30** · unresolvable **1550** · total 3,615 |
 | migration reality | vsdd 3,085 files/28.0 MB/71 raw types/21.3% can't round-trip · prism 2,784/47.6 MB/**150 types**/**67.8%** · rivetry 668/19.4 MB/51/**68.0%** |
 | coverage gaps | **18 of 70** observed `document_type` values have a table · **1,338 files (20.5%) carry no type at all** · 940 typed files in 75 types with no table · 80 of 103 canonical types in use |
 | bodies | only `bc`/`vp`/`story` carry one; **no `section` table**; max body **1.57 MB** (not the 211 KB SPEC.md says) |
@@ -575,21 +575,21 @@ Two carried over and are now REFRAMED by the design, do not do them standalone:
    design's **one unmeasured assumption** (materialization fallback specified, **no trigger**) — and a
    design resting on an unmeasured number is what "never report a number a test could contradict"
    forbids. Then fix `corpus.go:138` case-sensitivity, the `VARCHAR(220)` overflow, and the three
-   incompatible duplicate-key behaviours. All are Cohort A, all in `fa`, none in the factory.
+   incompatible duplicate-key behaviours. All are Cohort A, all in `datum`, none in the factory.
 2. **Design L7 (interfaces: CLI/MCP/CI) + the phased delivery plan with per-phase exit criteria.**
 3. **Adversarially review the four layer designs with FRESH EYES** — ~6,200 lines written partly in
    parallel, so the seams are worth attacking. Do this in a fresh session on purpose; reviewing them
    with the authoring context still loaded is the anchoring the factory's own fresh-context rule exists
    to prevent.
 
-**Also queued, smaller:** add "surface unpushed/dirty worktrees" to `fa fsck`'s scope (F20) — the prism
-register's E-1/E-2 are real git-level data-loss risks `fa` can *report* without pretending to own.
+**Also queued, smaller:** add "surface unpushed/dirty worktrees" to `datum fsck`'s scope (F20) — the prism
+register's E-1/E-2 are real git-level data-loss risks `datum` can *report* without pretending to own.
 
 ### ⚠ FOUR OPEN ITEMS THE LAYER DESIGNS SURFACED — they live only in those docs, so they are repeated here
 
 ⚠ **Items 1 and 2 are RESHAPED by V-J** — still work, no longer blockers. Read V-J first.
 
-1. **`fa render` is blocked on SCHEMAS, not on an engine.** **All 22 derived types declare ZERO
+1. **`datum render` is blocked on SCHEMAS, not on an engine.** **All 22 derived types declare ZERO
    sections**, and the three highest-churn indexes (BC-INDEX **218** commits, VP-INDEX 140,
    cycle-index 140) have no template either. No renderer can be written against a type that does not
    say what it looks like — invariant 15 cannot be gated without them. **Under V-J the AI infers a draft
@@ -626,7 +626,7 @@ The blocking ones are already lifted into this handoff; the rest stay in place.
   V-E makes a separate workstream.
 - **Opening the ADR** and registering the policy · **answering #671**.
 - From the migration design: does prism **rename its 80 `vp-*.md` files**, or does the matcher become
-  case-insensitive (my read: fix the matcher — it is `fa`'s defect, not prism's naming)? Are prism's 7
+  case-insensitive (my read: fix the matcher — it is `datum`'s defect, not prism's naming)? Are prism's 7
   `FOLLOWUP` story-id collisions versions or new ids? Is rivetry's `delta-archive` safe to **delete**
   after backfill?
 - From the prism register's own queue: **FINDING-A** (6 PROPOSED ADRs cited as authoritative) and
@@ -643,7 +643,7 @@ then the layer you are working on: `FA-V1-L1-L2-STORAGE-SCHEMA.md` · `FA-V1-L3-
 ### ⚠ STALE RESUME PROMPT (2026-08-02) — its "TASK — all three" are DONE. Use the 2026-08-03 one above.
 
 ```text
-READ FIRST — ~/Dev/scrap/dolt-artifact-spike/HANDOFF.md, the TOP BLOCK. It is a complete,
+READ FIRST — ~/Dev/datum/HANDOFF.md, the TOP BLOCK. It is a complete,
 self-sufficient zero-context resume: all 14 commits, the 15 settled decisions, the 23 invariants,
 every re-runnable number, what is blocked on me, and the corrections I made to my own claims.
 Read it before anything else.
@@ -663,22 +663,22 @@ Then, as the work requires:
 Each layer doc ends with its own OPEN QUESTIONS (12 / 15 / 13). The blocking ones are already
 lifted into the HANDOFF top block.
 
-WHAT THIS PROJECT IS NOW: `fa` becomes the SOLE HOME of every artifact for EVERY project using the
-vsdd-factory methodology — new projects start in fa, vsdd-factory + prism + rivetry migrate in —
+WHAT THIS PROJECT IS NOW: `datum` becomes the SOLE HOME of every artifact for EVERY project using the
+vsdd-factory methodology — new projects start in datum, vsdd-factory + prism + rivetry migrate in —
 production grade for v1. v1 is DESIGNED, NOT BUILT (~6,300 lines of design). The code is still
-phase-1 read-only shadow: no write path, no `fa render`, no section table.
+phase-1 read-only shadow: no write path, no `datum render`, no section table.
 
 REBUILD AND RE-VERIFY (the 148 MB binary is gitignored):
-  cd fa && CGO_ENABLED=1 go build -tags gms_pure_go -o fa .    # BOTH flags mandatory
+  cd datum && CGO_ENABLED=1 go build -tags gms_pure_go -o datum .    # BOTH flags mandatory
   CGO_ENABLED=1 go test -tags gms_pure_go ./...                # 124 tests, ~7s
   cd .. && python3 registry/validate_registry.py               # exit 0 · 18,826
-  ./fa/fa init --db /tmp/fadb && ./fa/fa import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
-  ./fa/fa validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 7,487
-  ./fa/fa shadow   --db /tmp/fadb ~/Dev/vsdd-factory/.factory              # 658
-  ./fa/fa refs     --db /tmp/fadb --kind section --status dangling         # 30
+  ./datum/datum init --db /tmp/fadb && ./datum/datum import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
+  ./datum/datum validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 7,487
+  ./datum/datum shadow   --db /tmp/fadb ~/Dev/vsdd-factory/.factory              # 658
+  ./datum/datum refs     --db /tmp/fadb --kind section --status dangling         # 30
   # these two FAIL — that is task 1 below, NOT your setup being wrong:
-  ./fa/fa import --db /tmp/fap ~/Dev/prism/.factory     # aborts: VARCHAR(220) overflow
-  ./fa/fa import --db /tmp/far ~/Dev/rivetry/.factory   # aborts: duplicate VP-001
+  ./datum/datum import --db /tmp/fap ~/Dev/prism/.factory     # aborts: VARCHAR(220) overflow
+  ./datum/datum import --db /tmp/far ~/Dev/rivetry/.factory   # aborts: duplicate VP-001
 
 REFERENCE CORPORA — LOCAL and READ-ONLY. DO NOT WRITE to any of them, not even a branch.
   ~/Dev/vsdd-factory/.factory  3,085 files · 71 raw types · pin 0aaba144
@@ -690,16 +690,16 @@ TASK — all three, in this order:
  1. MEASURE the field-per-row pivot cost at corpus scale, THEN fix the three verified importer
     defects. The pivot is the design's ONE unmeasured assumption (materialization fallback
     specified, no trigger), and a design resting on an unmeasured number violates this repo's own
-    rule. Then: (a) fa/corpus.go:138 `reVPFile` is CASE-SENSITIVE and is the walkMD FILTER, so
+    rule. Then: (a) datum/corpus.go:138 `reVPFile` is CASE-SENSITIVE and is the walkMD FILTER, so
     prism's 80 `vp-001-*.md` import as ZERO ROWS with no error — INSTANCE NINE of this repo's
     most-repeated defect class, in our own importer; (b) the VARCHAR(220) overflow on
     prose_ref.target; (c) duplicate keys handled THREE incompatible ways (bc files a finding,
-    story silently keeps the first, vp crashes). All Cohort A, all in fa, none in the factory.
+    story silently keeps the first, vp crashes). All Cohort A, all in datum, none in the factory.
  2. DESIGN L7 (interfaces) + the phased delivery plan with per-phase exit criteria. L7 has hard
     new inputs from V-J/V-K: the consumer is an LLM HARNESS (Claude Code, Codex) via CLI or MCP;
-    fa is NEVER an agent; NO op may be long-running (a harness call cannot block for a 6,537-file
-    migration ⇒ chunked, resumable, progress-reporting, batchable, fa emits the NEXT unit); every
-    op needs an IDEMPOTENCE KEY because harnesses retry; and fa CANNOT VERIFY a model claim, only
+    datum is NEVER an agent; NO op may be long-running (a harness call cannot block for a 6,537-file
+    migration ⇒ chunked, resumable, progress-reporting, batchable, datum emits the NEXT unit); every
+    op needs an IDEMPOTENCE KEY because harnesses retry; and datum CANNOT VERIFY a model claim, only
     record what the caller ASSERTS (type it caller-asserted, never verified).
  3. ADVERSARIALLY REVIEW the four layer designs with FRESH EYES — ~6,300 lines written partly in
     parallel, so the seams are worth attacking. Doing this in a fresh session is deliberate.
@@ -712,21 +712,21 @@ DO NOT DO THESE STANDALONE — the design reframed both:
 BLOCKED ON THE USER — ASK, do not assume: the 2 namespace renames (story-spec->story,
 state->pipeline-state) are now a HARD PRECONDITION of schema generation, not cleanup · opening the
 ADR · answering #671 · does prism rename its 80 vp-*.md files, or does the matcher become
-case-insensitive (my read: fix the matcher — it is fa's defect, not prism's naming) · are prism's 7
+case-insensitive (my read: fix the matcher — it is datum's defect, not prism's naming) · are prism's 7
 FOLLOWUP story-id collisions versions or new ids · is rivetry's delta-archive safe to DELETE after
 backfill.
 
 DO NOT RELITIGATE the 15 settled decisions — D-A..D-D (prose = verbatim body bytes + a derived
 ordinal section partition, gated byte-exact · gitignored store + committed render + invariant 15 ·
 declared natural keys with path DERIVED and never identity, plus an id_alias ledger · verdict
-retired into gate_result/convergence/severity_max) and V-A..V-K (fa is the source, markdown a
+retired into gate_result/convergence/severity_max) and V-A..V-K (datum is the source, markdown a
 rendered view · v1 scope is the whole operational substrate · the canonical type set is designed
 and migrated onto · vsdd-factory writable on a branch, local commits only, ASK before push · this
-workstream builds fa ONLY, factory changes are DOCUMENTED not made · EVERY project migrates ·
+workstream builds datum ONLY, factory changes are DOCUMENTED not made · EVERY project migrates ·
 review identity by backfilling the 4 declared key fields · Spec Supremacy beats STATE.md ·
-model-diversity retired as a gate but KEPT as a capability to grow into · fa is run WITH an AI and
+model-diversity retired as a gate but KEPT as a capability to grow into · datum is run WITH an AI and
 the AI is the PARSER for messy input — ingest tolerant, write strict, interpretation captured as
-DATA never applied as a side effect · the AI runs OUTSIDE: fa is a TOOL for an LLM harness).
+DATA never applied as a side effect · the AI runs OUTSIDE: datum is a TOOL for an LLM harness).
 
 OPERATING PRINCIPLES — every one earned by a real error here:
   - Measure, don't assume. NEVER infer a consequence from a structural fact.
@@ -734,7 +734,7 @@ OPERATING PRINCIPLES — every one earned by a real error here:
   - CHECK YOUR FIX'S PREDICTION, don't tune. Failed again last session (predicted ~70, got 17);
     reading ONE case rather than tuning found the real cause, two sessions running.
   - A parser that silently loses input is the most repeated defect class here — NINE instances, the
-    ninth in fa's own importer. Print per-form counts; report malformed; never drop.
+    ninth in datum's own importer. Print per-form counts; report malformed; never drop.
   - A hand-maintained vocabulary drifts from another one — 5 instances. Read vocabulary FROM the
     registry.
   - RULE ORDER is a correctness property (emptiness-before-counting asserted the OPPOSITE of the
@@ -752,17 +752,17 @@ WIP, nothing running. All 10 sub-agents completed; their outputs are the researc
 ### Kick-start (shell only)
 
 ```sh
-cd ~/Dev/scrap/dolt-artifact-spike/fa
-CGO_ENABLED=1 go build -tags gms_pure_go -o fa .      # BOTH flags mandatory
+cd ~/Dev/datum/datum
+CGO_ENABLED=1 go build -tags gms_pure_go -o datum .      # BOTH flags mandatory
 CGO_ENABLED=1 go test -tags gms_pure_go ./...          # 121 tests, ~7 s
 cd .. && python3 registry/validate_registry.py         # exit 0 · 18,826
-./fa/fa init --db /tmp/fadb && ./fa/fa import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
-./fa/fa validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 7,487
-./fa/fa shadow   --db /tmp/fadb ~/Dev/vsdd-factory/.factory              # 658
-./fa/fa refs     --db /tmp/fadb --kind section --status dangling         # 30
+./datum/datum init --db /tmp/fadb && ./datum/datum import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
+./datum/datum validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 7,487
+./datum/datum shadow   --db /tmp/fadb ~/Dev/vsdd-factory/.factory              # 658
+./datum/datum refs     --db /tmp/fadb --kind section --status dangling         # 30
 # these two FAIL TODAY — that is finding #1, not your setup being wrong:
-./fa/fa import --db /tmp/fap ~/Dev/prism/.factory      # aborts: VARCHAR(220) overflow
-./fa/fa import --db /tmp/far ~/Dev/rivetry/.factory    # aborts: duplicate VP-001
+./datum/datum import --db /tmp/fap ~/Dev/prism/.factory      # aborts: VARCHAR(220) overflow
+./datum/datum import --db /tmp/far ~/Dev/rivetry/.factory    # aborts: duplicate VP-001
 ```
 
 ⚠ **Corpora were READ-ONLY all session and verified so at wrap:** 0 md/yaml modified in vsdd-factory,
@@ -784,7 +784,7 @@ documents above. No background commands, no WIP, no uncommitted work.
 - **CHECK YOUR FIX'S PREDICTION, don't tune.** Failed again this session: predicted ~70 resolutions,
   got 17. Reading ONE case rather than tuning is what found the real cause — second session running.
 - **A parser that silently loses input is the most repeated defect class here — now NINE instances,
-  the ninth in `fa`'s own importer.** Print per-form counts; report malformed; never drop.
+  the ninth in `datum`'s own importer.** Print per-form counts; report malformed; never drop.
 - **A hand-maintained vocabulary drifts from another one** — five instances. Read vocabulary FROM the
   registry.
 - **Rule ORDER is a correctness property** (emptiness-before-counting asserted the *opposite* of the
@@ -803,12 +803,12 @@ SHIPPED, plus the three registry pattern defects they depended on.** Nothing in 
 Corpora READ-ONLY throughout: **0 md/yaml modified in vsdd-factory**; rivetry's 1 was already
 dirty at session start; prism's are a CONCURRENT session, not this work.
 
-Repo: `~/Dev/scrap/dolt-artifact-spike`, **local-only git, NO remote**, clean at `983df3d`.
-The 148 MB `fa/fa` binary is gitignored — rebuild it (kick-start below).
+Repo: `~/Dev/datum`, **local-only git, NO remote**, clean at `983df3d`.
+The 148 MB `datum/datum` binary is gitignored — rebuild it (kick-start below).
 
 | commit | what |
 |---|---|
-| `2922740` | **STORY 7 — the SHADOW stage.** `fa shadow` derives BC-INDEX / VP-INDEX / STORY-INDEX from the store and adjudicates them CELL BY CELL against the authored docs. Writes NOTHING (hash-verified). **658 findings.** |
+| `2922740` | **STORY 7 — the SHADOW stage.** `datum shadow` derives BC-INDEX / VP-INDEX / STORY-INDEX from the store and adjudicates them CELL BY CELL against the authored docs. Writes NOTHING (hash-verified). **658 findings.** |
 | `9be0fcf` | **STORY 4 — findings as ROWS.** `review` + `adversarial_finding`; 390 reviews, 2,211 finding rows; each review's claim vs `COUNT(*)`. |
 | `387425a` | handoff for the above |
 | `90b43da` | **STORY 12 — measured the ALTERNATIVE first.** 93.6% of prose refs should be ROWS, not extracted. |
@@ -823,15 +823,15 @@ The 148 MB `fa/fa` binary is gitignored — rebuild it (kick-start below).
 
 | | |
 |---|---|
-| `fa` | **117 tests**, ~6.7 s, no network, no `dolt` binary. **Schema v4.** |
+| `datum` | **117 tests**, ~6.7 s, no network, no `dolt` binary. **Schema v4.** |
 | `registry/validate_registry.py` | exit **0** · **18,826** conformance findings · check `[1n]` reports **15** prose-ref kinds |
-| `fa validate --registry` | **7,487** total (776 store-side + 6,711 registry-side) |
-| `fa validate` (store-side only) | **776** — top: 306 floating cites lag · 218 POLICY-8 · 68 review-count · 58 dep-direction |
-| `fa shadow` | **658** — 573 real drift · 44 editorial · 41 facts about derivation itself |
-| `fa import` | bc 1,959 · vp 80 · story 148 · reviews 390 · finding rows 2,211 · sub-artifacts 4,492 (+914 typed links) · prose refs 3,537 · version cites 2,197 |
+| `datum validate --registry` | **7,487** total (776 store-side + 6,711 registry-side) |
+| `datum validate` (store-side only) | **776** — top: 306 floating cites lag · 218 POLICY-8 · 68 review-count · 58 dep-direction |
+| `datum shadow` | **658** — 573 real drift · 44 editorial · 41 facts about derivation itself |
+| `datum import` | bc 1,959 · vp 80 · story 148 · reviews 390 · finding rows 2,211 · sub-artifacts 4,492 (+914 typed links) · prose refs 3,537 · version cites 2,197 |
 | graph / waves | unchanged: 2,421 nodes · 148 stories in 16 waves · 0 cycles |
 
-**New subcommands:** `fa shadow <corpus>` (story 7) · `fa refs --kind section|version-cite
+**New subcommands:** `datum shadow <corpus>` (story 7) · `datum refs --kind section|version-cite
 [--status X]` (read-only listing; sampling requires listing).
 **New tables:** `review`, `adversarial_finding`, `sub_artifact`, `sub_artifact_ref`, `prose_ref`,
 `version_cite`.
@@ -873,7 +873,7 @@ The 148 MB `fa/fa` binary is gitignored — rebuild it (kick-start below).
 - **The 18,418 baseline was STALE.** Reconciled exactly: 902da9d registry on pinned corpora
   18,396, +22 untracked prism files = 18,418; HEAD registry on the SAME pinned input 18,804;
   working 18,826. **+408 is the registry's own tightening, NOT corpus drift.**
-- **My probe over-counted reviews by ONE** (391 vs `fa`'s 390) — a `re.M` fallback matched a
+- **My probe over-counted reviews by ONE** (391 vs `datum`'s 390) — a `re.M` fallback matched a
   `document_type:` line in a BODY. 390 is correct.
 - **My undeclared-forms census over-counted by ~12,150** — a generic `[A-Z]+-…` sweep captured
   hyphenated English (`PASS-WITH-NITS`, `WASM-only`, `WONT-FIX`). Found by SAMPLING the tail.
@@ -892,13 +892,13 @@ The 148 MB `fa/fa` binary is gitignored — rebuild it (kick-start below).
 - **The corpus addresses a section THREE ways**: heading NAME · section ORDINAL (D-A's own key) ·
   ITEM within a section (`§Postcondition 5` where the doc has `## Postconditions`).
 - **330 BC-5.\* files carry `capability: CAP-001`** while BC-INDEX distributes them across 11
-  capabilities (`CAP-070`…`080`). One drift event = half of `fa shadow`'s findings.
+  capabilities (`CAP-070`…`080`). One drift event = half of `datum shadow`'s findings.
 
 ### ▶▶▶ TOP PRIORITY NEXT — nothing is in flight
 
 1. **Sample the remaining 214 dangling section refs** to earn PER-REFERENCE reporting. Currently
    AGGREGATE ONLY, deliberately: their post-fix precision is unmeasured and a confident wrong
-   finding set is worse than a count. `fa refs --db X --kind section --status dangling` lists them.
+   finding set is worse than a count. `datum refs --db X --kind section --status dangling` lists them.
 2. **Move the SCOPE PREDICATE into the registry** beside `derivation_stage` (result 1 above). It
    is the one thing blocking any derived type from advancing `shadow → proven`.
 3. **STORY 6 — ledgers to append-only rows.** The census puts it at **26,632 references**, the
@@ -929,15 +929,15 @@ findings, one reason each) · `registry/CHANGE-MANAGEMENT.md` (ADR + policy + 16
 ### Kick-start
 
 ```sh
-cd ~/Dev/scrap/dolt-artifact-spike/fa
-CGO_ENABLED=1 go build -tags gms_pure_go -o fa .      # BOTH flags mandatory
+cd ~/Dev/datum/datum
+CGO_ENABLED=1 go build -tags gms_pure_go -o datum .      # BOTH flags mandatory
 CGO_ENABLED=1 go test -tags gms_pure_go ./...          # 117 tests, ~6.7 s
 cd .. && python3 registry/validate_registry.py         # exit 0 · 18,826 · [1n] 15 kinds
-./fa/fa init --db /tmp/fadb && ./fa/fa import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
-./fa/fa validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 7,487
-./fa/fa shadow   --db /tmp/fadb ~/Dev/vsdd-factory/.factory              # 658
-./fa/fa refs     --db /tmp/fadb --kind section --status dangling         # 214
-./fa/fa waves --db /tmp/fadb && ./fa/fa graph build --db /tmp/fadb
+./datum/datum init --db /tmp/fadb && ./datum/datum import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
+./datum/datum validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 7,487
+./datum/datum shadow   --db /tmp/fadb ~/Dev/vsdd-factory/.factory              # 658
+./datum/datum refs     --db /tmp/fadb --kind section --status dangling         # 214
+./datum/datum waves --db /tmp/fadb && ./datum/datum graph build --db /tmp/fadb
 python3 registry/probe_indexes.py && python3 registry/probe_findings.py && \
   python3 registry/probe_prose_refs.py      # the measurements every rule came from
 ```
@@ -955,7 +955,7 @@ prism count. vsdd-factory and rivetry were static.
   rows-vs-prose split story 12 in half instead of building a permanent extractor.
 - **Never report a number a test could contradict.** Chase every "off by a little" — an off-by-ONE
   review count exposed a frontmatter-parsing difference; an off-by-408 exposed a stale baseline.
-- **Never collapse exit 1 (gate failed) and exit 2 (fa failed).**
+- **Never collapse exit 1 (gate failed) and exit 2 (datum failed).**
 - **Before claiming a field name, measure whether it is already in use** (`gate` and `scope` both
   were).
 - **A regex must not cross block boundaries**, and **a parser that silently loses input is the
@@ -967,7 +967,7 @@ prism count. vsdd-factory and rivetry were static.
 
 ## ⭐⭐⭐ SESSION SNAPSHOT — 2026-07-31 (wrap at `6341ab2`)
 
-**Seven commits. The type registry was BUILT, ported into `fa`, and the knowledge graph got a
+**Seven commits. The type registry was BUILT, ported into `datum`, and the knowledge graph got a
 real projection engine.** Everything below is measured; every claim has a repro command.
 `~/Dev/vsdd-factory`, `prism` and `rivetry` were **READ-ONLY the whole session** (verified: 0
 files modified after 21:00).
@@ -976,7 +976,7 @@ files modified after 21:00).
 |---|---|
 | `902da9d` | **THE REGISTRY** — 103 canonical types + 16 gap + 4 retired, 14 closed enums, 180 aliases, change-management package, validator (exit 0) |
 | `30f7057` | **#671's exit criterion RUN** — prose extraction worth 21.8%, derived-data 25.3%, 37.9% beyond any parser |
-| `d58b77c` | **`fa validate --registry`** — registry embedded in the binary, **67/67 rule parity** with the Python validator |
+| `d58b77c` | **`datum validate --registry`** — registry embedded in the binary, **67/67 rule parity** with the Python validator |
 | `e62665b` | **Namespace reconciliation (story 1)** — the disagreement is **2**, not 17 |
 | `6cc25cc` | **All four things taken from #671** folded in + machine-checked |
 | `8713636` | **Knowledge-graph projection** (gonum) + `waves`/`graph metrics|dot|diff` + benchmarks |
@@ -987,8 +987,8 @@ files modified after 21:00).
 
 | | |
 |---|---|
-| Registry | `fa/registry/{artifact-type-registry,enums,aliases}.yaml` — the ONE canonical copy, `go:embed`'d into `fa` AND read by the Python tooling |
-| `fa` | **62 tests · 9 benchmarks**, ~3.5 s, no network, no `dolt` binary |
+| Registry | `datum/registry/{artifact-type-registry,enums,aliases}.yaml` — the ONE canonical copy, `go:embed`'d into `datum` AND read by the Python tooling |
+| `datum` | **62 tests · 9 benchmarks**, ~3.5 s, no network, no `dolt` binary |
 | Gate on live corpus | **6,864 findings** (153 store-side + 6,711 registry-side), all baselined; ratchet proven (planted violation → exit 1 naming it) |
 | Graph | **2,421 nodes · 4,060 edges**, CSR at **0.1 MB**; 148 stories in **16 waves**; **0 dependency cycles**; 50 articulation points |
 | Repo | local-only, **NO remote**, clean at `6341ab2` |
@@ -1081,7 +1081,7 @@ files modified after 21:00).
 ## ⭐ CURRENT SNAPSHOT (2026-07-31)
 
 **Active workstream:** research spike — can [Dolt](https://github.com/dolthub/dolt) back a
-tool (`fa`) that is the **sole interface to all vsdd-factory artifacts**, replacing the
+tool (`datum`) that is the **sole interface to all vsdd-factory artifacts**, replacing the
 `factory-artifacts` orphan git branch?
 
 **Status: SPIKE COMPLETE · 3 blocking decisions SETTLED · SCALED to 200 agents · every
@@ -1090,12 +1090,12 @@ GitHub Actions. Verdict GO (phased). 193 of 194 checks, 24 suites**, all re-runn
 against the LIVE vsdd-factory corpus and a REAL GitHub remote. (**Superseded on the
 "no product code" point** — phase 1 shipped on 2026-07-31; see the block at the top.) Nothing in vsdd-factory has been changed.
 
-⭐ **THE END STATE IS ONE GO BINARY, `fa`** (user-confirmed 2026-07-31). Everything below
+⭐ **THE END STATE IS ONE GO BINARY, `datum`** (user-confirmed 2026-07-31). Everything below
 lands as its subcommands — see TOP PRIORITY NEXT item 0.
 
-**Repo state:** `~/Dev/scrap/dolt-artifact-spike`, **local-only git (NO remote — nothing
+**Repo state:** `~/Dev/datum`, **local-only git (NO remote — nothing
 to push)**, clean. **12 spike passes + the phase-1 build. HEAD = `e4db2ad`**
-(`fa/fa`, the 148 MB binary, is gitignored — rebuild it, see the top block).
+(`datum/datum`, the 148 MB binary, is gitignored — rebuild it, see the top block).
 
 **Reference repos (both READ-ONLY here; we changed neither):**
 | Repo | Where | Pin |
@@ -1105,10 +1105,10 @@ to push)**, clean. **12 spike passes + the phase-1 build. HEAD = `e4db2ad`**
 | beads (Dolt reference product) | **`/tmp/_bd/b` — EPHEMERAL, re-clone on resume** | pin `b1694a5`; a `--depth=1` clone now lands on `9fddc56` |
 | Dolt | `brew install dolt` | 2.2.3 |
 | Go — NEW, only for the embedded harness | `brew install go` | 1.26.5 + Xcode clang (CGO) |
-| **test remote** | `https://github.com/drbothen/dolt-artifact-spike-remote` (PRIVATE, ours) | seeded `main`; suites create per-run `refs/dolt/*` and delete them in a `finally`. **Swept clean at wrap** — only `main` + Dolt's `__dolt_remote_info__` remain |
-| **the CI aggregator workflow** | DEPLOYED at `.github/workflows/fa-aggregate.yml` in that test remote; source of truth copied to `poc/workflows/fa-aggregate.yml` here | **active, dispatch-only — the cron sweep is COMMENTED OUT** so an idle repo doesn't run forever. Re-enable the cron to test that layer. `/tmp/ciwork` was the scratch clone used to edit it — EPHEMERAL, re-clone if needed |
+| **test remote** | `https://github.com/drbothen/datum (formerly dolt-artifact-spike)-remote` (PRIVATE, ours) | seeded `main`; suites create per-run `refs/dolt/*` and delete them in a `finally`. **Swept clean at wrap** — only `main` + Dolt's `__dolt_remote_info__` remain |
+| **the CI aggregator workflow** | DEPLOYED at `.github/workflows/datum-aggregate.yml` in that test remote; source of truth copied to `poc/workflows/datum-aggregate.yml` here | **active, dispatch-only — the cron sweep is COMMENTED OUT** so an idle repo doesn't run forever. Re-enable the cron to test that layer. `/tmp/ciwork` was the scratch clone used to edit it — EPHEMERAL, re-clone if needed |
 
-**ONE-LINE RESUME POINTER:** phase 1 is BUILT — read `fa/README.md` first, then
+**ONE-LINE RESUME POINTER:** phase 1 is BUILT — read `datum/README.md` first, then
 `research/DECISIONS.md` (the 3 settled calls) → `research/SPEC.md` (14 invariants) →
 `research/SCALE.md` + `research/CI-AGGREGATOR.md` (what scale and the cross-internet
 topology actually cost). **Nothing is blocking. The next work is DEPLOYING the phase-1
@@ -1120,7 +1120,7 @@ gate into vsdd-factory and ratcheting its baseline down.**
 
 ### The three blocking decisions are SETTLED — `research/DECISIONS.md`
 
-1. **Conflict-resolution policy — DESIGNED (D1).** `fa` never auto-resolves. Abort
+1. **Conflict-resolution policy — DESIGNED (D1).** `datum` never auto-resolves. Abort
    mechanically on any conflict (invariant 2), record it in an append-only `conflict`
    table, and the **loser of the push race re-applies its intent as a validated write**
    (`--reapply | --take-theirs | --take-mine`); cross-actor collisions escalate to the
@@ -1130,9 +1130,9 @@ gate into vsdd-factory and ratcheting its baseline down.**
 2. **Zone granularity — per-DIRECTORY, ratified (D2).** Tier 1 remains the only
    enforceable option, and two new measurements strengthen it: a zone opens in ~25 ms
    in-process and one process can hold both handles (so the ~144 ms per-zone cost
-   objection is gone), and an embedded `fa` needs no `dolt` binary (so "deny `Bash`,
-   allow only `fa`" becomes practical). **New required deliverable:** a cross-zone
-   integrity pass in `fa validate`, since splitting zones removes that FK (A6).
+   objection is gone), and an embedded `datum` needs no `dolt` binary (so "deny `Bash`,
+   allow only `datum`" becomes practical). **New required deliverable:** a cross-zone
+   integrity pass in `datum validate`, since splitting zones removes that FK (A6).
 3. **Phase 1 — SIGNED OFF (D3).** Read-only shadow: `import` + `validate` in CI, markdown
    stays truth, **plus a dated baseline allowlist of the 82 existing findings** — without
    it the gate blocks every PR on day one and gets switched off. Python + `dolt sql -f` in
@@ -1141,26 +1141,26 @@ gate into vsdd-factory and ratcheting its baseline down.**
 
 ### Then, in order
 
-0. ⭐ **THE END STATE IS ONE GO BINARY, `fa`.** Everything lands as its subcommands.
+0. ⭐ **THE END STATE IS ONE GO BINARY, `datum`.** Everything lands as its subcommands.
    Settled consequences: the embedded `dolthub/driver/v2` is **THE** access path (so
-   **no `dolt` CLI dependency anywhere, including CI**); `fa aggregate` is the
+   **no `dolt` CLI dependency anywhere, including CI**); `datum aggregate` is the
    aggregator, which makes the Actions-outage fallback "any dev runs the same binary";
    and **DECISIONS D3's "phase 1 = Python, no Go" is SUPERSEDED** (phase-1 SCOPE is
    unchanged — only language + access path). Build costs are fixed and non-negotiable:
    CGO, **`-tags gms_pure_go` MANDATORY** (else the build dies on ICU headers), 155
    indirect deps, ~147 MB binary, its own pinned Dolt build separate from the CLI's.
 
-4. **BUILD PHASE 1.** Nothing blocks it now. Deliverables: `fa import`; `fa validate` with
+4. **BUILD PHASE 1.** Nothing blocks it now. Deliverables: `datum import`; `datum validate` with
    the gates as SQL (W8); the dated baseline of 38 dangling refs + 44 type violations; a
    CI job that fails on *new* violations only; and D2's cross-zone check.
    **Exit criterion into phase 2:** baseline at zero (or each item explicitly waived)
    **and** the gate has caught ≥1 real regression in a real PR.
    ⚠ **Two features that measurement made mandatory, do not drop them:**
-   (a) **`fa aggregate` must QUARANTINE a stuck staging ref** — attempt count + backoff,
+   (a) **`datum aggregate` must QUARANTINE a stuck staging ref** — attempt count + backoff,
    or move it to `refs/dolt/quarantine/*`. A conflicted ref is re-fetched and re-merged
    on EVERY run today (measured 17 s then 8 s of pure waste with nothing new to do);
    at 20 stuck refs it dominates the job and the backlog only grows. Retention is
-   right; unbounded RE-ATTEMPT is not. (b) **`fa doctor` must check WRITABILITY, not
+   right; unbounded RE-ATTEMPT is not. (b) **`datum doctor` must check WRITABILITY, not
    openability** — a second opener of a Dolt directory silently becomes read-only.
 5. **Extract prose-embedded references.** The graph was built from frontmatter only; BC/VP
    bodies also cite ADRs and BCs in prose, so the **38 dangling refs are a floor**.
@@ -1177,10 +1177,10 @@ gate into vsdd-factory and ratcheting its baseline down.**
    an aggregator collapse hosts to 1 (64 s); peer `--remotesapi-port` pull does it in
    25 s at the cost of a listener per writer. Backoff tuning makes contention WORSE
    (159 -> 185 -> 193 attempts). **No central server is needed for contention.**
-8. ⭐ **THE END STATE IS A SINGLE GO BINARY, `fa`** (user-confirmed 2026-07-31). Everything
+8. ⭐ **THE END STATE IS A SINGLE GO BINARY, `datum`** (user-confirmed 2026-07-31). Everything
    above lands as ITS subcommands. Consequences: the embedded `dolthub/driver/v2` path is
    now the access path (not a phase-3 option), so there is **no `dolt` CLI dependency
-   anywhere — including CI**; `fa aggregate` is the aggregator, which makes the
+   anywhere — including CI**; `datum aggregate` is the aggregator, which makes the
    Actions-outage fallback "any dev runs the same binary" rather than a parallel script;
    and **DECISIONS D3's "phase 1 = Python + dolt sql -f, no Go" is SUPERSEDED** and needs
    rewriting. Build costs are fixed: CGO, `-tags gms_pure_go` mandatory, 155 indirect
@@ -1202,7 +1202,7 @@ gate into vsdd-factory and ratcheting its baseline down.**
 Passes 10 → 12b were all completed in one session (2026-07-31). Nothing is in progress,
 no WIP, no uncommitted work, and no background jobs were left running.
 
-Pass 12 / 12b (CI aggregator) **✓ complete**: built + deployed the `fa-aggregate`
+Pass 12 / 12b (CI aggregator) **✓ complete**: built + deployed the `datum-aggregate`
 workflow to the test remote · proved `GITHUB_TOKEN` can create/update/DELETE
 `refs/dolt/*` · proved `repository_dispatch` reaches it and `on: push` never would ·
 `concurrency:` = the merge slot for free · conflicting writer isolated with its ref
@@ -1291,7 +1291,7 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
   pinned Dolt build separate from the CLI's.
 - **It does NOT remove the mutex.** A second opener of the same directory silently becomes
   **read-only** and fails later with `cannot update manifest: database is read only` — so
-  `doctor` must check *writability*, and `fa` embedded + `dolt sql` cannot share a directory.
+  `doctor` must check *writability*, and `datum` embedded + `dolt sql` cannot share a directory.
 - **Real remote (github.com):** an acquire is **~10 s**, not 640 ms; an acquire+release
   pair ~20 s ⇒ push-as-CAS is a phase-gate mechanism only. **Payload size is irrelevant** —
   a 2-row database and the 33 MB corpus both push in ~10 s, and the corpus clones back in
@@ -1314,9 +1314,9 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 - **`~/Dev/vsdd-factory` and the 9 sibling corpora were READ-ONLY all session.** vsdd's
   `git status` shows 2 modified files + 1 untracked, all dating from **2026-05-30 and
   2026-07-23** — pre-existing, NOT from this session (verified by mtime).
-- **Rebuild `fa/fa`** — the 148 MB binary is gitignored (39.5 s cold build).
+- **Rebuild `datum/datum`** — the 148 MB binary is gitignored (39.5 s cold build).
 - **Disposable `/tmp` ephemera from this session, all safe to delete / recreate:**
-  `/tmp/fadb` + `/tmp/fadb_final` (fa stores built from the live corpus), `/tmp/fahist`
+  `/tmp/fadb` + `/tmp/fadb_final` (datum stores built from the live corpus), `/tmp/fahist`
   (a 2-commit store used for the diff experiment — carries a FULLTEXT index added by
   hand), `/tmp/corpus_v2` + `/tmp/corpus_regress` (COPIES of the corpus used to plant
   regressions — the live corpus was never touched), `/tmp/_bd/b` (the beads clone at
@@ -1336,7 +1336,7 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
   sources are tracked). Tracked tree stays source + docs only.
 - **Go was installed this session** (`brew install go`, 1.26.5) purely to build the embedded
   harness. Reversible with `brew uninstall go`. Nothing else depends on it.
-- **A GitHub repo was created:** `drbothen/dolt-artifact-spike-remote` (**private**), seeded
+- **A GitHub repo was created:** `drbothen/datum (formerly dolt-artifact-spike)-remote` (**private**), seeded
   with one commit on `main`. It holds `refs/heads/__dolt_remote_info__` (Dolt's own
   bookkeeping branch) permanently; per-run `refs/dolt/run-*` refs are deleted by the suite
   itself in a `finally` block. Auth is the `gh` git credential helper — **no token is
@@ -1352,7 +1352,7 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 - **`/tmp` ephemera that will NOT survive:** `/tmp/_bd/b` (the beads clone — re-clone
   per the kick-start) and `/tmp/ciwork` (the scratch clone of the test remote used to
   edit the CI workflow; the workflow's source of truth is committed here at
-  `poc/workflows/fa-aggregate.yml` and is already DEPLOYED to the test remote).
+  `poc/workflows/datum-aggregate.yml` and is already DEPLOYED to the test remote).
 
 ---
 
@@ -1360,17 +1360,17 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 
 | Date | Commit | What |
 |---|---|---|
-| 2026-07-31 | `6341ab2` | **CSR ENGINE for 250k+ nodes.** Two int32 arrays + keys interned in ONE byte slab, ids in SORTED key order so `Lookup` is a binary search and NO `map[string]int32` is retained (~80 MB at 1M nodes saved). **MEASURED 96× less memory** (240k nodes: gonum 756.5 MB → CSR **7.9 MB**; live corpus **0.1 MB**; ~33 MB vs ~3.1 GB at 1M) **and ~100× faster** (articulation 240k: 980 ms → **8.1 ms**; SCC 240k 4.6 ms; waves 240k 710 → 121 ms). Parallel edges preserved. **NO Brandes ported** — betweenness was measured off the critical path. gonum retained for Louvain only. **Correctness by PARITY**: 7 hand-worked articulation cases + generated graphs at 50/500/2400 (node/edge counts, per-node degree, articulation set, SCC count), waves layering, dangling, parallel-edge survival. **A benchmark that measured NOTHING, caught:** waves reported 1.1 µs at 240k because `synthProjection` makes no `story` nodes, so `Waves()` returned immediately — now pinned by `TestSynthStoriesActuallyProducesWaves`. `fa graph build` + `fa waves` run on CSR. 62 tests, 9 benchmarks |
-| 2026-07-31 | `c4d59d0` | **CENTRALITY HYPOTHESIS TESTED — AND BETWEENNESS LOST.** Betweenness existed for the claim that propagation misses cluster on high-betweenness nodes. Measured against 2,138 extracted findings, AUC = P(flagged outranks unflagged), 231 flagged vs 2,190 unflagged: **degree 0.871 (O(E), FREE) · pagerank 0.843 (16 ms@24k) · betweenness 0.725 (~52 s@24k)**. The cheapest measure predicts BEST and betweenness is ~3,000× the cost. ⇒ sampled Brandes, parallel Brandes and Brandes-over-CSR all came **OFF the critical path**; `degree` promoted into default metrics; CSR's scope shrank to memory. New `fa graph centrality` (CSV) + `Degrees()`. **Caveat recorded:** the proxy is "id mentioned in a finding" and well-connected artifacts get discussed more, so degree's edge is partly tautological — that weakens "centrality predicts risk" but NOT "betweenness isn't worth 52 s" |
-| 2026-07-31 | `8713636` | **KNOWLEDGE-GRAPH PROJECTION** over gonum (pure Go — no CGO fight) + `fa waves` and `fa graph build|metrics|dot|diff`. Node identity from the REGISTRY's declared key; `multi.DirectedGraph` NOT `simple` (simple permits one edge per (u,v) and would have silently collapsed story→BC via behavioral_contracts AND traces_to); dangling = an edge whose head is undeclared. Live: 2,421 nodes/4,060 edges, 148 stories in 16 waves, 0 SCCs>1, 50 articulation points, 11 Louvain communities. **TWO OF MY THREE SPEED CLAIMS REFUTED:** betweenness is 236 ms at 2.4k (not "single-digit ms") and **52.2 s at 24k** (not "probably fine at 10×") ⇒ opt-in + bounded, REFUSED not silently skipped. **REAL BUG FOUND BY BENCHMARKING:** gonum's dense `PageRank` allocates 47 MB/call on a sparse graph; `PageRankSparse` is **197× faster, 43× less memory** ⇒ default `graph metrics` 577 ms → 73 ms. **`topo.BiconnectedComponents` DOES NOT EXIST** — articulation points hand-rolled Hopcroft–Tarjan, iterative, 7 hand-worked tests. **Third silent failure caught:** a bad `--as-of` ref produced an EMPTY projection reported as "+2,421 nodes added", exit 0 → now a ref probe, exit 2. `research/GRAPH-PERF.md` |
+| 2026-07-31 | `6341ab2` | **CSR ENGINE for 250k+ nodes.** Two int32 arrays + keys interned in ONE byte slab, ids in SORTED key order so `Lookup` is a binary search and NO `map[string]int32` is retained (~80 MB at 1M nodes saved). **MEASURED 96× less memory** (240k nodes: gonum 756.5 MB → CSR **7.9 MB**; live corpus **0.1 MB**; ~33 MB vs ~3.1 GB at 1M) **and ~100× faster** (articulation 240k: 980 ms → **8.1 ms**; SCC 240k 4.6 ms; waves 240k 710 → 121 ms). Parallel edges preserved. **NO Brandes ported** — betweenness was measured off the critical path. gonum retained for Louvain only. **Correctness by PARITY**: 7 hand-worked articulation cases + generated graphs at 50/500/2400 (node/edge counts, per-node degree, articulation set, SCC count), waves layering, dangling, parallel-edge survival. **A benchmark that measured NOTHING, caught:** waves reported 1.1 µs at 240k because `synthProjection` makes no `story` nodes, so `Waves()` returned immediately — now pinned by `TestSynthStoriesActuallyProducesWaves`. `datum graph build` + `datum waves` run on CSR. 62 tests, 9 benchmarks |
+| 2026-07-31 | `c4d59d0` | **CENTRALITY HYPOTHESIS TESTED — AND BETWEENNESS LOST.** Betweenness existed for the claim that propagation misses cluster on high-betweenness nodes. Measured against 2,138 extracted findings, AUC = P(flagged outranks unflagged), 231 flagged vs 2,190 unflagged: **degree 0.871 (O(E), FREE) · pagerank 0.843 (16 ms@24k) · betweenness 0.725 (~52 s@24k)**. The cheapest measure predicts BEST and betweenness is ~3,000× the cost. ⇒ sampled Brandes, parallel Brandes and Brandes-over-CSR all came **OFF the critical path**; `degree` promoted into default metrics; CSR's scope shrank to memory. New `datum graph centrality` (CSV) + `Degrees()`. **Caveat recorded:** the proxy is "id mentioned in a finding" and well-connected artifacts get discussed more, so degree's edge is partly tautological — that weakens "centrality predicts risk" but NOT "betweenness isn't worth 52 s" |
+| 2026-07-31 | `8713636` | **KNOWLEDGE-GRAPH PROJECTION** over gonum (pure Go — no CGO fight) + `datum waves` and `datum graph build|metrics|dot|diff`. Node identity from the REGISTRY's declared key; `multi.DirectedGraph` NOT `simple` (simple permits one edge per (u,v) and would have silently collapsed story→BC via behavioral_contracts AND traces_to); dangling = an edge whose head is undeclared. Live: 2,421 nodes/4,060 edges, 148 stories in 16 waves, 0 SCCs>1, 50 articulation points, 11 Louvain communities. **TWO OF MY THREE SPEED CLAIMS REFUTED:** betweenness is 236 ms at 2.4k (not "single-digit ms") and **52.2 s at 24k** (not "probably fine at 10×") ⇒ opt-in + bounded, REFUSED not silently skipped. **REAL BUG FOUND BY BENCHMARKING:** gonum's dense `PageRank` allocates 47 MB/call on a sparse graph; `PageRankSparse` is **197× faster, 43× less memory** ⇒ default `graph metrics` 577 ms → 73 ms. **`topo.BiconnectedComponents` DOES NOT EXIST** — articulation points hand-rolled Hopcroft–Tarjan, iterative, 7 hand-worked tests. **Third silent failure caught:** a bad `--as-of` ref produced an EMPTY projection reported as "+2,421 nodes added", exit 0 → now a ref probe, exit 2. `research/GRAPH-PERF.md` |
 | 2026-07-31 | `6cc25cc` | **ALL FOUR THINGS TAKEN FROM #671**, each machine-checked (validator 1j–1m + 3 Go tests). (1) **`generate → prove equal → retire`** — new `derivation_stage` on all **23** derived types, all at `shadow`; story 7 was a one-way flip on BC-INDEX/STORY-INDEX and is now a ratchet. (2) **WRITE-TIME enforcement** — new `enforcement_point`, and `block` enforced only in CI is now a rejected CONTRADICTION. (3) **VERSION-PINNED citations** — new `pin_policy` on all 23 link types + `index_cite` (floating ⇒ lag IS a finding) and `reviewed_version` (pinned ⇒ lag is CORRECT); same syntax, opposite verdicts, which is why it had to land BEFORE prose extraction. (4) **`impact`** the reverse closure + a `query_verbs` catalogue with a declared growth path. NOT taken (with reasons): the Rust crate/no-DB architecture, in-memory petgraph, "not git-diffable". Already held stronger: #671's cannot-be-stale virtue IS invariant 15. **Defect caught:** `link_types` held a rules LIST beside entry MAPS → untypeable in Go, a test discarded the error, and a parse failure surfaced as a nil deref. Hoisted to `link_rules` |
 | 2026-07-31 | `e62665b` | **NAMESPACE RECONCILIATION (story 1) — the disagreement is 2, not 17.** One boolean stood for THREE unrelated defects: `name_disagreement` **2** (`story`/`story-spec`, `pipeline-state`/`state`) · `path_missing` 4 · `template_missing` 11. Only the first two are namespace defects. **A full file merge would be WRONG** — the path registry is deliberately COARSER (`cycle-document` serves 8+ types), so requiring a unique path per type would force 8 invented subdirectories ⇒ `shared_path_patterns`, and story 1 shrinks to TWO renames. `namespace_reconciliation` declares resolution_rule (the `document_type` name WINS) + all 4 categories + the 4 path-registry-only entries + a validator-CHECKED exit criterion. **Second self-caught defect:** a non-greedy regex matched flag lines belonging to LATER type blocks and mis-assigned 17 of 17 values while parsing cleanly — caught by PRINTING the groups, fixed with block-scoped editing |
-| 2026-07-31 | `d58b77c` | **`fa validate --registry` — ONE GATE, NOT TWO.** `fa/registry/*.yaml` is the ONE canonical copy: `go:embed`'d into the binary AND read by the Python tooling. **67/67 rules agree EXACTLY** with the Python validator on vsdd-factory (6,711 registry findings each). Getting there fixed THREE defects: (1) **three states not two** — `blocks: []` is a DECLARATION of none vs an absent key; Go called empty lists missing, Python called BLOCK-STYLE lists missing (it never parsed `key:\n  - item`); (2) **inline YAML comments** — `verification_properties: []  # ...` read as non-empty, found by a parity diff off by EXACTLY ONE FILE; (3) **exit 1 vs 2 collapse** — a bad `--registry` path validated ZERO files while exiting non-zero from the store gates. Ratchet proven end-to-end (baselined → 0, planted invented type → 1 naming it, `--strict` → 1, bad path → 2). `baseline write --registry` was ALSO required or every registry finding reads as new next run. Tests 24 → 43 |
-| 2026-07-31 | `30f7057` | **#671's EXIT CRITERION RUN AT LAST.** Hand-classified random sample (n=100 of 1,894 cleaned findings, seed 2026; 87 real after 13 turned out to be closure rows): **registry+fa already address 40.2% ±10.3** (derived-data 25.3% + frontmatter 14.9%) · **prose extraction 21.8% ±8.7** · **beyond ANY parser 37.9% ±10.2** (external 13.8 + process 12.6 + semantic 11.5). ⇒ #671 is PARTLY RIGHT: registry GAINS `prose_ref_kinds` (9 kinds) + 5 rules, an ADDITION not a redesign; and **story 7 goes BEFORE story 12** since derived-data elimination is worth more AND eliminates rather than detects. The 37.9% belongs in the ADR: nothing here replaces adversarial review. **4th parser-lost-input caught:** v1 of the extractor knew 1 of 3 finding formats and ran on 8 docs/cycle → **11 findings, all from ONE file**, 0.3% of the data. v2 covers all three forms over 390 docs. Keyword rules classified only 33%, so the headline is HAND-classified and committed for audit. `research/FSTAR-COMPARISON.md` |
+| 2026-07-31 | `d58b77c` | **`datum validate --registry` — ONE GATE, NOT TWO.** `datum/registry/*.yaml` is the ONE canonical copy: `go:embed`'d into the binary AND read by the Python tooling. **67/67 rules agree EXACTLY** with the Python validator on vsdd-factory (6,711 registry findings each). Getting there fixed THREE defects: (1) **three states not two** — `blocks: []` is a DECLARATION of none vs an absent key; Go called empty lists missing, Python called BLOCK-STYLE lists missing (it never parsed `key:\n  - item`); (2) **inline YAML comments** — `verification_properties: []  # ...` read as non-empty, found by a parity diff off by EXACTLY ONE FILE; (3) **exit 1 vs 2 collapse** — a bad `--registry` path validated ZERO files while exiting non-zero from the store gates. Ratchet proven end-to-end (baselined → 0, planted invented type → 1 naming it, `--strict` → 1, bad path → 2). `baseline write --registry` was ALSO required or every registry finding reads as new next run. Tests 24 → 43 |
+| 2026-07-31 | `30f7057` | **#671's EXIT CRITERION RUN AT LAST.** Hand-classified random sample (n=100 of 1,894 cleaned findings, seed 2026; 87 real after 13 turned out to be closure rows): **registry+datum already address 40.2% ±10.3** (derived-data 25.3% + frontmatter 14.9%) · **prose extraction 21.8% ±8.7** · **beyond ANY parser 37.9% ±10.2** (external 13.8 + process 12.6 + semantic 11.5). ⇒ #671 is PARTLY RIGHT: registry GAINS `prose_ref_kinds` (9 kinds) + 5 rules, an ADDITION not a redesign; and **story 7 goes BEFORE story 12** since derived-data elimination is worth more AND eliminates rather than detects. The 37.9% belongs in the ADR: nothing here replaces adversarial review. **4th parser-lost-input caught:** v1 of the extractor knew 1 of 3 finding formats and ran on 8 docs/cycle → **11 findings, all from ONE file**, 0.3% of the data. v2 covers all three forms over 390 docs. Keyword rules classified only 33%, so the headline is HAND-classified and committed for audit. `research/FSTAR-COMPARISON.md` |
 | 2026-07-31 | `902da9d` | **THE TYPE REGISTRY BUILT** (the session's headline deliverable). 103 canonical types + 16 gap types + 4 retired, each declaring key · required fields · enums · link types · section schema · shape · authority · gate severity · enforcement_level · profile; 14 closed vocabularies; 180 aliases carrying `set:` FIELD DEFAULTS (a rename-only map would destroy the scope/reviewer_role the 12 adversarial-review spellings encoded); a change-management package (ADR + policy + stories + graduation ladder + 7 hazards); a validator that exits 0. **FIVE FINDINGS:** two declared standards overlapping on 11 · enforcement gap by MASS but design gap by VOCABULARY (181 values/1,138 files; 22/71, 32/150, 27/51 distinct) · the tail is 108 SINGLETONS · the 12 review spellings encode real dimensions · **`delta-archive` (211 rivetry files, created by rivetry's own POLICY-22) and `input-hash` (3,890 files, admits "spurious DRIFT") exist ONLY because there is no versioned store ⇒ RETIRED**. **SEVEN defects the validator caught in my own registry**, incl. `bc_id`/`vp_id` required → 2,577 FALSE findings (ids live only in filenames) and `priority` bound to `severity_max` → 391 false findings on legitimate `P1` |
 | 2026-07-31 | `b96a668` | **CROSS-CORPUS: ten `.factory` corpora compared** — prompted by "look at prism". **THE DRIFT IS METHOD-GENERATED:** vsdd-factory vs prism, same factory, `document_type` 6 spellings each with only **2 of 12 shared**, `verdict` with **ZERO** shared values. **The spine is SMALL** (`cycles` 10/10, `specs` 10/10, `logs` 9/10, `planning` 8/10, `code-delivery`+`stories` 7/10; `BC-S.SS.NNN` 11/12 but `S-N.NN` only 2/12). **28 singleton dirs track PRODUCT TYPE** (rivetry UI/SaaS: `design-system`/`ui-evidence`/`brand`/`ux`; prism security: `test-strategy`/`security-review`). **vsdd-factory is an OUTLIER** — 1,961 BCs = 7.2× the next, its `holdout-evaluations/` uniquely named AND empty vs `holdout-scenarios/` in 7, prism's flat-with-slug BC names are vsdd's own identity violation, and 151 prism files sit in 4 `specs/` dirs the path registry never declares. **METHOD CORRECTION: corverax is NOT the biggest corpus** — 9,274 of 9,291 files are `semport/` scratch and its BC dir holds ONE file; counting files ≠ counting artifacts. `research/CROSS-CORPUS.md` |
 | 2026-07-31 | `3ce3aa1` | **PROBE `cycles/` + harvest beads.** **GAP-MATRIX §2.7 OVERTURNED** (banner added): 481/611 prose files carry frontmatter with keys, links AND counts. The class is **three shapes** — ~568 write-once immutable docs, nine append-only ledgers (`burst-log`/`decision-log`/`lessons`, 600+ append commits) that a ROW model strictly improves, and a DERIVED `INDEX.md`. **The worst case is the easiest to model.** Real blockers are general: composite keys (18 basenames collide, ALL with different content), **as-of resolution** (`BC-1.12.008` was legitimately renumbered; `ADR-099` is an example CLI arg — a flat check manufactures false findings), section-scoped semantics. **Dolt does FULLTEXT** (0.15 s / 1,959 bodies) ⇒ no new query language. NOT established: `finding_count` drift (all 6 comparable docs agree; 5 first-run 'mismatches' were dict-vs-Counter artefacts, caught pre-publish). `research/PROBE-CYCLES.md` + `research/BEADS-PROSE.md` (beads stores prose in 4 typed columns, has NO document table, NO markdown rendering, gitignores the DB, and decays prose LOSSILY — unusable for an authoritative corpus) |
-| 2026-07-31 | `e4db2ad` | **PHASE 1 BUILT — first product code.** `fa` as a Go binary (`fa/`, embedded `dolthub/driver/v2`, CGO + `-tags gms_pure_go`, 148 MB, 39.5 s cold build): `import` (live corpus in **1.1-1.4 s**, ONE transaction, idempotent, FK rejections recorded as findings) · `validate` (**0.15 s**, every gate a query: W8's gates + a count-assertion gate + index enumeration + prefix agreement + scalar refs + dependency direction + **D2's mandatory cross-zone pass**, ids and counts only) · a **dated 153-finding baseline** that ratchets · `doctor` probing **WRITABILITY not openability** (verified against a real read-only second opener: `cannot update manifest: database is read only`, while the schema check passed on the same store) · the **`fa aggregate` quarantine policy** as pure tested code (bounded attempts, run-counted backoff, move to `refs/dolt/quarantine/*`, and an unmergeable lineage quarantined on the FIRST failure per invariant 14) · a CI workflow that fails on NEW findings only · 24 tests in 3.3 s with no network and no `dolt` binary. **PARITY PROVEN** against the Python prototype: identical records + universes, the 82 import-path findings match RULE FOR RULE, edge sets diffed row by row. **Gate proven to FAIL**: a dangling ref planted in a COPY of the corpus → exactly 1 new finding, exit 1; live corpus → exit 0. **CORRECTIONS #9-10:** the corpus graph has **1,509 edges, not 1,490** (the prototype's parser treated a prose value with an unbalanced `[` as an unterminated inline list, swallowing every key after `BC-INDEX`'s `last_amended` — hiding `total_bcs: 1955` from the count gate and 19 real edges across six S-15.x stories; THIRD instance of the parser-loses-input class, now pinned by a regression test), and **"1962 distinct BC ids" depends on its extraction rule** (first column of the enumeration table = 1,959, which agrees with disk). `fa/README.md` |
+| 2026-07-31 | `e4db2ad` | **PHASE 1 BUILT — first product code.** `datum` as a Go binary (`datum/`, embedded `dolthub/driver/v2`, CGO + `-tags gms_pure_go`, 148 MB, 39.5 s cold build): `import` (live corpus in **1.1-1.4 s**, ONE transaction, idempotent, FK rejections recorded as findings) · `validate` (**0.15 s**, every gate a query: W8's gates + a count-assertion gate + index enumeration + prefix agreement + scalar refs + dependency direction + **D2's mandatory cross-zone pass**, ids and counts only) · a **dated 153-finding baseline** that ratchets · `doctor` probing **WRITABILITY not openability** (verified against a real read-only second opener: `cannot update manifest: database is read only`, while the schema check passed on the same store) · the **`datum aggregate` quarantine policy** as pure tested code (bounded attempts, run-counted backoff, move to `refs/dolt/quarantine/*`, and an unmergeable lineage quarantined on the FIRST failure per invariant 14) · a CI workflow that fails on NEW findings only · 24 tests in 3.3 s with no network and no `dolt` binary. **PARITY PROVEN** against the Python prototype: identical records + universes, the 82 import-path findings match RULE FOR RULE, edge sets diffed row by row. **Gate proven to FAIL**: a dangling ref planted in a COPY of the corpus → exactly 1 new finding, exit 1; live corpus → exit 0. **CORRECTIONS #9-10:** the corpus graph has **1,509 edges, not 1,490** (the prototype's parser treated a prose value with an unbalanced `[` as an unterminated inline list, swallowing every key after `BC-INDEX`'s `last_amended` — hiding `total_bcs: 1955` from the count gate and 19 real edges across six S-15.x stories; THIRD instance of the parser-loses-input class, now pinned by a regression test), and **"1962 distinct BC ids" depends on its extraction rule** (first column of the enumeration table = 1,959, which agrees with disk). `datum/README.md` |
 | 2026-07-30 | `e2620e0` | Pass 1: assessment + POC store; 13/13. Found the 4-way count drift, 3 dangling refs, the lock TOCTOU |
 | 2026-07-30 | `f6762d1` | Pass 2: full relationship graph (1,490 edges) + multi-machine; 27/27. **Fixed 2 of my own bugs that faked clean results** (frontmatter parser dropped all list edges; `INSERT IGNORE` suppressed FK violations) |
 | 2026-07-30 | `5002d16` | Pass 3: locking + **CORRECTION** — pass-1's "16 acquirers, one wins" was right by accident (`fence+1` is the documented anti-pattern) |
@@ -1381,7 +1381,7 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 | 2026-07-30 | `11f0da3`, `b723569` | Pass 8: `research/GAP-MATRIX.md` vs all 46 registry artifact types; asymmetry + factory-ops + multi-instance; 112/112 |
 | 2026-07-30 | `7f36c27`, `001f166` | Pass 9: scale + zones + identity; `research/ACCESS-CONTROL.md`; 137/137. **Corrected my prediction that macOS hides process envs — it does not** |
 | 2026-07-31 | `700a776`, `7379abf` | Pass 12: **CI AS THE AGGREGATOR = the cross-internet answer, 4/4.** Only staging-refs survives dispersed writers (a relay needs a shared FS; peer-pull needs INBOUND TCP to laptops behind NAT). `GITHUB_TOKEN` can create/update/DELETE `refs/dolt/*`; `repository_dispatch` reaches the workflow and `on: push` never fires for `refs/dolt/*`; **`concurrency:` IS the merge slot for free**, retiring the lock-ref and its TTL/break-glass/unique-sha costs. Conflicting writer ISOLATED with its ref retained; **strand defence held against a REAL `cancelled` pending run**. **NEW INVARIANT 14:** writers must be CLONES of the artifact branch — unrelated lineages fail `no common ancestor` and can NEVER be merged, so per-instance-ref fragmentation is a ONE-WAY DOOR. Six CI gotchas incl. a LIVELOCK I caused by swallowing a failed `git push` rc. `research/CI-AGGREGATOR.md` |
-| 2026-07-31 | `acad904` | Pass 12b: **stressed the aggregator at 20 writers × 10 agents (5/5)** — publish FLAT in N (14 s vs 13 s at N=4), 190/190 rows landed. **Found the one real flaw:** a conflicted staging ref is re-fetched and re-merged on EVERY run (17 s then 8 s wasted with nothing to do) ⇒ `fa aggregate` MUST quarantine. **Measured END-TO-END LATENCY: median 30 s** (27/44/30), ~22 s irreducible because the ~8 s push cost is paid TWICE. **Corrected two of my own estimates** — "~1-2 min, runner-startup-dominated" (really ~30 s, startup negligible) and "the Go binary saves 20-30 s of dolt install" (it saves 2 s) |
+| 2026-07-31 | `acad904` | Pass 12b: **stressed the aggregator at 20 writers × 10 agents (5/5)** — publish FLAT in N (14 s vs 13 s at N=4), 190/190 rows landed. **Found the one real flaw:** a conflicted staging ref is re-fetched and re-merged on EVERY run (17 s then 8 s wasted with nothing to do) ⇒ `datum aggregate` MUST quarantine. **Measured END-TO-END LATENCY: median 30 s** (27/44/30), ~22 s irreducible because the ~8 s push cost is paid TWICE. **Corrected two of my own estimates** — "~1-2 min, runner-startup-dominated" (really ~30 s, startup negligible) and "the Go binary saves 20-30 s of dolt install" (it saves 2 s) |
 | 2026-07-31 | `cad9144` | Pass 11: SCALE + CONTENTION. 200 agents / 20 clones / real remote: **S6 = 247/247 rows, 0 missing, 0 dupes, 0 dangling FKs** after 200 concurrent writers + 9 merges. **CORRECTIONS #6-8:** contention is per-BRANCH not per-ref (so `--ref`-per-instance is inapplicable to a single-branch store); slow pushes were CONCURRENCY not churn (a push costs the same for 1 commit as 50); and backoff/ticket ordering make contention WORSE (159 → 185 → 193 attempts), not better. **Exhausted the decentralised option space** — aggregation (`file://` relay + flock per host, 17 s; staging refs + aggregator, 64 s; peer remotesapi pull, 25 s) collapses 20 writers to ONE push, so **no central server is needed for contention**. New invariant 13; `research/SCALE.md` |
 | 2026-07-31 | `71ca16a`, `dd5fec0` | Pass 10: embedded-driver benchmark (13/13) + **real GitHub remote: 10/10 mechanics AND 11/11 ported `file://` scenarios** + the three decisions settled (`research/DECISIONS.md`, `ACCESS-PATH.md`, `REMOTE.md`); 171/171. **CORRECTION #5 — pass 9's "the embedded driver is the single biggest engineering lever" was wrong: the lever is a missing `BEGIN`/`COMMIT`, worth 17–23× and available from the CLI.** Also: invariant 6 restated, new invariant 12 (one git ref per remote ⇒ global push contention), and the embedded path does NOT remove the write mutex |
 
@@ -1390,7 +1390,7 @@ export. **No daemon, no new hosting** — Dolt rides `refs/dolt/data` in the pro
 ## KICK-START PROMPT (paste this cold)
 
 ```
-Resume the dolt-artifact-spike in ~/Dev/scrap/dolt-artifact-spike (local-only git, NO remote,
+Resume the datum (formerly dolt-artifact-spike) in ~/Dev/datum (local-only git, NO remote,
 clean at d564f36; the work itself is 902da9d..6341ab2).
 
 READ FIRST — ONLY THESE FOUR:
@@ -1403,17 +1403,17 @@ READ FIRST — ONLY THESE FOUR:
 
   Then as needed: registry/CHANGE-MANAGEMENT.md (ADR + policy + 16 stories + hazards) ·
   research/STANDARDIZATION.md · CROSS-CORPUS.md · PROBE-CYCLES.md · SPEC.md · DECISIONS.md ·
-  LESSONS.md · BEADS-PROSE.md · GAP-MATRIX.md · fa/README.md
+  LESSONS.md · BEADS-PROSE.md · GAP-MATRIX.md · datum/README.md
 
 REBUILD AND RE-VERIFY (the 148 MB binary is gitignored):
-  cd fa && CGO_ENABLED=1 go build -tags gms_pure_go -o fa .   # BOTH flags mandatory
+  cd datum && CGO_ENABLED=1 go build -tags gms_pure_go -o datum .   # BOTH flags mandatory
   CGO_ENABLED=1 go test -tags gms_pure_go ./...               # 62 tests, ~3.5s
   cd .. && python3 registry/validate_registry.py              # exit 0; prints the 3-way
                                                               # namespace split + all checks
-  ./fa/fa init --db /tmp/fadb && ./fa/fa import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
-  ./fa/fa validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 6,864 findings
-  ./fa/fa graph build --db /tmp/fadb      # CSR: 2,421 nodes / 4,060 edges / 0.1 MB
-  ./fa/fa waves --db /tmp/fadb            # 148 stories, 16 waves, 0 cycles
+  ./datum/datum init --db /tmp/fadb && ./datum/datum import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
+  ./datum/datum validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 6,864 findings
+  ./datum/datum graph build --db /tmp/fadb      # CSR: 2,421 nodes / 4,060 edges / 0.1 MB
+  ./datum/datum waves --db /tmp/fadb            # 148 stories, 16 waves, 0 cycles
 
 REFERENCE CORPORA — LOCAL and READ-ONLY. DO NOT WRITE until the standard is agreed:
   ~/Dev/vsdd-factory/.factory   (pin 0aaba144)   ~/Dev/prism/.factory   (95b90d003)
@@ -1465,7 +1465,7 @@ OPERATING PRINCIPLES (each one earned by a real error in this repo):
   - Never report a number a test could contradict. TWO benchmarks measured NOTHING and said so
     plausibly this session (an extractor that knew 1 of 3 formats -> 11 findings from 1 file;
     a waves benchmark timing an early return -> 1.1us at 240k nodes). Both now pinned by tests.
-  - Never collapse exit 1 (gate failed) and exit 2 (fa failed). Caught twice more this session.
+  - Never collapse exit 1 (gate failed) and exit 2 (datum failed). Caught twice more this session.
   - Before claiming a field name, MEASURE whether it is already in use with another meaning
     (`gate` and `scope` both were).
   - A regex must not cross block boundaries: one mis-assigned 17 of 17 values while parsing
@@ -1476,7 +1476,7 @@ OPERATING PRINCIPLES (each one earned by a real error in this repo):
     inline-YAML-comment parsing bug).
   - Counting files is not counting artifacts. State the extraction rule with any count.
 
-STATE: registry BUILT + embedded in fa + validated against 3 corpora (67/67 parity) ·
+STATE: registry BUILT + embedded in datum + validated against 3 corpora (67/67 parity) ·
 #671's exit criterion RUN · all four #671 borrowings folded in and machine-checked ·
 knowledge-graph projection + CSR engine (96x less memory, ~100x faster) shipped ·
 62 tests / 9 benchmarks green · corpora untouched · nothing in flight, no WIP, nothing running.

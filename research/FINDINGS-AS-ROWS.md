@@ -16,8 +16,8 @@ prose. Story 4 gives each finding a row, which is what lets all three become `CO
 `GROUP BY` — the discipline `schema.go` already applies to every other count.
 
 ```sh
-fa import   --db /tmp/fadb ~/Dev/vsdd-factory/.factory
-fa validate --db /tmp/fadb
+datum import   --db /tmp/fadb ~/Dev/vsdd-factory/.factory
+datum validate --db /tmp/fadb
 ```
 
 ## What it produced
@@ -102,10 +102,10 @@ required field instead of something recovered from six competing prose conventio
   is the exact defect the registry exists to remove. Same shape as `depends_on`/`blocks` and as
   the two declared namespaces: the fix is always to have one source. Pinned by
   `TestReviewTypeSetIsDerivedFromTheRegistry`.
-- **The probe over-counted reviews by one.** It reported 391 documents against `fa`'s 390.
+- **The probe over-counted reviews by one.** It reported 391 documents against `datum`'s 390.
   Chased rather than accepted: `fstar_compare.py` reads `document_type` from the frontmatter
   BLOCK, my probe fell through to a `re.M` search that also matched a `document_type:` line in
-  a body. **390 is correct** and `fa` agrees with the correct method exactly.
+  a body. **390 is correct** and `datum` agrees with the correct method exactly.
 - **`category` is prose, not an enum.** The template declares six values; the corpus writes
   sentences into the field. The column is `TEXT` and a non-declared value is a reported TYPE
   finding (24 today) rather than being silently coerced — the same call the importer already
@@ -124,14 +124,14 @@ required field instead of something recovered from six competing prose conventio
   actual 2"), and some are extraction gaps in a seventh id form nobody has hit yet. The gate
   names each one, which is the point.
 
-`fa`: **106 tests** (was 97), ~6.8 s. Corpora READ-ONLY.
+`datum`: **106 tests** (was 97), ~6.8 s. Corpora READ-ONLY.
 
 ## Reproduce
 
 ```sh
 python3 registry/probe_findings.py          # the measurement the rules came from
-cd fa && CGO_ENABLED=1 go build -tags gms_pure_go -o fa .
-./fa init --db /tmp/fadb && ./fa import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
-./fa validate --db /tmp/fadb --json /tmp/v.json
+cd datum && CGO_ENABLED=1 go build -tags gms_pure_go -o datum .
+./datum init --db /tmp/fadb && ./datum import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
+./datum validate --db /tmp/fadb --json /tmp/v.json
 CGO_ENABLED=1 go test -tags gms_pure_go -count=1 -run 'TestExtractFindings|TestOwnership' ./...
 ```

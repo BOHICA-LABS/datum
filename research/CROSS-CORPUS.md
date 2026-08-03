@@ -1,7 +1,7 @@
 ---
 title: CROSS-CORPUS — ten .factory corpora compared, to derive the core/profile boundary empirically
 date: 2026-07-31
-purpose: decide what belongs in fa's CORE schema vs a per-project PROFILE, from evidence rather than judgment
+purpose: decide what belongs in datum's CORE schema vs a per-project PROFILE, from evidence rather than judgment
 method: read-only measurement of ~/Dev/*/.factory across 12 candidates; 10 have a populated artifact set
 status: the boundary is now measurable; vsdd-factory is an OUTLIER and must not be the template
 ---
@@ -10,7 +10,7 @@ status: the boundary is now measurable; vsdd-factory is an OUTLIER and must not 
 
 ## Why this exists
 
-The vision requires `fa` to own every factory artifact, which forces a decision:
+The vision requires `datum` to own every factory artifact, which forces a decision:
 **what is core (in the binary) and what is a per-project profile (declared data)?**
 That boundary is a one-way door. Until now it was being reasoned about from a single
 corpus — vsdd-factory — which is a factory building a factory. This measures nine more.
@@ -166,7 +166,7 @@ prism also carries product-specific document types vsdd has none of: `security-r
 
 So `artifact-path-registry.yaml`, which calls itself *"single source of truth for canonical
 `.factory/` artifact locations"*, is in practice **vsdd-factory's own layout**. Deriving
-`fa`'s core schema from it would encode the outlier as the standard — and would mark a
+`datum`'s core schema from it would encode the outlier as the standard — and would mark a
 majority of prism, rivetry and slideforge as non-conformant on day one.
 
 ## 7. Two process findings, incidental but worth recording
@@ -200,7 +200,7 @@ So `BLOCKED`, `BLOCKED-hard` and `FINDINGS_REMAIN` all declare `category: blocke
 Neither project renames anything; both become queryable. Core enumerates categories —
 a closed set — and projects map onto them.
 
-**And the migration is already built:** declare the profile → `fa validate` → date and
+**And the migration is already built:** declare the profile → `datum validate` → date and
 baseline the findings → ratchet, composing with the registry's existing
 `enforcement_level: block|warn|advisory`.
 

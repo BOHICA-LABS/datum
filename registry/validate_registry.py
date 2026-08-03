@@ -14,7 +14,7 @@ schema. Two halves:
   PART 2  CONFORMANCE OF THE CORPORA TO THE REGISTRY
           For every file, resolve its type through the alias map, then check the declared
           required fields, enum membership and section schema. Emits findings in the same
-          shape `fa validate` uses so they can be baselined and ratcheted.
+          shape `datum validate` uses so they can be baselined and ratcheted.
 
 Read-only. Touches nothing outside this directory.
 
@@ -37,8 +37,8 @@ FENCE = re.compile(r'^\s*(```|~~~)')
 
 
 def load():
-    RD = os.path.join(os.path.dirname(HERE), "fa", "registry")   # ONE canonical location:
-    # the YAML is embedded into the fa binary from there, so there is no second copy to drift.
+    RD = os.path.join(os.path.dirname(HERE), "datum", "registry")   # ONE canonical location:
+    # the YAML is embedded into the datum binary from there, so there is no second copy to drift.
     reg = yaml.safe_load(open(os.path.join(RD, "artifact-type-registry.yaml")))
     enums = yaml.safe_load(open(os.path.join(RD, "enums.yaml")))
     al = yaml.safe_load(open(os.path.join(RD, "aliases.yaml")))

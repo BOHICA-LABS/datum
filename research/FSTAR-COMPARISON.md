@@ -7,20 +7,20 @@ status: ANSWERED. #671 is partly right. The registry needs an ADDITION, not a re
 corpus_pin: vsdd-factory .factory @ 0aaba144
 ---
 
-# Can `fa` reproduce the known F-\* findings?
+# Can `datum` reproduce the known F-\* findings?
 
 [#671](https://github.com/drbothen/vsdd-factory/issues/671)'s phase-1 exit criterion is
 *"reproduces known F-\* findings from recent adversarial passes without hand-tuning."*
-`fa` reproduced the Python prototype's 82 findings rule-for-rule and found 71 more, but
+`datum` reproduced the Python prototype's 82 findings rule-for-rule and found 71 more, but
 had **never been compared to the F-\* findings** — the ones the adversary actually reported.
-That comparison decides whether `fa`'s frontmatter-only parser is sufficient or whether
+That comparison decides whether `datum`'s frontmatter-only parser is sufficient or whether
 #671's insistence on **body prose** is where the real drift lives.
 
 ## The answer
 
 | | share of real findings | 95% CI |
 |---|---|---|
-| **the registry + `fa` as designed already address** | **40.2%** | ±10.3 |
+| **the registry + `datum` as designed already address** | **40.2%** | ±10.3 |
 | ├─ A: derived-data staleness the registry makes *impossible* | 25.3% | ±9.1 |
 | └─ B: frontmatter-reachable (today, or via a declared field/enum/link) | 14.9% | ±7.5 |
 | **needs BODY-PROSE extraction — #671's claim** | **21.8%** | ±8.7 |
@@ -41,7 +41,7 @@ That comparison decides whether `fa`'s frontmatter-only parser is sufficient or 
    detecting them. That validates the derived-authority decision on independent evidence.
 3. **38% is unreachable by any parser, and no amount of tooling changes that.** The adversary
    is doing work — semantic completeness judgement, spec-vs-code verification, gate-execution
-   auditing — that neither `fa` nor #671's `factory-graph` can do. Any claim that a parser
+   auditing — that neither `datum` nor #671's `factory-graph` can do. Any claim that a parser
    "replaces" adversarial review is false, and this is the number that says so.
 
 Combined, **62% of what the adversary reports becomes mechanically detectable or structurally
@@ -67,12 +67,12 @@ splits almost evenly: **36.8% needs rows + typed links, 36.8% needs prose extrac
 | after dropping closure/status rows | **1,894** |
 | extractor precision (hand-measured) | **87%** — 87 of 100 sampled are real findings |
 | estimated real findings corpus-wide | **~1,647** |
-| findings `fa` reports today | **153** |
+| findings `datum` reports today | **153** |
 
-`fa` sees roughly **9% of the volume** — but the overlap is smaller still, because `fa`'s
+`datum` sees roughly **9% of the volume** — but the overlap is smaller still, because `datum`'s
 153 are dominated by link/type/count classes while the adversary's are dominated by
 body-prose and semantic classes. **They are largely disjoint, not redundant.** So the right
-reading is not "`fa` catches 9%" but "`fa` and the adversary are looking at different things,
+reading is not "`datum` catches 9%" but "`datum` and the adversary are looking at different things,
 and roughly 40% of what the adversary looks at could be automated away."
 
 ## Method, stated in full
@@ -201,7 +201,7 @@ section it lives in rather than the 615 KB document.
 - **Story 7 (make indexes derived) is confirmed as the highest-value single change** — 25.3%
   of findings, eliminated rather than detected.
 - **#671's exit criterion is now MET as a measurement** (it has been run) but **not as a
-  pass**: `fa` today reproduces the B class only. A frontmatter-only parser was never going
+  pass**: `datum` today reproduces the B class only. A frontmatter-only parser was never going
   to clear that bar, and now the gap is quantified rather than argued.
 - **A claim nobody should make:** that this replaces adversarial review. 37.9% of what the
   adversary finds is beyond any parser, and that number should appear in the ADR so the

@@ -1,7 +1,7 @@
 ---
-title: FA-V1-VALIDATION-PRISM-SESSION — would fa v1 have prevented the 2026-08-02 prism findings?
+title: FA-V1-VALIDATION-PRISM-SESSION — would datum v1 have prevented the 2026-08-02 prism findings?
 date: 2026-08-02
-purpose: test the v1 design's central claim against an INDEPENDENT register of real findings, including where fa does nothing
+purpose: test the v1 design's central claim against an INDEPENDENT register of real findings, including where datum does nothing
 source: /Users/jmagady/Dev/scrap/prism-session-findings-2026-08-02.md (21 entries, prism §Authority backfill rounds 4-5, decisions D-2090/D-2091)
 method: classify every entry as PREVENTED (structurally impossible) / DETECTED (mechanically, continuously) / MITIGATED / OUT OF SCOPE / NOT A DEFECT
 status: assessment complete
@@ -64,10 +64,10 @@ their words.
 | **R-1** | 14 phantom story IDs hardcoded in a resume snapshot; `S-3.8.*` does not exist at all | **Invariant 17** — nothing stored that is derivable. A story list is a *query*, never a stored list. The register's own going-forward rule is "never carry a story-ID list forward in a resume snapshot", which is invariant 17 restated. Same class as the 37 phantom STORY-INDEX rows. |
 | **R-2** | Coverage tracked against a denominator of 237; disk truth is 264 | Counts are projections with no stored copy to go stale. Same class as the six BC totals. |
 | **R-3** | Round-vs-batch unit conflation producing `29 × 24 = 696` against a 264-file corpus | Coverage is computed from rows, so there is no hand-derived ratio to get wrong — and an impossible magnitude is caught by the vacuity guard rather than by a reader noticing. |
-| **R-4** | `FINDING-D` reused for two different findings, so a real spec correction "appears nowhere in STATE.md" | Findings are rows with **fa-minted ids** (F12). An id cannot be reused, and a correction cannot exist without a record because **the record *is* the write**. |
-| **S-2** | A shell variable failed to expand, so a compliance grep received empty input and returned a **vacuous clean verdict** | **Mandatory vacuity guard** plus `fa gate exec` as the sole evidence producer. The register's lesson — "an empty grep result must be distinguished from a grep that never ran" — is the guard's exact specification. Its secondary issue (glob `S-6.0*` silently excluding `S-6.10`) is the same shape as `fa`'s own instance-9 bug, and under v1 sets are queries, not globs. |
+| **R-4** | `FINDING-D` reused for two different findings, so a real spec correction "appears nowhere in STATE.md" | Findings are rows with **datum-minted ids** (F12). An id cannot be reused, and a correction cannot exist without a record because **the record *is* the write**. |
+| **S-2** | A shell variable failed to expand, so a compliance grep received empty input and returned a **vacuous clean verdict** | **Mandatory vacuity guard** plus `datum gate exec` as the sole evidence producer. The register's lesson — "an empty grep result must be distinguished from a grep that never ran" — is the guard's exact specification. Its secondary issue (glob `S-6.0*` silently excluding `S-6.10`) is the same shape as `datum`'s own instance-9 bug, and under v1 sets are queries, not globs. |
 | **S-3** | `records-lint` exits 0 while check L11 is `-proposed` and **not deployed**, so green carries no evidentiary weight | **Unevaluable = error = block. No fail-open.** A non-deployed criterion cannot report green; it blocks, or it is `manual: true` with a named owner and an attestation. |
-| **E-4** | Cross-record SHA verification **skipped** because `python3`/`pyyaml` were unavailable | Prevented twice: `fa` is a single static Go binary with no external runtime dependency to be missing, *and* a skip is not a pass. Same class as `validate-wave-gate-prerequisite.sh` exiting 0 without `jq`. |
+| **E-4** | Cross-record SHA verification **skipped** because `python3`/`pyyaml` were unavailable | Prevented twice: `datum` is a single static Go binary with no external runtime dependency to be missing, *and* a skip is not a pass. Same class as `validate-wave-gate-prerequisite.sh` exiting 0 without `jq`. |
 
 **Three of these — S-2, S-3, E-4 — are the same failure wearing three costumes: a check reported green
 without having run.** That is one design rule (`unevaluable = block`, plus a vacuity guard, plus no
@@ -93,16 +93,16 @@ read frontmatter or ran a cross-check. Under v1 each is a standing query that ca
   Worth being precise about the limit: this instance is catchable because both facts are in the store;
   the general class (semantically wrong yet valid) is the residue §1 of the spine measured at **26.3%
   of class C**.
-- **E — POL-39 version pins in live normative text.** `fa` already extracts version cites (2,197 of
+- **E — POL-39 version pins in live normative text.** `datum` already extracts version cites (2,197 of
   them) and judges them by `pin_policy`. The register even describes the sites as "grandfathered
   under the L9 ratchet" — a baseline/ratchet (F15) they are hand-rolling.
 - **F — stories citing components recorded as *planned, not on disk*.** The reference resolves to a
   record whose lifecycle says planned, so this is a lifecycle query, not a dangling reference. Note
   what the register is doing: registering the finding "pre-emptively so a later sweep does not mint
-  this as a phantom-anchor defect" — i.e. **manually preventing a future false positive.** `fa`'s
+  this as a phantom-anchor defect" — i.e. **manually preventing a future false positive.** `datum`'s
   resolved / dangling / unresolvable distinction does that structurally, which is the same discipline
   the section-ref work earned the hard way.
-- **R-5 — a process-gap marked `CLOSED` on the strength of one compliant burst.** `fa` cannot stop
+- **R-5 — a process-gap marked `CLOSED` on the strength of one compliant burst.** `datum` cannot stop
   someone asserting closure, but it can make the assertion fail: **a finding may not reach `resolved`
   while its remediating story is `draft`** is a cross-reference rule, and closure requires evidence
   under invariant 22. The register notes the saving grace was that "the story anchor is named in the
@@ -112,7 +112,7 @@ read frontmatter or ran a cross-check. Under v1 each is a standing query that ca
 
 ## MITIGATED (1)
 
-**S-1 — a scope claim generalized from one batch and falsified by the next.** `fa` cannot stop an agent
+**S-1 — a scope claim generalized from one batch and falsified by the next.** `datum` cannot stop an agent
 reasoning badly in prose. But **invariant 19** bites here more than I expected: if "exposure is
 confined to the Wave-4 ops cluster" has to be expressed as a *scoped query* rather than a sentence,
 the predicate must name its denominator — and a query over all stories would have included batch 14.
@@ -128,8 +128,8 @@ not eliminated.
 dirty), and a `stash@{0}` that would deadlock every PR against 24 required checks if applied with any
 check-name shift.
 
-**`fa` is the artifact substrate. It is not a replacement for git on source code**, and it should not
-pretend to be. `fa fsck` / `fa doctor` can *surface* unpushed worktrees and diverged branches as
+**`datum` is the artifact substrate. It is not a replacement for git on source code**, and it should not
+pretend to be. `datum fsck` / `datum doctor` can *surface* unpushed worktrees and diverged branches as
 health signals — worth adding to F20's scope — but the underlying data-loss risk is git-level and stays
 git-level. Any design that claimed otherwise would be overreaching.
 
@@ -138,7 +138,7 @@ git-level. Any design that claimed otherwise would be overreaching.
 ## NOT A DEFECT (1)
 
 **E-5 — S-5.11 cannot reach `status: ready` until the PO amends `BC-2.16.007` or splits a new BC.**
-This is a correctly-identified blocking obligation, not a failure. `fa` improves the *tracking* — a
+This is a correctly-identified blocking obligation, not a failure. `datum` improves the *tracking* — a
 typed obligation with an owner and an expiry rather than a prose note, which is the same
 `deferred`-abolition decision L5–L6 made — but the work itself is real and human.
 
@@ -146,8 +146,8 @@ typed obligation with an owner and an expiry rather than a prose note, which is 
 
 ## What this validation does NOT show, stated plainly
 
-1. **`fa` introduces a new risk class of its own, and it is already proven.** Instance **nine** of
-   silent input loss is live in `fa`'s own importer (`reVPFile` is case-sensitive; prism names all 80
+1. **`datum` introduces a new risk class of its own, and it is already proven.** Instance **nine** of
+   silent input loss is live in `datum`'s own importer (`reVPFile` is case-sensitive; prism names all 80
    VPs `vp-001-*.md`; prism's entire L4 layer imports as **zero rows** with no error). The prism
    register has no equivalent — 3,085 independently readable markdown files fail *loudly* and
    partially, whereas a store fails *quietly* and totally. The migration's conservation gate exists

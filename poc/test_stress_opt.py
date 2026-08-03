@@ -48,7 +48,7 @@ ROOT = POC / "opt"
 RES = ROOT / "results"
 SELF = str(Path(__file__).resolve())
 REMOTE = os.environ.get("FA_GH_REMOTE",
-                        "https://github.com/drbothen/dolt-artifact-spike-remote.git")
+                        "https://github.com/drbothen/datum (formerly dolt-artifact-spike)-remote.git")
 RUN = os.environ.get("FA_OPT_RUN") or f"opt-{int(time.time())}"
 
 N_CLONES = int(os.environ.get("FA_OPT_CLONES", 10))     # pushers in O1

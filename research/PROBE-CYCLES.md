@@ -10,7 +10,7 @@ corpus: vsdd-factory .factory @0aaba144 (factory-artifacts tip), read-only
 
 ## Why this class first
 
-The vision changed on 2026-07-31: `fa` should be the source of truth for **everything**
+The vision changed on 2026-07-31: `datum` should be the source of truth for **everything**
 that goes into `factory-artifacts`, prose included. That reverses
 [SPEC §6](SPEC.md) non-goal 1 and the 12 prose non-goals in
 [GAP-MATRIX §2.7](GAP-MATRIX.md), whose stated rationale was:
@@ -64,7 +64,7 @@ under-count.
 **`verdict` holds two incompatible vocabularies in one field** — severities
 (`HIGH` 87, `MEDIUM` 12, `LOW` 11, `CRITICAL` 10, `NITPICK` 11, `NITPICK_ONLY` 88) mixed
 with pass states (`SUBSTANTIVE` 63, `FINDINGS_REMAIN` 43, `CONVERGENCE_REACHED` 15,
-`CLOCK_RESET` 15). That is a type violation of the kind `fa validate` already reports for
+`CLOCK_RESET` 15). That is a type violation of the kind `datum validate` already reports for
 `VP.scope`.
 
 ---
@@ -150,7 +150,7 @@ than one body — see [BEADS-PROSE.md](BEADS-PROSE.md).
 
 ## 4. Retrieval: full-text works, and it is SQL
 
-Measured on the live store (1,959 BC bodies, `fa`'s open zone):
+Measured on the live store (1,959 BC bodies, `datum`'s open zone):
 
 ```sql
 ALTER TABLE bc ADD FULLTEXT INDEX ft_bc_body (body);          -- accepted

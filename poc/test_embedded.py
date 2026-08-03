@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Embedded driver vs CLI vs sql-server — the three access paths for `fa`.
+"""Embedded driver vs CLI vs sql-server — the three access paths for `datum`.
 
 Every timing in this spike so far shelled out to `dolt sql`, paying a measured
 141 ms spawn floor per invocation (~14,000x the cost of a COUNT(*)). SPEC §8.6
@@ -187,7 +187,7 @@ def b1_adoption(dirs):
     FACTS["bin_mb"] = size_mb
     check("B1 adoption cost of the embedded driver",
           size_mb > 0 and deps > 0,
-          f"language           : Go (CGO). `fa` in Python cannot use it — the driver is\n"
+          f"language           : Go (CGO). `datum` in Python cannot use it — the driver is\n"
           f"                     a Go database/sql driver; an embedded fa is a Go binary.\n"
           f"CGO_ENABLED=0 build: rc={nocgo.returncode} "
           f"{'(refuses — embedded needs cgo)' if nocgo.returncode != 0 else '(built)'}\n"
@@ -492,7 +492,7 @@ def b10_mixed(dirs):
           f"CLI write while held: rc={r.returncode} after {dt:.0f} ms\n"
           f"message: {msg or '(none)'}\n"
           f"=> mixing the two access paths on one directory is NOT free; a\n"
-          f"   migration cannot run `fa` embedded and `dolt sql` side by side\n"
+          f"   migration cannot run `datum` embedded and `dolt sql` side by side\n"
           f"   without the same mutex covering both.")
 
 

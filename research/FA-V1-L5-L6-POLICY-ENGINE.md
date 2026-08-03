@@ -4,11 +4,11 @@ date: 2026-08-02
 purpose: specify L5 (policy — gates as queries, findings, convergence, baselines, attestation) and L6 (engine — workflow-as-data, frontier, scheduler, PR/CI join, cost, modes)
 status: DESIGN — nothing implemented (design-only by direction)
 spine: research/FA-V1-DESIGN.md (8 settled decisions, invariants 1–23 BINDING, §7 keep-list PRESERVED)
-builds_on: research/FINDINGS-AS-ROWS.md · fa/findings.go · fa/validate.go · fa/baseline.go
+builds_on: research/FINDINGS-AS-ROWS.md · datum/findings.go · datum/validate.go · datum/baseline.go
 corpus_pin: vsdd-factory .factory @ 0aaba144 · plugin tree @ develop (rc.20 lineage) · rehydrate-wave read from ~/.claude/plugins/cache/claude-mp/vsdd-factory/1.0.0-rc.23
 ---
 
-# `fa` v1 — L5 POLICY and L6 ENGINE
+# `datum` v1 — L5 POLICY and L6 ENGINE
 
 The spine's §1 argument is that most defects become *unrepresentable* under V-A + V-C. L5 and L6
 are where that argument runs out. A gate verdict, a convergence declaration, an approval and a
@@ -87,7 +87,7 @@ predicate kinds, one conditional modifier, and one honest escape hatch. That is 
 
 ## 1. L5 POLICY
 
-### 1.1 Evidence is a tuple `fa` produced, or it does not exist
+### 1.1 Evidence is a tuple `datum` produced, or it does not exist
 
 The corpus's dominant evidence form is a shell transcript pasted into a markdown body that asserts
 its own output. `POLICY 15` (`.factory/policies.yaml:258-271`,
@@ -108,9 +108,9 @@ that was destroyed when the executor was not the recorder.
 So:
 
 ```
-L5-A  An evidence record is created ONLY by `fa` executing something.
+L5-A  An evidence record is created ONLY by `datum` executing something.
       There is no API, flag, file format or import path that accepts evidence bytes
-      from a caller. `fa gate record --evidence-text` does not exist and will not.
+      from a caller. `datum gate record --evidence-text` does not exist and will not.
 ```
 
 ```sql
@@ -130,8 +130,8 @@ CREATE TABLE evidence (
   row_count      BIGINT       NULL,       -- kind='query'
   result_digest  CHAR(64)     NULL,       -- kind='query': sha256 over the canonicalised result set
   -- when, against what, by whom
-  store_version  VARCHAR(64)  NOT NULL,   -- read by fa, never typed
-  repo_sha       CHAR(40)     NULL,       -- read by fa from the git object db
+  store_version  VARCHAR(64)  NOT NULL,   -- read by datum, never typed
+  repo_sha       CHAR(40)     NULL,       -- read by datum from the git object db
   produced_by    VARCHAR(64)  NOT NULL,   -- role token (F16), not a self-declared name
   produced_at    DATETIME(3)  NOT NULL,
   duration_ms    INT          NOT NULL,
@@ -142,10 +142,10 @@ CREATE TABLE evidence (
 );
 ```
 
-`fa gate exec` is the only producer:
+`datum gate exec` is the only producer:
 
 ```
-fa gate exec --gate phase-2 --subject cycle-15 [--criterion C-08] [--dry-run]
+datum gate exec --gate phase-2 --subject cycle-15 [--criterion C-08] [--dry-run]
 ```
 
 1. Resolves the gate from `gate_def` and every `criterion_def` whose `applies_when` evaluates TRUE
@@ -160,12 +160,12 @@ fa gate exec --gate phase-2 --subject cycle-15 [--criterion C-08] [--dry-run]
    git object database itself.
 4. Writes one `criterion_result` row per criterion, each pointing at exactly one `evidence_id`.
 5. Writes one `gate_run` row whose `verdict` is **derived at print time from the criterion rows**
-   and never pre-written — the rule `fa/baseline.go:160-162` already states and enforces
+   and never pre-written — the rule `datum/baseline.go:160-162` already states and enforces
    ("a report that states a conclusion its own numbers contradict is worse than no report").
 
 Three properties fall out that the corpus has been trying to legislate:
 
-- **Replay is a first-class operation.** `fa evidence replay <id>` re-executes the identical spec,
+- **Replay is a first-class operation.** `datum evidence replay <id>` re-executes the identical spec,
   records a new evidence row with `replay_of` set, and reports `identical | divergent |
   unreproducible`. POLICY 5 v1.3.5 Part B becomes one command. For `volatile: true` criteria
   replay compares the *verdict*, not the bytes, and the divergence is recorded rather than argued.
@@ -177,9 +177,9 @@ Three properties fall out that the corpus has been trying to legislate:
   non-agent `producer:` identities the review found cannot recur.
 
 **`manual: true` and invariant 22.** A criterion or policy with no machine predicate is not exempt
-from invariant 22 — it is evidenced *differently*. `fa gate attest --criterion C-19 --owner
+from invariant 22 — it is evidenced *differently*. `datum gate attest --criterion C-19 --owner
 <role>` writes an `evidence` row with `kind='attestation'`: the attesting role, the moment, and
-the `store_version` attested against, all read by `fa`. The *content* of the judgment is human;
+the `store_version` attested against, all read by `datum`. The *content* of the judgment is human;
 the *record* is machine-produced and typed, so `SELECT … WHERE kind='attestation'` separates
 attested criteria from executed ones in every report. Invariant 22 is preserved without pretending
 a human sign-off is a command run.
@@ -326,7 +326,7 @@ WHERE c.project = ? AND c.status <> 'retired'
 -- PASS iff row_count = 0 AND nonempty holds
 ```
 Companion, not folded in: `bc.capability` is a *scalar reference*, not an FK, because the corpus
-fills it with prose — `fa/validate.go:306-308` already reports `bc.capability -> missing CAP`, and
+fills it with prose — `datum/validate.go:306-308` already reports `bc.capability -> missing CAP`, and
 the measured instance is `capability: "E-12"` (an epic id in a capability field). Keep them
 separate: E1 answers "is every capability covered", the scalar-ref gate answers "does every
 capability field hold a capability". A single query conflating them reports a coverage gap for a
@@ -338,8 +338,8 @@ type error, and the fix is different.
 `kind: absence`
 
 A boolean is not an acceptable result here; the evidence must carry the **witness cycle**, because
-a gate that says "there is a cycle" and cannot name it gets waived. `fa/graph.go` and
-`fa/graph_metrics.go` already compute this.
+a gate that says "there is a cycle" and cannot name it gets waived. `datum/graph.go` and
+`datum/graph_metrics.go` already compute this.
 
 ```sql
 -- scope_pred: story_dep edges whose both endpoints are live stories in cycle ?
@@ -348,7 +348,7 @@ SELECT cycle_path AS witness FROM fa_story_cycles(?cycle);   -- SCC projection, 
 -- PASS iff row_count = 0
 ```
 The evidence row's `stdout_bytes` holds the ordered cycle members. Also note this criterion is a
-*different* question from the one `fa/validate.go:337-355` already gates
+*different* question from the one `datum/validate.go:337-355` already gates
 (`gateDependencyDirection` — `depends_on`/`blocks` maintained as two hand-kept lists of one fact).
 Acyclicity over a half-recorded graph is unsound, so E2 declares
 `requires: [dependency-direction-clean]` and reports `error` if that criterion is not `pass` in
@@ -367,7 +367,7 @@ WHERE b.project = ? AND b.status NOT IN ('retired','superseded')
                   WHERE x.project=b.project AND x.bc_id=b.bc_id)
   AND EXISTS (SELECT 1 FROM story s WHERE s.project=b.project);   -- vacuity guard inline
 ```
-`fa/validate.go:507` already computes `bc_without_story` as a **metric**, deliberately not a
+`datum/validate.go:507` already computes `bc_without_story` as a **metric**, deliberately not a
 finding, on the stated grounds that coverage is "a fact about the project, not a violation of a
 rule". L5 does not overturn that: the metric stays, and this criterion is the *gate* over the same
 query with a declared scope. The distinction matters because 90.2% of BCs having no verifying VP
@@ -379,7 +379,7 @@ would otherwise make the gate unratchetable — which is precisely §1.5's job.
 `kind: coverage`
 
 Story 12a already minted AC/EC/PC/T-task as `sub_artifact` rows with typed links
-(`fa/schema.go:233-271`), and `fa/validate.go:59` already runs
+(`datum/schema.go:233-271`), and `datum/validate.go:59` already runs
 `gateACTracesAgainstStoryBCs`. The criterion is that gate with a scope:
 
 ```sql
@@ -497,7 +497,7 @@ the call.
 **E9 (honest negative) · `"Every HIGH-impact R-NNN addressed in architecture"`**
 — `greenfield.lobster:252` · `kind: manual`, `owner: architect`
 
-Risks (`R-NNN`) and assumptions (`ASM-NNN`) have **no table** in `fa/schema.go` today, and four
+Risks (`R-NNN`) and assumptions (`ASM-NNN`) have **no table** in `datum/schema.go` today, and four
 Phase 1 criteria plus five Phase 2 criteria depend on them
 (`greenfield.lobster:250-253`, `485-490`). Two honest options, and only two: model the types (V-C
 says the 103 canonical types are the floor, not the ceiling — do this), or register the criterion
@@ -626,7 +626,7 @@ FROM f;
 ```
 
 Linkage is **declared and deterministic in v1**, not learned, and each row records which method
-won — the same discipline `sev_source` already applies (`fa/findings.go:268`, and the reasoning at
+won — the same discipline `sev_source` already applies (`datum/findings.go:268`, and the reasoning at
 `FINDINGS-AS-ROWS.md:83-95`: reporting the source is what keeps "unresolved" a measured fact about
 the corpus rather than a silent parser default). Methods, in resolution order:
 `declared-closes` → `declared-duplicates` → `exact-statement` (normalised) →
@@ -657,7 +657,7 @@ L5-K  A strict increase between adjacent passes writes a `regression` row with
 ```
 Monotonicity is evaluated over the **window since the last dispositioned regression**, not over
 all history. Otherwise one early regression blocks a subject permanently, which is unusable and
-would be waived wholesale within a week — the same failure mode `fa/baseline.go:8-10` already
+would be waived wholesale within a week — the same failure mode `datum/baseline.go:8-10` already
 documents for unbaselined gates.
 
 #### ONE termination rule
@@ -717,7 +717,7 @@ agent's self-declaration is read at all. `no fixed maximum` (`:178`) is preserve
 becomes an **escalation** trigger, never a success (§2.4).
 
 The anti-fabrication clause (`brownfield-ingest/SKILL.md:238`) is preserved verbatim as the
-required prompt preamble for every pass dispatch, and `fa` refuses to open a pass whose dispatch
+required prompt preamble for every pass dispatch, and `datum` refuses to open a pass whose dispatch
 record does not carry it — an integrity check on the dispatch, so the clause cannot be dropped by
 editing a prompt.
 
@@ -727,7 +727,7 @@ one of 5 repos showed genuine B.5 blind spots after 19-62 rounds of convergence"
 round-driven deepening selects targets from prior-round flags and drifts toward covered ground.
 Its method is preserved too — `:268` "**Method must be grep-driven, not agent-judgment-driven** …
 Don't ask the agent 'are there gaps' — make it prove coverage with greps" — which is exactly a
-`kind='command'` criterion whose evidence is the grep output `fa` captured. (Where that grep runs
+`kind='command'` criterion whose evidence is the grep output `datum` captured. (Where that grep runs
 is **OQ-4**.)
 
 The **two-phase validation arithmetic** is preserved as a distinct criterion family, not folded
@@ -735,7 +735,7 @@ into convergence: `agents/validate-extraction.md:28,110` and `brownfield-ingest/
 require, for every numeric claim, the triple `(claimed, recounted, delta)` where "the recounted
 number either matches or it doesn't. **Any mismatch is an error regardless of how small.**" Under
 L5 the `recounted` value is a query result and the `delta` is computed, so the criterion is
-`delta = 0` over a table of claims — which is what `fa/validate.go:116-167`
+`delta = 0` over a table of claims — which is what `datum/validate.go:116-167`
 (`gateCountAssertions`) and `:369-439` (`gateReviewFindingCounts`) already do. Its future under
 V-A is **OQ-7**.
 
@@ -751,7 +751,7 @@ for 1.5% of the corpus.
 
 ```
 L5-M  Reviews are resolved by document_type through the registry alias map, never by
-      filename glob. `fa/findings.go:48-59` (reviewTypeSet) already does exactly this,
+      filename glob. `datum/findings.go:48-59` (reviewTypeSet) already does exactly this,
       and already has a test pinning it derived rather than hardcoded
       (TestReviewTypeSetIsDerivedFromTheRegistry) — because the first cut's hardcoded
       set disagreed with the Python extractor's on eight spellings in both directions.
@@ -763,7 +763,7 @@ entries; under L5-M every one is seen.
 
 ### 1.5 Baselines, ratchets, and time-series retention
 
-`fa/baseline.go` is already the right design and needs three additions, not a rewrite. Its three
+`datum/baseline.go` is already the right design and needs three additions, not a rewrite. Its three
 existing properties — itemised, dated + attributed to a corpus commit, ratcheting so tolerated sets
 only shrink (`baseline.go:10-18`) — are what let a loud gate survive. Keep them exactly.
 
@@ -793,7 +793,7 @@ earned by having no history.
 add `waived_by` and `expires_at`. An expired waiver is a NEW finding. Otherwise the ratchet has a
 one-way valve.
 
-**Addition 3 — per-criterion baselines.** `fa/baseline.go:53` keys on `(rule, subject)`; L5 keys
+**Addition 3 — per-criterion baselines.** `datum/baseline.go:53` keys on `(rule, subject)`; L5 keys
 gate baselines on `(gate_id, crit_id, witness_key)` so one criterion can be ratcheted while its
 siblings stay strict. This is what makes the E6 replacement work, and it is what lets
 `POLICY 11`/`POLICY 12` flip from advisory to blocking without blocking every PR on day one.
@@ -816,8 +816,8 @@ L5-O  severity ENUM('CRITICAL','HIGH','MEDIUM','LOW'). A policy declared to bloc
       convergence registers CRITICAL.
 
 L5-P  Every policy has EITHER a machine predicate OR manual: true WITH a named owner role.
-      A policy with neither cannot be registered — `fa policy add` refuses it.
-      `fa policy coverage` reports predicate / manual / unregistered counts, so
+      A policy with neither cannot be registered — `datum policy add` refuses it.
+      `datum policy coverage` reports predicate / manual / unregistered counts, so
       "16 of 18 have no mechanism" is a number on a dashboard rather than a discovery.
 ```
 
@@ -826,11 +826,11 @@ declare an owner}. Several are already predicates in prose. POLICY 1 (`append_on
 is `SELECT id FROM <t> WHERE retired_at IS NOT NULL AND reused=1` plus an index-presence anti-join.
 POLICY 2 (`lift_invariants_to_bcs`, "every DI-NNN must be cited by at least one BC's Traceability
 L2 Invariants field") is `SELECT di_id FROM domain_invariant d WHERE NOT EXISTS (SELECT 1 FROM
-vp_di / bc_trace …)` — an anti-join `fa/schema.go:101` already has the edge table for. POLICY 15's
+vp_di / bc_trace …)` — an anti-join `datum/schema.go:101` already has the edge table for. POLICY 15's
 verbatim-stdout mandate is not a predicate at all: it **becomes L5-A** and is retired, along with
 POLICY 5's six cure levels.
 
-### 1.7 `fa attest`
+### 1.7 `datum attest`
 
 ```sql
 CREATE TABLE attestation (
@@ -851,7 +851,7 @@ CREATE TABLE attestation (
 
 ```
 L5-Q  An attestation is written by the DISPATCHER, not by the attested agent, and
-      resolved_model comes from provider response metadata that `fa` read. Frontmatter
+      resolved_model comes from provider response metadata that `datum` read. Frontmatter
       and model_tier: are recorded as `declared_*` and can never satisfy a criterion.
 
 L5-R  status='unverifiable' when no resolver is configured or the provider returned no
@@ -956,7 +956,7 @@ L6-B  A condition evaluates to TRUE / FALSE / UNKNOWN.
 ```
 
 ```
-L6-C  step_dep.on_skip is NOT NULLABLE. `fa workflow validate` refuses any workflow with an
+L6-C  step_dep.on_skip is NOT NULLABLE. `datum workflow validate` refuses any workflow with an
       edge to a conditional step whose on_skip is unset.
 
       Defaults applied at migration, then reviewed edge by edge:
@@ -975,16 +975,16 @@ witness** rather than a silent hole; `phase-7-convergence:1246` → `phase-6-ui-
 stranding the entire post-pipeline tail.
 
 **The migration cost is stated, not hidden: 140 edges each need one declared `on_skip`.** That is
-the honest price of making skip propagation sound, and it is a one-time list `fa workflow validate`
+the honest price of making skip propagation sound, and it is a one-time list `datum workflow validate`
 prints.
 
 ```
-L6-D  `fa workflow plan --mode <m> --profile <p> --facts <f>` resolves the WHOLE step set —
+L6-D  `datum workflow plan --mode <m> --profile <p> --facts <f>` resolves the WHOLE step set —
       every step, gate, criterion and approval — to one of
       {will_run, will_skip(reason), blocked(unknown fact), unreachable(cycle)}
       and emits it as rows. This is the artifact a human reviews before a run starts.
 ```
-`fa workflow validate` additionally: resolves every `agent`/`skill` reference; detects `nest`
+`datum workflow validate` additionally: resolves every `agent`/`skill` reference; detects `nest`
 cycles (`planning.lobster` ↔ `greenfield.lobster` is mutual — permitted only with a declared
 re-entry bound); refuses a `gate` step whose `gate_id` has no `gate_def`; and refuses a `loop`
 with neither cap nor exit condition (3 exist today).
@@ -1171,7 +1171,7 @@ L6-M  The manifest is the ONLY input to rehydration. A missing manifest is a har
 L6-N  method ENUM has one value. RAG, semantic retrieval, vector similarity and
       LLM file-matching are UNREPRESENTABLE rather than prohibited by prose.
 ```
-The anti-fabrication checks move into `fa` where an agent cannot skip the step that runs them:
+The anti-fabrication checks move into `datum` where an agent cannot skip the step that runs them:
 40-char-hex validation on any SHA field, the no-hardcode/no-cache rule, the three-state
 `precompact_flush_sha` that hard-blocks rather than writing a bad value, the non-empty `active_bcs`
 requirement, and the CWE-116 interpolation guard.
@@ -1208,8 +1208,8 @@ CREATE TABLE schedule_fire (
 ```
 L6-O  Durability is the whole feature. `next_due` is stored, so a window that passed
       unfired is a `missed` row rather than a window nobody knows existed. "Schedule X"
-      as an agent instruction is not representable: `fa schedule add` is a semantic op.
-L6-P  `fa schedule due --project <p>` is the ONLY read a driver needs, and it is scoped by
+      as an agent instruction is not representable: `datum schedule add` is a semantic op.
+L6-P  `datum schedule due --project <p>` is the ONLY read a driver needs, and it is scoped by
       project — a shared cron across N tenants is one query, not N.
 L6-Q  missed >= max_missed disables the schedule and writes a finding. A schedule that
       silently stops is indistinguishable from one that never existed; this is the same
@@ -1244,7 +1244,7 @@ CREATE TABLE merge_prereq (project, repo, pr_number, prereq_id VARCHAR(16),
 ```
 L6-R  A merge prerequisite is a (gate_id, crit_id) REFERENCE. There is no filename in the
       table and no path in the predicate. "Security review conducted" resolves to a
-      criterion_result whose evidence `fa` produced.
+      criterion_result whose evidence `datum` produced.
 ```
 
 The whole join, one query:
@@ -1300,7 +1300,7 @@ CREATE TABLE protected_role (project, role VARCHAR(64), PRIMARY KEY (project, ro
 L6-S  Budget TIER is derived, never stored:
         tier(scope) = f(SUM(cost_micros) / limit_micros) over the declared window
       With no cost_event rows the ratio is 0 and the tier is `ok`. That is honest — but
-      `fa cost status` reports coverage (`events=0`), and a budget-gated transition with
+      `datum cost status` reports coverage (`events=0`), and a budget-gated transition with
       zero events is `error` under L5-D's vacuity guard, not `pass`.
 L6-T  hard_stop is enforced at the DISPATCH boundary by a store predicate, not in a driver's
       memory, so it survives a session restart. `run.status='hard_stopped'` and no step_run
@@ -1350,7 +1350,7 @@ CREATE TABLE mode_step_disposition (
 
 ```
 L6-W  A profile resolves the WHOLE step set, including gates, criteria and approvals —
-      not just agent steps. `fa workflow plan --mode quick-dev` emits a row per step with
+      not just agent steps. `datum workflow plan --mode quick-dev` emits a row per step with
       its disposition and reason, and every skip's reason is RECORDED on the run
       (step_run.skip_reason), so "which phases did quick-dev skip and why" is a query.
 L6-X  always_preserve is enforced against the profile at registration: a profile that skips
@@ -1369,7 +1369,7 @@ Extending the spine's 1–23. None replaces or renumbers an existing invariant.
 
 | # | Invariant | Gated by | Kills |
 |---|---|---|---|
-| **24** | Evidence records are created only by `fa` executing a query or a command. No API accepts evidence bytes. | `fa gate exec` is the only writer of `evidence`; write-path test asserts no other caller | the self-attesting `$ grep -c … / PASS` transcript; POLICY 15; POLICY 5's six cure levels |
+| **24** | Evidence records are created only by `datum` executing a query or a command. No API accepts evidence bytes. | `datum gate exec` is the only writer of `evidence`; write-path test asserts no other caller | the self-attesting `$ grep -c … / PASS` transcript; POLICY 15; POLICY 5's six cure levels |
 | **25** | Every `criterion_result` carries exactly one of `evidence_id` / (`skip_reason` + `skip_condition`) / `attestation_id`. `pass` with none is refused at write time. | schema CHECK + write-path validation | Wave 15's CONVERGED with no record that Gates 2/4/5 ran |
 | **26** | A predicate that cannot be evaluated is `error`, and `error` blocks. There is no fail-open path in L5 or L6. | every evaluator returns a 3-valued result; no `exit 0` default | `lib.rs:215-233`; `wave-state.yaml` absent → `exit 0`; missing `jq`/`python3` |
 | **27** | Every coverage/absence/threshold criterion declares a scope predicate **and** a non-emptiness guard. Vacuous truth is `error`. | refused at registration | Gate 5 over an empty scenario set; `RED_RATIO = 0.0`; merge prereqs = 0 |
@@ -1377,16 +1377,16 @@ Extending the spine's 1–23. None replaces or renumbers an existing invariant.
 | **29** | Every ratio guards its denominator and records which branch it took. A NULL metric never satisfies a comparison. | `fa_novelty` returns `(value, state)`; comparison operators refuse NULL | `Novelty 0.0 (0/(0+0))` satisfying `≤ 0.15`; `CI(i)` dividing by `Cost(i)` |
 | **30** | Convergence is derived at read time from `converge_pass` + finding rows. No convergence value is stored. | no `passes_clean` / `novelty` / `clean_streak` column exists | `passes_clean: 3` beside `"fix_batches_pending": ["B3","B4"]` |
 | **31** | A monotonicity regression is a hard fail; the clean streak cannot increment while a regression is undispositioned. | `fa_converged` clause (3) | `convergence-tracker.sh:116-118` warn-then-`exit 0` over four unexplained increases |
-| **32** | There is exactly one termination rule, registered once and referenced. No workflow, hook, skill or doc may restate it. | `loop.termination_rule` is an FK; `fa doctor` diffs prose against the rule | 3-in-five-places / `2+` in two docs / `0.15` in a hook / `LOW` in a skill / 0 in exit conditions |
-| **33** | Every policy has a machine predicate or `manual: true` with a named owner role. | `fa policy add` refuses otherwise | 16 of 18 with `lint_hook: null` |
+| **32** | There is exactly one termination rule, registered once and referenced. No workflow, hook, skill or doc may restate it. | `loop.termination_rule` is an FK; `datum doctor` diffs prose against the rule | 3-in-five-places / `2+` in two docs / `0.15` in a hook / `LOW` in a skill / 0 in exit conditions |
+| **33** | Every policy has a machine predicate or `manual: true` with a named owner role. | `datum policy add` refuses otherwise | 16 of 18 with `lint_hook: null` |
 | **34** | Policy severity includes CRITICAL. | enum | `severity: <HIGH\|MEDIUM>` making a CRITICAL policy inexpressible |
-| **35** | Every condition variable is declared with a producer; an undeclared variable is a registration error, never a runtime false. | `fa workflow validate` | 166 conditional steps over undeclared facts |
-| **36** | `step_dep.on_skip` is non-nullable; every edge to a conditional step declares its resolution. | `fa workflow validate` refuses | 140 edges, incl. `wave-gate`, `phase-7-convergence`, and the whole post-pipeline tail |
+| **35** | Every condition variable is declared with a producer; an undeclared variable is a registration error, never a runtime false. | `datum workflow validate` | 166 conditional steps over undeclared facts |
+| **36** | `step_dep.on_skip` is non-nullable; every edge to a conditional step declares its resolution. | `datum workflow validate` refuses | 140 edges, incl. `wave-gate`, `phase-7-convergence`, and the whole post-pipeline tail |
 | **37** | Every loop run records `declared_cap`, `iterations` and `exit_reason`; `cap_hit` is not success; a missing `exit_reason` is a crash record. | schema + recovery | 19 loops sharing the magic cap 10; converged and cap-hit indistinguishable |
 | **38** | An approval's pending row exists from reachability, and the clock runs from `reachable_at`. `on_timeout` never includes `approve`. | schema + scheduler | `waiting_human_approval` existing nowhere while the heartbeat nudges on it |
 | **39** | Merge prerequisites are `(gate_id, crit_id)` references. No filename appears in a prerequisite. | schema has no path column | three file-existence checks + a regex over a self-written PR description |
-| **40** | Model identity resolves through an `attestation` row whose `resolved_model` `fa` read from the provider. `unverifiable` and `mismatch` block. | L5-Q/L5-R | "different model family (GPT-5.4, not Claude)" against 44 agent files declaring only opus/sonnet |
-| **41** | Every recurring subject has a durable `(subject, interval, last_fired, next_due)` row; a passed-unfired window is a `missed` row. | schema; `fa schedule due` | 7/30/90 declared twice with no scheduler; five discovery cadences behind one run id |
+| **40** | Model identity resolves through an `attestation` row whose `resolved_model` `datum` read from the provider. `unverifiable` and `mismatch` block. | L5-Q/L5-R | "different model family (GPT-5.4, not Claude)" against 44 agent files declaring only opus/sonnet |
+| **41** | Every recurring subject has a durable `(subject, interval, last_fired, next_due)` row; a passed-unfired window is a `missed` row. | schema; `datum schedule due` | 7/30/90 declared twice with no scheduler; five discovery cadences behind one run id |
 | **42** | Budget tier is derived from `cost_event` rows and enforced at the dispatch boundary. | L6-S/L6-T | five tiers reading three files that do not exist |
 | **43** | Rehydration's only input is the manifest; RAG is unrepresentable, not prohibited. | `method` enum has one value | — (preserving what already works) |
 
@@ -1460,7 +1460,7 @@ hooks are retirement targets, not integration targets.
 **R12 · An external scheduler (cron / systemd timers).** Rejected as the source of truth. Without
 a stored `next_due`, a missed window is indistinguishable from a window that never existed —
 exactly the `regression-state.json` failure one layer over. An external timer may *drive*
-`fa schedule due`; it may not own the state. Multi-project (V-F) settles it: one query beats N
+`datum schedule due`; it may not own the state. Multi-project (V-F) settles it: one query beats N
 crontabs.
 
 **R13 · Budget enforcement in the driver only.** Rejected. HARD STOP must survive a session
@@ -1496,7 +1496,7 @@ larger. Should the rule be parameterised by `converge_subject.perimeter`? Design
 there is no data to set the values.
 
 **OQ-4 · Where does the coverage audit's grep run?** `brownfield-ingest/SKILL.md:268` requires a
-grep-driven inventory of the **source tree**, not `.factory`. So `fa gate exec` with
+grep-driven inventory of the **source tree**, not `.factory`. So `datum gate exec` with
 `kind='command'` needs a working zone outside the artifact store, which is a permission surface
 (what can a criterion read? can it read the walled zone? can it read secrets?). Needs a declared
 `working_zone` on the command registry and a rule for the walled case.
@@ -1518,7 +1518,7 @@ migration state and (a) as the target**, but this is not a design call.
 **OQ-7 · Does the two-phase `(claimed, recounted, delta)` mechanism survive V-A?** Its premise is
 that a *claim* exists in prose to be recounted. Under V-A there are no stored claims — that is the
 point of invariant 17. Three candidate futures: it becomes an import-time-only gate (which is what
-`fa/validate.go:116-167` already is); it retargets at agent *narrative* inside review bodies, where
+`datum/validate.go:116-167` already is); it retargets at agent *narrative* inside review bodies, where
 numbers will still be written by hand; or it retires. The keep-list says preserve it, so retiring
 it needs an explicit decision. Recommend the second: narrative claims persist even when artifact
 claims do not, and `agents/validate-extraction.md:32`'s anchor (32 files/5279 LOC claimed vs 23
@@ -1533,7 +1533,7 @@ window (it can: 5 runs arrive sooner than 20, and asymmetric-by-construction is 
 **OQ-9 · Evidence retention.** A `kind='command'` evidence row stores stdout. At 38 gates × 278
 criteria × N runs × M projects this is the store's dominant growth term. Needs a declared policy:
 digest-only after K days? Retain full bytes only for `fail` and for the last `pass` per criterion?
-Cap per row? Note the constraint this must respect: `fa evidence replay` needs the *spec*, not the
+Cap per row? Note the constraint this must respect: `datum evidence replay` needs the *spec*, not the
 bytes, so digest-only retention preserves replay while losing the human-readable trail — which is
 precisely what POLICY 15 was trying to keep.
 
@@ -1542,7 +1542,7 @@ what the iteration set is (a wave's stories? a glob? a story list from a fact?).
 cannot round-trip until this is answered, and invariant 15's byte-exact requirement means guessing
 is not available.
 
-**OQ-11 · L6 depends on F16 landing first.** If `fa` schedules the loop bodies, `fa` must enforce
+**OQ-11 · L6 depends on F16 landing first.** If `datum` schedules the loop bodies, `datum` must enforce
 the `ctx_rule` exclude sets — otherwise the three adversary perimeters are still prose. That makes
 role tokens and `DENIED_BY_WALL` a *prerequisite* for L6's dispatch path, not a parallel
 workstream. Sequencing question for the migration plan.
@@ -1551,7 +1551,7 @@ workstream. Sequencing question for the migration plan.
 monotonicity regressions in live convergence subjects (four in the S-5.03 trajectory alone). Under
 L5-K those force `clean_streak = 0` and retroactively un-converge subjects the corpus considers
 closed. Backfill dispositions at migration, or open them as baselined findings? **Recommend
-findings, baselined with a waiver and an expiry** — consistent with `fa/baseline.go`'s existing
+findings, baselined with a waiver and an expiry** — consistent with `datum/baseline.go`'s existing
 argument that a gate which blocks everything on day one gets switched off, and it keeps the fact
 visible instead of writing a rationale nobody held.
 

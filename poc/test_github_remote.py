@@ -23,7 +23,7 @@ and are cleaned up at the end. Credentials come from the git credential helper
 (gh); no token is ever written to disk or into a URL.
 
 Run: .venv/bin/python -u poc/test_github_remote.py
-Env: FA_GH_REMOTE (default https://github.com/drbothen/dolt-artifact-spike-remote.git)
+Env: FA_GH_REMOTE (default https://github.com/drbothen/datum (formerly dolt-artifact-spike)-remote.git)
      FA_GH_KEEP=1 to skip ref cleanup
 """
 from __future__ import annotations
@@ -42,7 +42,7 @@ POC = Path(__file__).parent
 ROOT = POC / "gh"
 BENCH = POC / "bench" / "bench"
 REMOTE = os.environ.get("FA_GH_REMOTE",
-                        "https://github.com/drbothen/dolt-artifact-spike-remote.git")
+                        "https://github.com/drbothen/datum (formerly dolt-artifact-spike)-remote.git")
 RUN = os.environ.get("FA_GH_RUN") or f"run-{int(time.time())}"
 DATA_REF = f"refs/dolt/{RUN}/data"
 PUSH_TIMEOUT = int(os.environ.get("FA_GH_TIMEOUT", 300))
@@ -439,7 +439,7 @@ def g7_one_ref_for_all_branches():
 
 def g8_embedded_remote():
     """Can the embedded driver do the remote half in-process? If yes, an embedded
-    `fa` needs no `dolt` binary at all."""
+    `datum` needs no `dolt` binary at all."""
     if not BENCH.exists():
         check("G8 embedded driver remote ops", False, f"missing {BENCH}")
         return
@@ -470,7 +470,7 @@ def g8_embedded_remote():
           f"CLI seed push        : rc={p0.returncode}\n"
           + "\n".join(f"in-process {k:<12}: {v}" for k, v in sorted(remote_ops.items()))
           + f"\nwhole probe run      : {dt:.1f} s\n"
-            f"=> {'an embedded `fa` needs NO dolt binary: SQL + remote ops both in-process' if ok else 'remote ops did NOT work in-process — an embedded fa still shells out'}")
+            f"=> {'an embedded `datum` needs NO dolt binary: SQL + remote ops both in-process' if ok else 'remote ops did NOT work in-process — an embedded fa still shells out'}")
 
 
 # ---------------------------------------------------------------- G9

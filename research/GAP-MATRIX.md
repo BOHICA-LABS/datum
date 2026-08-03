@@ -1,11 +1,11 @@
 ---
-title: Gap assessment — fa vs the full vsdd-factory artifact surface
+title: Gap assessment — datum vs the full vsdd-factory artifact surface
 date: 2026-07-30
 status: 112/112 tests; 3 architectural findings that change the recommendation
 method: enumerated from plugins/vsdd-factory/config/artifact-path-registry.yaml (46 types), not from memory
 ---
 
-# Gap assessment: `fa` vs the full factory surface
+# Gap assessment: `datum` vs the full factory surface
 
 ## 1. Method
 
@@ -40,7 +40,7 @@ Coverage legend: **✅ tested** · **◐ partial** · **❌ gap** · **⊘ delib
 `behavioral-contract-index`, `verification-property-index`, `architecture-index`,
 `story-index`, `epic-index`, `cycle-index`.
 
-✅ All become `fa render` output. R2 proves six count sources collapse to **one**
+✅ All become `datum render` output. R2 proves six count sources collapse to **one**
 value — against the live corpus's **four** disagreeing totals.
 
 ### 2.3 State — mutable, runtime (✅ 7/7, all new this pass)

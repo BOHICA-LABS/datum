@@ -16,11 +16,11 @@ by making it *impossible* rather than detectable. Story 7 is that change. This i
 type only on evidence.
 
 ```sh
-fa import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
-fa shadow --db /tmp/fadb ~/Dev/vsdd-factory/.factory
+datum import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
+datum shadow --db /tmp/fadb ~/Dev/vsdd-factory/.factory
 ```
 
-`fa shadow` **never writes**, to either side. That is not caution, it is the mechanism: if the
+`datum shadow` **never writes**, to either side. That is not caution, it is the mechanism: if the
 generator is subtly wrong, flipping replaces hand-maintained drift with *generated* drift and
 destroys the evidence that would have caught it. Pinned by `TestShadowWritesNothing`, which
 hashes the corpus before and after.
@@ -138,13 +138,13 @@ intention:
 | guard | test |
 |---|---|
 | a declared table that matches nothing is a FINDING, not a pass | `TestShadowReportsMissingTableRatherThanPassing` |
-| a bad corpus root is `fa` failing (exit 2), never a clean gate | `TestShadowRejectsBadCorpusRoot` |
+| a bad corpus root is `datum` failing (exit 2), never a clean gate | `TestShadowRejectsBadCorpusRoot` |
 | every spec resolves in the registry and sits at `derivation_stage: shadow` | `TestShadowSpecsAreDeclaredAndAtShadowStage` |
 | shadow writes nothing, verified by content hash | `TestShadowWritesNothing` |
 | a scope exclusion is reported, never silent | `shadow.scope-excludes` is emitted with its count and reason |
 | an underivable column is reported, never skipped | `shadow.column-underivable` |
 
-`fa`: **97 tests** (was 62), ~6.4 s, no network, no `dolt` binary.
+`datum`: **97 tests** (was 62), ~6.4 s, no network, no `dolt` binary.
 
 ## What has to happen before any type reaches `proven`
 
@@ -162,16 +162,16 @@ Not yet earned, and the shadow diffs say why:
 5. **Story 4 first for `cycles/INDEX`.** Its Findings column is a severity distribution over
    prose tables, so it cannot be derived until `adversarial-finding` exists as rows.
 
-Only then is `proven` (they agree, `fa render` writes it, the authored one is still diffed)
+Only then is `proven` (they agree, `datum render` writes it, the authored one is still diffed)
 an evidence-based step rather than a flip.
 
 ## Reproduce
 
 ```sh
-cd fa && CGO_ENABLED=1 go build -tags gms_pure_go -o fa .
-./fa init   --db /tmp/fadb
-./fa import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
-./fa shadow --db /tmp/fadb ~/Dev/vsdd-factory/.factory --json /tmp/shadow.json
+cd datum && CGO_ENABLED=1 go build -tags gms_pure_go -o datum .
+./datum init   --db /tmp/fadb
+./datum import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
+./datum shadow --db /tmp/fadb ~/Dev/vsdd-factory/.factory --json /tmp/shadow.json
 CGO_ENABLED=1 go test -tags gms_pure_go -count=1 -run 'TestShadow|TestCompareCell|TestParseMD' ./...
 
 python3 registry/probe_indexes.py            # the per-column measurement the rules came from

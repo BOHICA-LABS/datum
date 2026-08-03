@@ -1,0 +1,451 @@
+# enums.yaml — the CLOSED vocabularies. schema_version: 1
+#
+# Every value here is measured in ~/Dev/{vsdd-factory,prism,rivetry}/.factory unless
+# marked NEW. A value absent from this file is a finding, not a variant: that is the
+# whole point (CROSS-CORPUS §5 measured ZERO shared `verdict` values between two
+# projects running the same factory).
+#
+# Extension rule: projects add NAMES to an open_extension enum by declaring them in
+# their profile. Projects NEVER add CATEGORIES. `datum` core logic queries category, never
+# name (pattern verified in beads, BEADS-PROSE §6). Enums without open_extension are
+# hard-closed.
+
+version: 1
+
+enums:
+
+  # ── The verdict decomposition ────────────────────────────────────────────────
+  # `verdict` was ONE field carrying THREE axes, which is why vsdd's values mix HIGH
+  # with SUBSTANTIVE with CLOCK_RESET (CROSS-CORPUS §5) and why the two corpora share
+  # no values. Root cause was NOT agent whimsy: the factory ships two conflicting
+  # vocabularies — templates/state-manager-checklist-template.md declares
+  # `verdict: BLOCKED|CLEAN` (prism inherited it) while
+  # workflows/phases/per-story-delivery.md + agents/code-reviewer.md use
+  # NITPICK_ONLY / CONVERGENCE_REACHED / FINDINGS_REMAIN (vsdd inherited those).
+  #
+  # `verdict` is RETIRED. It is replaced by three orthogonal closed fields.
+  # NOTE the field is `gate_result`, not `gate`: `gate` is ALREADY IN USE in prism as
+  # an identifier (`gate: wave-3-integration-gate`, beside `gate_step` /
+  # `gate_step_name`, 40 files). Naming the outcome `gate` would collide with a live
+  # field carrying a different meaning.
+
+  gate_result:
+    description: Did this review/gate permit forward progress? Binary, no severity, no convergence.
+    closed: true
+    values:
+      BLOCKED: {category: blocked, note: "prism 143 + BLOCKED-soft 31 + BLOCKED-hard 15"}
+      CLEAN:   {category: clean,   note: "prism 69 · vsdd 18"}
+    migrated_from:
+      # value -> gate_result, and where the discarded axis goes instead
+      BLOCKED-soft:              {gate_result: BLOCKED, severity_max: MED,  note: "prism 31"}
+      BLOCKED-hard:              {gate_result: BLOCKED, severity_max: HIGH, note: "prism 15"}
+      FINDINGS_OPEN:             {gate_result: BLOCKED, convergence: SUBSTANTIVE, note: "prism 16"}
+      FINDINGS-OPEN:             {gate_result: BLOCKED, convergence: SUBSTANTIVE, note: "prism 5"}
+      FINDINGS_REMAIN:           {gate_result: BLOCKED, convergence: SUBSTANTIVE, note: "vsdd 43 · prism 5"}
+      PASS:                      {gate_result: CLEAN, note: "prism 10"}
+      APPROVE:                   {gate_result: CLEAN, note: "prism 7"}
+      APPROVED:                  {gate_result: CLEAN, note: "prism 4"}
+      CLOSED:                    {gate_result: CLEAN, note: "prism 10 — ambiguous with lifecycle; see AMBIGUOUS below"}
+      CONVERGED:                 {gate_result: CLEAN, convergence: CONVERGENCE_REACHED, note: "prism 6"}
+      CONDITIONAL_PASS:          {gate_result: CLEAN, severity_max: LOW, note: "prism 6"}
+      APPROVED_WITH_CONDITIONS:  {gate_result: CLEAN, severity_max: LOW, note: "prism 6"}
+      CLEAN_PASS_1_OF_3:         {gate_result: CLEAN, convergence: CLEAN_STREAK, streak: 1, note: "vsdd 6 — streak belongs in its own field"}
+      CO-SIGN_GRANTED:           {gate_result: CLEAN, note: "rivetry 5 — security co-sign"}
+      CO-SIGN GRANTED:           {gate_result: CLEAN, note: "rivetry 1 — space variant of the same value"}
+      # These carried ONLY severity and no gate outcome. They are NOT gate_result values.
+      CRITICAL: {severity_max: CRITICAL, gate_result: BLOCKED, note: "vsdd 11 — severity in a verdict field"}
+      HIGH:     {severity_max: HIGH,     gate_result: BLOCKED, note: "vsdd 106 — the single most common vsdd `verdict`"}
+      MEDIUM:   {severity_max: MED,      note: "vsdd 19"}
+      MED:      {severity_max: MED,      note: "vsdd 9"}
+      MINOR:    {severity_max: LOW,      note: "vsdd 9"}
+      LOW:      {severity_max: LOW,      note: "vsdd 14"}
+      NITPICK:  {severity_max: NIT,      note: "vsdd 11"}
+      # These carried ONLY convergence.
+      NITPICK_ONLY:        {convergence: NITPICK_ONLY,        note: "vsdd 88"}
+      SUBSTANTIVE:         {convergence: SUBSTANTIVE,         note: "vsdd 63"}
+      CONVERGENCE_REACHED: {convergence: CONVERGENCE_REACHED, note: "vsdd 15"}
+      CLOCK_RESET:         {convergence: CLOCK_RESET,         note: "vsdd 15"}
+
+  convergence:
+    description: >
+      Did this pass move the convergence clock? Orthogonal to gate_result: a CLEAN pass
+      can still reset the clock, and a BLOCKED pass can be NITPICK_ONLY.
+    closed: true
+    values:
+      CONVERGENCE_REACHED: {category: converged,  note: "vsdd 15 (+4 as `convergence:`)"}
+      CLEAN_STREAK:        {category: converging,  note: "NEW — the CLEAN_PASS_n_OF_m target; pair with `streak`"}
+      NITPICK_ONLY:        {category: converging,  note: "vsdd 88"}
+      SUBSTANTIVE:         {category: not_converged, note: "vsdd 63"}
+      CLOCK_RESET:         {category: not_converged, note: "vsdd 15 — a NEW substantive finding reset the streak"}
+      IN_PROGRESS:         {category: not_converged, note: "prism 68 (as `convergence:`)"}
+    migrated_from:
+      NOT_CONVERGED:            {convergence: SUBSTANTIVE, note: "prism 36"}
+      REACHED:                  {convergence: CONVERGENCE_REACHED, note: "vsdd 10"}
+      CONVERGED:                {convergence: CONVERGENCE_REACHED, note: "prism 8 + vsdd 1"}
+      converged:                {convergence: CONVERGENCE_REACHED, note: "prism 4 — case variant"}
+      LOCAL_3_CLEAN_CONVERGED:  {convergence: CONVERGENCE_REACHED, scope: story, streak: 3, note: "prism 1"}
+      "true":                   {convergence: CONVERGENCE_REACHED, note: "prism 3 — a boolean in an enum field"}
+
+  severity_max:
+    description: Highest severity among this document's findings. NONE means zero findings.
+    closed: true
+    values:
+      CRITICAL: {category: blocking, rank: 5}
+      HIGH:     {category: blocking, rank: 4}
+      MED:      {category: substantive, rank: 3}
+      LOW:      {category: minor, rank: 2}
+      NIT:      {category: minor, rank: 1}
+      NONE:     {category: none, rank: 0}
+    migrated_from:
+      MEDIUM:        {severity_max: MED}
+      MINOR:         {severity_max: LOW}
+      NITPICK:       {severity_max: NIT}
+      suggestion:    {severity_max: LOW,  note: "prism 1"}
+      informational: {severity_max: NIT,  note: "prism 1"}
+      critical:      {severity_max: CRITICAL, note: "case variants observed in prism"}
+      high:          {severity_max: HIGH}
+      medium:        {severity_max: MED}
+      low:           {severity_max: LOW}
+
+  # ── Lifecycle ───────────────────────────────────────────────────────────────
+  # `status` is overloaded exactly as `verdict` was. vsdd mixes lifecycle
+  # (draft 2095 · complete 256 · merged 77 · accepted 39) with review OUTCOME
+  # (MINOR 7 · NITPICK 5 · RED_GATE_VERIFIED 6 · converged 6). rivetry mixes in
+  # free prose (`exploration -- pending founder review` 4 ·
+  # `pass-clean-with-1-low` 1). status is LIFECYCLE ONLY from here.
+
+  status:
+    description: Lifecycle state of the artifact itself. NOT a review outcome, NOT a severity.
+    closed: true
+    values:
+      draft:      {category: active,   note: "vsdd 2095 · prism 440 · rivetry 290 — dominant everywhere"}
+      active:     {category: active,   note: "prism 108 · vsdd 7"}
+      in-progress: {category: active,  note: "rivetry 5"}
+      complete:   {category: settled,  note: "vsdd 256 · prism 345 · rivetry 6"}
+      merged:     {category: settled,  note: "vsdd 77 · prism 132"}
+      accepted:   {category: settled,  note: "vsdd 39 · prism 24 · rivetry 60"}
+      final:      {category: settled,  note: "vsdd 7 · prism 10"}
+      closed:     {category: settled,  note: "vsdd 4 · prism 35 (CLOSED)"}
+      superseded: {category: retired,  note: "vsdd 2 · prism 7"}
+      retired:    {category: retired,  note: "prism 9"}
+      withdrawn:  {category: retired,  note: "vsdd 2"}
+      archived:   {category: retired,  note: "rivetry 9 (archive)"}
+    migrated_from:
+      CLOSED:                  {status: closed}
+      ACCEPTED:                {status: accepted}
+      archive:                 {status: archived, note: "rivetry 9"}
+      ready:                   {status: active,   note: "vsdd 5 · prism 14"}
+      capture:                 {status: draft,    note: "prism 66"}
+      converged:               {status: complete, convergence: CONVERGENCE_REACHED, note: "vsdd 6 — outcome in a lifecycle field"}
+      RED_GATE_VERIFIED:       {status: complete, gate_result: CLEAN, note: "vsdd 6"}
+      MINOR:                   {status: complete, severity_max: LOW, note: "vsdd 7"}
+      NITPICK:                 {status: complete, severity_max: NIT, note: "vsdd 5"}
+      findings-open:           {status: active,   convergence: SUBSTANTIVE, note: "prism 29"}
+      complete-fixed:          {status: complete, note: "prism 10"}
+      remediated-closed:       {status: closed,   note: "rivetry 3"}
+      captured-awaiting-remediation: {status: active, note: "rivetry 3"}
+      fail:                    {status: complete, gate_result: BLOCKED, note: "rivetry 7"}
+      pass:                    {status: complete, gate_result: CLEAN, note: "rivetry 2"}
+      "pass-clean":            {status: complete, gate_result: CLEAN, severity_max: NONE, note: "rivetry 1"}
+      "pass-with-findings":    {status: complete, gate_result: CLEAN, convergence: SUBSTANTIVE, note: "rivetry 1"}
+      "pass-clean-with-1-low": {status: complete, gate_result: CLEAN, severity_max: LOW, note: "rivetry 1"}
+      binding:                 {status: accepted, note: "rivetry 2"}
+      exploration:             {status: draft,    note: "rivetry — head of a prose value; the tail moves to a note field"}
+
+  lifecycle_status:
+    description: >
+      Spec-object lifecycle, distinct from `status`. Declared by 3 templates
+      (behavioral-contract, verification-property, holdout-scenario) and observed as a
+      REQUIRED field on all three types in every corpus that has them.
+    closed: true
+    values:
+      active:     {category: active}
+      superseded: {category: retired}
+      withdrawn:  {category: retired}
+      retired:    {category: retired}
+      deprecated: {category: retired}
+
+  # ── Provenance ──────────────────────────────────────────────────────────────
+  level:
+    description: >
+      VSDD abstraction level. L1..L5 are the method's own ladder; `ops` marks an
+      operational (non-spec) artifact. Observed: vsdd L3 1975 / ops 417 / L4 86 / L2 8;
+      prism L3 341 / ops 297 / L4 265 / L2 33 / L1 3 / L5 1; rivetry ops 252 / L3 153.
+    closed: true
+    values:
+      L1: {category: spec, note: "brief"}
+      L2: {category: spec, note: "domain spec"}
+      L3: {category: spec, note: "PRD / behavioral contract"}
+      L4: {category: spec, note: "verification property"}
+      L5: {category: spec, note: "prism 1"}
+      ops: {category: ops}
+    migrated_from:
+      PR-LEVEL:     {level: ops, scope: pr,    note: "prism 10 — scope in a level field"}
+      LOCAL:        {level: ops, scope: story, note: "prism 7"}
+      ADR:          {level: ops, note: "prism 3 — document_type in a level field"}
+      impl:         {level: ops, note: "prism 1"}
+      architecture: {level: ops, note: "rivetry 6"}
+      governance:   {level: ops, note: "rivetry 2"}
+      design-level: {level: ops, note: "rivetry 1"}
+      cycle:        {level: ops, note: "vsdd 1"}
+      F1:           {level: ops, phase: F1, note: "vsdd 1 — phase in a level field"}
+      F5:           {level: ops, phase: F5, note: "vsdd 1"}
+      "null":       {level: ops, note: "prism 2 — a literal null"}
+
+  scope:
+    description: >
+      NEW closed field. The review/artifact's blast radius. This is the axis the 12
+      `adversarial-review` spellings were encoding in their NAMES (local-, per-story-,
+      pr-level-, gate-step-), which is why a rename-only alias would destroy
+      information. Every alias that collapses a spelling MUST set this.
+    closed: true
+    values:
+      spec:      {category: spec,  note: "phase-1d spec review"}
+      story:     {category: local, note: "was `local-adversary-review` / `LOCAL`"}
+      pr:        {category: local, note: "was `pr-level-*` / `PR-LEVEL`"}
+      wave-gate: {category: gate,  note: "was `gate-step-report` / `wave-gate-report`"}
+      cycle:     {category: cycle, note: "cycle-wide"}
+      corpus:    {category: cycle, note: "whole-corpus sweep"}
+    migrated_from:
+      # MEASURED COLLISION, same class as `gate`. `scope:` is ALREADY in use and carries
+      # TWO different meanings: prism uses it for exactly this axis (PR-LEVEL 86 · LOCAL 86
+      # · spec 36 = 208 files), while vsdd uses it for the TARGET (SS-01 20 · SS-03 14 ·
+      # SS-04 10 · s7-03-spec 15 · s6.01-spec 8). So the field is kept with prism's
+      # semantics and vsdd's usage migrates to `target`, which is a separate declared field.
+      PR-LEVEL: {scope: pr,    note: "prism 86"}
+      LOCAL:    {scope: story, note: "prism 86"}
+      spec:     {scope: spec,  note: "prism 36 — already canonical"}
+    rules:
+      - "A subsystem or story id in `scope` (vsdd: SS-01, s7-03-spec) is a TARGET, not a
+         scope, and migrates to `target`. A commit range or PR title in `scope` (prism:
+         'e4be29ae..ba3b10c7 (Wave 3.4 — 2 fix PRs...)') is prose and migrates to
+         `diff_base`/`diff_head` plus `producer_note`."
+
+
+  reviewer_role:
+    description: >
+      NEW closed field. Which reviewer produced a review document — the second axis the
+      spellings encoded (`pr-level-security-review` vs `pr-level-pr-reviewer-review`
+      differ ONLY in this). Values are the factory's own declared agent names.
+    closed: true
+    open_extension: true   # projects may add agent names; categories stay closed
+    values:
+      adversary:             {category: adversarial}
+      code-reviewer:         {category: peer}
+      pr-reviewer:           {category: peer}
+      security-reviewer:     {category: security}
+      consistency-validator: {category: mechanical}
+      holdout-evaluator:     {category: holdout}
+      architect:             {category: authority}
+      product-owner:         {category: authority}
+
+  producer:
+    description: >
+      The agent or role that wrote the artifact. open_extension because the agent
+      roster is a project concern: vsdd shows 14+ values including per-wave shards
+      (`phase-1-4b-bcs-agent-4` 330), prism shows dclaude/vsdd-prefixed names.
+      Categories are closed so core logic never enumerates project rosters.
+    closed: false
+    open_extension: true
+    categories: [authority, spec-author, reviewer, mechanical, human, ingestion]
+    values:
+      product-owner:         {category: authority}
+      architect:             {category: authority}
+      business-analyst:      {category: spec-author}
+      story-writer:          {category: spec-author}
+      ux-designer:           {category: spec-author}
+      adversary:             {category: reviewer}
+      code-reviewer:         {category: reviewer}
+      pr-reviewer:           {category: reviewer}
+      security-reviewer:     {category: reviewer}
+      consistency-validator: {category: mechanical}
+      state-manager:         {category: mechanical}
+      spec-steward:          {category: mechanical}
+      orchestrator:          {category: mechanical}
+      test-writer:           {category: spec-author}
+      implementer:           {category: spec-author}
+      research-agent:        {category: ingestion}
+      codebase-analyzer:     {category: ingestion}
+      pr-manager:            {category: mechanical}
+      founder:               {category: human}
+    rules:
+      - "A `producer` value MUST NOT carry parenthetical prose. Measured violations: prism
+         `adversary (vsdd-factory; reified by state-manager due to read-only tool profile)` 25,
+         `state-manager (orchestrator-coordinated; story-writer + state-manager stages)` 12,
+         `adversary (verbatim findings reconstructed by state-manager)` 11. The parenthetical
+         belongs in `producer_note`."
+
+  priority:
+    description: >
+      Delivery priority. NOT a severity — a P1 story is not a HIGH finding, and binding
+      the two was a defect in the first draft of this registry, caught by running the
+      validator (391 false enum-illegal findings on legitimate `P1` values).
+    closed: true
+    values:
+      P0: {category: must, rank: 3, note: "vsdd 31 · prism 199"}
+      P1: {category: should, rank: 2, note: "vsdd 61 · prism 107"}
+      P2: {category: could, rank: 1, note: "vsdd 22 · prism 57"}
+      P3: {category: wont, rank: 0, note: "prism 7"}
+    migrated_from:
+      HIGH:   {priority: P1, note: "vsdd 3 — severity vocabulary in a priority field"}
+      MEDIUM: {priority: P2}
+      LOW:    {priority: P3}
+    rules:
+      - "Values are unquoted. Measured: vsdd carries both \"P1\" (44) and P1 (17) — a
+         quoting inconsistency inside ONE corpus that a closed enum with a normalisation
+         rule removes."
+
+  # ── Storage model ───────────────────────────────────────────────────────────
+  shape:
+    description: >
+      How the artifact is PHYSICALLY stored. Orthogonal to `authority` (who may write
+      it) — an INDEX is physically a `document` and its authority is `derived`.
+      Collapsing the two was a defect in an earlier draft of this registry.
+    closed: true
+    values:
+      record:
+        note: Typed fields are the artifact. Identity is a declared id. Mutable, cell-merged.
+        table: one row per artifact in a typed table
+      document:
+        note: >
+          Prose is the artifact. Stored as verbatim `body` bytes PLUS a derived section
+          partition. Split/rejoin measured byte-exact on 6,537/6,537 md files, so the
+          partition is provably lossless and is gated as such.
+        table: doc + section (derived, ordinal-keyed)
+      append-only-event:
+        note: >
+          An enumerable ledger of entries. NEVER a document. The nine highest-churn
+          prose files in the corpus are this shape (burst-log 133 commits, lessons 106,
+          decision-log 97) and storing them as documents is what makes them collide.
+        table: one row per entry, insert-only
+      config:
+        note: Typed key/value settings. Small, hand-edited, schema-validated.
+        table: typed table or a validated blob with a declared schema
+      blob-with-path:
+        note: >
+          Opaque bytes whose path is meaningful and whose content datum does not model
+          (images, .tape, .jsonl telemetry, wireframe assets).
+        table: blob table keyed by path + content hash
+
+  authority:
+    description: Who is permitted to write the artifact. Enforced, not documentation.
+    closed: true
+    values:
+      authored:
+        note: An agent or human writes it through the datum write API. The normal case.
+      derived:
+        note: >
+          datum computes it. NEVER stored as an authored artifact, NEVER hand-edited.
+          The five highest-churn paths in the corpus are all derived
+          (STORY-INDEX 381 commits, BC-INDEX 218, ARCH-INDEX 151, VP-INDEX 140,
+          cycles/INDEX 98) and storing them is the direct cause of the count drift
+          `datum validate` reports (ARCH-INDEX says 1949, BC-INDEX frontmatter says 1955,
+          disk says 1959).
+      ingested:
+        note: Imported from outside the factory (brownfield scan, semport, external research).
+      retired:
+        note: >
+          The type existed to work around the absence of a versioned store and has no
+          place in one. Migration DELETES it after verifying the store carries the
+          same information. See `delta-archive`.
+
+  # ── Reference currency: the axis #671 was actually policing ─────────────────
+  pin_policy:
+    description: >
+      HOW a reference resolves to a VERSION of its target. Taken from #671, whose
+      `validate-index-cite-refresh` exists solely to police version cites like
+      `per BC-INDEX v1.25` by hand-rolled string scanning.
+      THE POINT: the same syntax carries opposite verdicts depending on this field.
+      `ARCH-INDEX` citing `BC-INDEX v1.25` when current is v1.26 is a DEFECT; a pass-74
+      review citing `BC-INDEX v1.25` is CORRECT — it reviewed that version. Without
+      declaring the policy, a prose extractor cannot tell them apart and manufactures
+      findings against correct history, which is the same trap as the BC-1.12.008
+      renumbering (PROBE-CYCLES §5).
+    closed: true
+    values:
+      floating:
+        note: >
+          MUST resolve to the target's current version. A lagging cite is a finding.
+          Correct for indexes citing indexes, and for any live claim of currency.
+      pinned:
+        note: >
+          Cites a SPECIFIC version deliberately. Lagging is EXPECTED and is NOT a finding.
+          Correct for reviews, findings, checkpoints and archived entries — anything that
+          records what it saw. A pinned ref whose target VERSION NEVER EXISTED is still a
+          finding.
+      as_of:
+        note: >
+          Resolve at the CITING document's own version, through id_alias. The default for
+          traceability links: BC-1.12.008 was legitimately renumbered to BC-3.05.004, so a
+          flat existence check against today's corpus is wrong.
+
+  # ── Derived-artifact migration: the `generate -> prove -> retire` ladder ────
+  derivation_stage:
+    description: >
+      Taken from #671's sequencing tail (observe -> query -> advise -> enforce -> generate
+      -> retire). An `authority: derived` type cannot simply be FLIPPED to derived: if the
+      generator is subtly wrong, hand-maintained drift is replaced by generated drift AND
+      the evidence is deleted. The corpus asserts FOUR different BC totals, so the first
+      diffs are expected to be informative rather than clean. Every derived type therefore
+      declares which stage it is in, and advances only on evidence.
+    closed: true
+    values:
+      shadow:
+        note: >
+          Generate alongside the hand-maintained artifact. Do not write it. Every
+          disagreement is a finding. This is where every derived type starts.
+        exit: "the generated form and the authored form agree for N consecutive cycles"
+      proven:
+        note: >
+          They agree. The generated form is written by `datum render`; the authored one is
+          still present and still diffed, so a regression is visible.
+        exit: "one full cycle at `proven` with zero diffs, and the ratchet at zero"
+      retired:
+        note: >
+          The hand-maintained artifact is deleted. Only the generated form exists, and it
+          cannot disagree with its source because it IS its source.
+    default_stage: shadow
+
+  # ── Where enforcement happens ──────────────────────────────────────────────
+  enforcement_point:
+    description: >
+      Taken from #671, which puts its gate in `factory-dispatcher` hooks rather than in CI.
+      This is not a detail: CI catches drift AFTER the fact, when the authoring agent's
+      context is gone, so it reports rather than shapes. A write-time hook refuses the bad
+      write while the agent can still fix it — and it reuses an enforcement surface that
+      already exists instead of building a new one. It also explains how the drift got this
+      far: the path registry CLAIMS to block unregistered paths, yet 151 prism files sit in
+      4 undeclared specs/ subdirectories.
+    closed: true
+    values:
+      ci:
+        note: "`datum validate --registry` in a CI job. Reports; cannot prevent."
+      write:
+        note: "a PreToolUse hook calling `datum`. Refuses the write. The only point that shapes behaviour."
+      both:
+        note: "write-time refusal plus a CI backstop for anything written outside the hook (git, editors, other tooling)."
+    default_point: both
+    rule: >
+      A type at `enforcement_level: block` MUST be enforced at `write` or `both`. A `block`
+      level enforced only in CI is a contradiction: the write already happened.
+
+  # ── Gate wiring ─────────────────────────────────────────────────────────────
+  gate_severity:
+    description: What a violation of this type's declared schema costs.
+    closed: true
+    values:
+      error: {note: "datum validate emits a finding that fails the gate once enforcement_level is block"}
+      warn:  {note: "datum validate emits a finding; never fails the gate"}
+      info:  {note: "reported in datum validate --verbose only"}
+
+  enforcement_level:
+    description: >
+      Reuses artifact-path-registry.yaml's existing vocabulary verbatim (ADR-016) so
+      one concept has one spelling. Composes with datum's dated baseline: land a type at
+      `advisory`, promote to `warn`, then to `block` when THAT TYPE's baseline reaches
+      zero.
+    closed: true
+    values:
+      advisory: {note: "log only. Where every migrating type starts."}
+      warn:     {note: "hook.warn event; write proceeds"}
+      block:    {note: "the write is refused"}

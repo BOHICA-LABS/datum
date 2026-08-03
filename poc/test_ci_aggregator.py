@@ -21,8 +21,8 @@ the cross-internet claim.
          publisher can lose its trigger. Does self-redispatch/cron still drain it?
 
 NOTE ON SCOPE: the workflow is a PROTOTYPE that shells out to the dolt CLI. The
-deliverable is `fa aggregate`, a subcommand of the Go binary that embeds Dolt — at
-which point the CI job is "download fa, run fa aggregate" with no dolt install, and
+deliverable is `datum aggregate`, a subcommand of the Go binary that embeds Dolt — at
+which point the CI job is "download fa, run datum aggregate" with no dolt install, and
 the local fallback during an Actions outage is the same binary devs already run.
 What is being tested here is the GitHub mechanics, which are language-independent.
 
@@ -43,7 +43,7 @@ from pathlib import Path
 
 POC = Path(__file__).parent
 ROOT = POC / "ci"
-REPO = os.environ.get("FA_CI_REPO", "drbothen/dolt-artifact-spike-remote")
+REPO = os.environ.get("FA_CI_REPO", "drbothen/datum (formerly dolt-artifact-spike)-remote")
 REMOTE = f"https://github.com/{REPO}.git"
 ARTIFACT_REF = "refs/dolt/artifacts/data"
 N = int(os.environ.get("FA_CI_WRITERS", 6))
@@ -154,13 +154,13 @@ def publish(d: Path, i: int) -> tuple[int, float]:
 
 
 def dispatch() -> int:
-    r = sh(["gh", "api", f"repos/{REPO}/dispatches", "-f", "event_type=fa-aggregate",
+    r = sh(["gh", "api", f"repos/{REPO}/dispatches", "-f", "event_type=datum-aggregate",
             "--silent"], timeout=120)
     return r.returncode
 
 
 def runs(limit=15) -> list[dict]:
-    r = sh(["gh", "run", "list", "-R", REPO, "-w", "fa-aggregate", "-L", str(limit),
+    r = sh(["gh", "run", "list", "-R", REPO, "-w", "datum-aggregate", "-L", str(limit),
             "--json", "databaseId,status,conclusion,createdAt,event"], timeout=120)
     try:
         return json.loads(r.stdout or "[]")
@@ -460,7 +460,7 @@ def c5_latency(observer_pulls_every=3.0, sample=0):
           + f"  5. observer pull + poll     : ~{observer_pulls_every:.0f} s resolution\n"
             f"\n"
             f"WHAT THE GO BINARY REMOVES   : the dolt install step, {install:.0f} s of the above\n"
-            f"  => projected with `fa`      : ~{(total - install):.0f} s\n" if total else ""
+            f"  => projected with `datum`      : ~{(total - install):.0f} s\n" if total else ""
           )
 
 

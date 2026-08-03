@@ -3,9 +3,9 @@
 
 Two things must both hold, or the design fails:
   REAL      — a walled zone must actually be unreachable
-  INVISIBLE — nobody ever types a zone name; `fa get HS-001` just works
+  INVISIBLE — nobody ever types a zone name; `datum get HS-001` just works
 
-  Z1  `fa init` creates every zone from one config file
+  Z1  `datum init` creates every zone from one config file
   Z2  routing: id -> artifact type -> zone, with no zone named by the caller
   Z3  a role without access gets a CLEAN, actionable refusal (not a crash)
   Z4  a permitted role reads the same id transparently
@@ -41,7 +41,7 @@ def check(name, ok, detail=""):
 
 
 def setup():
-    print("--- setup: fa init")
+    print("--- setup: datum init")
     if ROOT.parent.exists():
         shutil.rmtree(ROOT.parent)
     s = Store.open(ROOT, role="orchestrator")
@@ -65,7 +65,7 @@ def setup():
 def z1_init(s):
     cfg = (ROOT / "fa.yaml").exists()
     dbs = {z: (ROOT / z / ".dolt").exists() for z in ("open", "walled")}
-    check("Z1 `fa init` creates every zone from one config file",
+    check("Z1 `datum init` creates every zone from one config file",
           cfg and all(dbs.values()),
           f"{ROOT.name}/fa.yaml exists = {cfg}\ninitialized: {dbs}\n"
           "=> one command, and the layout is discoverable: .factory-db/{fa.yaml,open,walled}")
@@ -82,7 +82,7 @@ def z2_routing_no_zone_names(s):
     check("Z2 routing: id -> type -> zone, caller never names a zone",
           ok,
           "\n".join(f"  {a:14} -> type={t:18} zone={z}" for a, (t, z) in cases.items())
-          + "\n=> `fa get HS-001` and `fa get BC-1.01.001` are the same command shape;\n"
+          + "\n=> `datum get HS-001` and `datum get BC-1.01.001` are the same command shape;\n"
             "   the zone split is an implementation detail the user never sees")
 
 
@@ -240,11 +240,11 @@ def z9_error_messages(s):
         msgs["uninitialized"] = str(e)
     helpful = (("Known prefixes" in msgs.get("unknown id", ""))
                and ("visible_to" in msgs.get("walled", ""))
-               and ("fa init" in msgs.get("uninitialized", "")))
+               and ("datum init" in msgs.get("uninitialized", "")))
     check("Z9 every error names the fix, not the internals", helpful,
           "\n".join(f"  {k:14} {v[:96]}" for k, v in msgs.items())
           + "\n=> unknown id lists valid prefixes; a wall points at the config key;\n"
-            "   an uninitialized store says `fa init`")
+            "   an uninitialized store says `datum init`")
 
 
 def main():

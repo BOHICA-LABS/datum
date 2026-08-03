@@ -193,7 +193,7 @@ is unmeasured; the whole point of the aggregate is that a confident wrong findin
 than a count. What changed is that the residual is now much smaller and three known-good
 resolution schemes are pinned by `TestSectionRefsHaveTHREEAddressingSchemes`.
 
-`fa refs --kind section --status dangling` lists them, because sampling requires listing and
+`datum refs --kind section --status dangling` lists them, because sampling requires listing and
 re-deriving them in a script would have created a second source of truth for the extraction —
 the defect this repo has now fixed three times.
 
@@ -219,7 +219,7 @@ Every other gate is byte-identical across the change: `validate` 776, `validate 
 
 **208 of the 214 reported line numbers do not point at the reference.** `prose_ref.src_line` is
 computed over the body (`ExtractProseRefs(…, d.body, …)`, `Line: i+1`), which is correct under D-A
-— prose *is* the body — but `fa refs` prints the column as `line`, and a reader lands in the wrong
+— prose *is* the body — but `datum refs` prints the column as `line`, and a reader lands in the wrong
 place. The offset is exactly the frontmatter length, deterministic and recoverable: the hypothesis
 `actual == reported + frontmatter_lines` held on **210 of 210** findable cases, 0 disagreements.
 Per-reference reporting is impossible until a reference can be opened, so this is a prerequisite
@@ -311,6 +311,6 @@ title) · **spacing** (`§Source/Origin` vs the heading `Source / Origin`) · bo
 ### Reproduce
 
 ```sh
-./fa/fa refs --db /tmp/fadb --kind section --status dangling    # 30
-./fa/fa refs --db /tmp/fadb --kind section --status resolved    # 2035
+./datum/datum refs --db /tmp/fadb --kind section --status dangling    # 30
+./datum/datum refs --db /tmp/fadb --kind section --status resolved    # 2035
 ```

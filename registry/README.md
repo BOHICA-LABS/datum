@@ -104,16 +104,16 @@ Four things, each machine-checked by `validate_registry.py` (checks 1j–1m) and
 
 ## The knowledge-graph projection
 
-The Dolt store IS the knowledge graph; `fa/graph*.go` projects it into gonum so the
+The Dolt store IS the knowledge graph; `datum/graph*.go` projects it into gonum so the
 algorithms SQL cannot express become available. Measured, not asserted — see
 [research/GRAPH-PERF.md](../research/GRAPH-PERF.md).
 
 ```sh
-fa waves                                   # 148 stories in 16 waves, 0 cycles
-fa graph build                             # 2,421 nodes · 4,060 edges in 85 ms
-fa graph metrics                           # 73 ms default; --betweenness for the O(V*E) one
-fa graph dot --scope subsystem | dot -Tsvg
-fa graph diff --from HEAD                  # what a rehydrate-per-run graph cannot do
+datum waves                                   # 148 stories in 16 waves, 0 cycles
+datum graph build                             # 2,421 nodes · 4,060 edges in 85 ms
+datum graph metrics                           # 73 ms default; --betweenness for the O(V*E) one
+datum graph dot --scope subsystem | dot -Tsvg
+datum graph diff --from HEAD                  # what a rehydrate-per-run graph cannot do
 ```
 
 At 250k+ nodes the engine is **CSR** (two int32 arrays + an interned key slab): measured

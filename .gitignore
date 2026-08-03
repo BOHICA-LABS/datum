@@ -27,6 +27,16 @@ poc/opt/
 poc/dc/
 poc/ci/
 
-# fa: the built binary (148 MB) and any local store
-fa/fa
+# datum: the built binary (~150 MB) and any local store.
+#
+# ⚠ THESE PATTERNS ARE DELIBERATELY BROAD, and that is a scar. The rename moved the
+# built binary from `fa/fa` to `datum/fa`, which matched NEITHER the old ignore
+# (`fa/fa`) nor the new one (`datum/datum`) — so `git add -A` committed a 144.8 MB
+# binary, and GitHub's 100 MB limit is what caught it rather than any check of mine.
+# Ignore the binary by SHAPE (an executable in the module dir), not by one exact name.
+datum/datum
+datum/fa
+datum/datum.test
+datum/*.test
+.datum-db/
 .fa-db/
