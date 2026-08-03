@@ -15,7 +15,7 @@ package main
 // the MARKDOWN claims, precisely so a gate can compare those claims against
 // COUNT(*). Recording a wrong number is the point of that table.
 
-const schemaVersion = 4
+const schemaVersion = 5
 
 // openDDL is the `open` zone: specs, stories, waves, state — what most agents read.
 var openDDL = []string{
@@ -273,8 +273,20 @@ var openDDL = []string{
 	  citing_key  VARCHAR(300) NOT NULL,
 	  citing_type VARCHAR(64)  NOT NULL,
 	  kind        VARCHAR(16)  NOT NULL,
-	  raw         VARCHAR(220) NOT NULL,
-	  target      VARCHAR(220) NOT NULL,
+	  -- WIDTHS ARE MEASURED, v5. Both were VARCHAR(220), and target at 220 was a HARD
+	  -- ABORT of the entire prism import on ONE value in 30,973 prose refs (0.004%):
+	  -- a legitimate 235-char markdown heading, because prism embeds traceability
+	  -- inside heading text. Measured maxima over all three corpora: target 256
+	  -- (p99.9 168), raw 205 (p99.9 162). raw had only 15 chars of headroom left and
+	  -- is IN THE PK -- the next cliff. GMS was verified to accept VARCHAR(2000) in
+	  -- this composite PK, so no index-key limit forces a narrow column. 1000 gives
+	  -- ~4x headroom over the observed maxima.
+	  --
+	  -- Headroom is NOT the fix: any width can be exceeded again. The durable fix is
+	  -- that the importer TRUNCATES-AND-REPORTS rather than aborting (see fitCol in
+	  -- import.go), so no value length can ever kill an import again.
+	  raw         VARCHAR(1000) NOT NULL,
+	  target      VARCHAR(1000) NOT NULL,
 	  section_ord INT          NOT NULL DEFAULT -1,
 	  status      VARCHAR(16)  NOT NULL,
 	  src_line    INT          NOT NULL,   -- part of the PK: the line distinguishes two refs
@@ -295,6 +307,51 @@ var openDDL = []string{
 	  src_line      INT          NOT NULL,   -- part of the PK, same reason
 	  PRIMARY KEY (citing_key, target, cited_version, src_line),
 	  KEY idx_vc_verdict (verdict)
+	)`,
+
+	// Duplicate natural keys, kept IN FULL. One condition previously had three
+	// incompatible behaviours -- bc filed a finding and dropped the row, story
+	// silently kept the first file, vp had no check and HARD-ABORTED the import (which
+	// is why rivetry, with 143 collisions from its 211 .DELTA-ARCHIVE sidecars, could
+	// not be imported at all). The single behaviour is FILE A FINDING AND KEEP BOTH:
+	// the deterministic winner occupies the typed table, every loser lands here with
+	// the winner it collided with, so nothing is dropped and the pair is adjudicable.
+	`CREATE TABLE IF NOT EXISTS key_collision (
+	  kind      VARCHAR(16)  NOT NULL,
+	  art_key   VARCHAR(64)  NOT NULL,
+	  lose_path VARCHAR(512) NOT NULL,
+	  win_path  VARCHAR(512) NOT NULL,
+	  title     VARCHAR(1000) NULL,
+	  body      LONGTEXT     NULL,
+	  PRIMARY KEY (kind, art_key, lose_path),
+	  KEY idx_kc_key (kind, art_key)
+	)`,
+
+	// LEDGER FIELDS AS ROWS.
+	//
+	// Measured: 18 frontmatter values exceed the L1-L2 design's v_text VARCHAR(2000),
+	// the largest being 50,801 characters -- `last_amended` on stories/STORY-INDEX.md,
+	// a single line of nested `[Prior: ... [Prior: ...]]]` closing with 21 consecutive
+	// `]`. That is not an oversized string, it is an APPEND-ONLY LEDGER serialised into
+	// a scalar because markdown frontmatter has no other shape for it. `delta` and
+	// `modified` are the same class.
+	//
+	// Widening a column would preserve the defect. Invariant 16's ratified per-shape
+	// rule already says append-only-event TYPES store entries and derive the file; this
+	// applies the same treatment at FIELD granularity, which is where the corpus
+	// actually put them. One row per ledger entry, ordinal-keyed so concat(entries) is
+	// checkable against the original bytes.
+	`CREATE TABLE IF NOT EXISTS ledger_entry (
+	  citing_key  VARCHAR(300) NOT NULL,
+	  citing_type VARCHAR(64)  NOT NULL,
+	  field       VARCHAR(64)  NOT NULL,
+	  ord         INT          NOT NULL,   -- 0 = the live head entry; 1..n = older, outermost first
+	  entry       VARCHAR(2000) NOT NULL,
+	  version     VARCHAR(32)  NULL,       -- the version token this entry announces, when it has one
+	  entry_date  VARCHAR(32)  NULL,       -- the date token, as written; NOT parsed into a DATETIME
+	  truncated   TINYINT      NOT NULL DEFAULT 0,
+	  PRIMARY KEY (citing_key, field, ord),
+	  KEY idx_le_field (citing_type, field)
 	)`,
 
 	`CREATE TABLE IF NOT EXISTS schema_migrations (

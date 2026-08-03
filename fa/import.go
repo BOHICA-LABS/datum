@@ -55,6 +55,10 @@ type ImportStats struct {
 	SubArtifactRefs int
 	ProseRefs       int
 	VersionCites    int
+	KeyCollisions   int
+	LedgerFields    int
+	LedgerEntries   int
+	LedgerTruncated int
 	Changed     bool
 	Elapsed     time.Duration
 }
@@ -297,6 +301,60 @@ func Import(ctx context.Context, s *Store, root string, out io.Writer) (*ImportS
 	}
 	_ = afStmt.Close()
 
+	// ---- duplicate natural keys: KEPT, never dropped (see corpus.go KeyCollision)
+	if len(c.KeyCollisions) > 0 {
+		kcStmt, err := tx.PrepareContext(ctx, `INSERT INTO key_collision
+		  (kind, art_key, lose_path, win_path, title, body) VALUES (?,?,?,?,?,?)`)
+		if err != nil {
+			return nil, err
+		}
+		for _, k := range c.KeyCollisions {
+			if _, err := kcStmt.ExecContext(ctx, k.Kind, k.Key, k.LosePath, k.WinPath,
+				nullIf(k.Title), k.Body); err != nil {
+				if isDuplicateKey(err) {
+					// the same (kind,key,lose_path) twice is the same collision
+					continue
+				}
+				return nil, fmt.Errorf("key_collision %s/%s: %w", k.Kind, k.Key, err)
+			}
+			st.KeyCollisions++
+		}
+		_ = kcStmt.Close()
+	}
+
+	// ---- LEDGER FIELDS AS ROWS (see ledger.go)
+	//
+	// A ledger serialised into a scalar is split into ordinal entries. The split is
+	// byte-exact reversible by construction and gated over every real ledger value in
+	// ledger_test.go, so this write cannot lose an entry silently.
+	leStmt, err := tx.PrepareContext(ctx, `INSERT INTO ledger_entry
+	  (citing_key, citing_type, field, ord, entry, version, entry_date, truncated)
+	  VALUES (?,?,?,?,?,?,?,?)`)
+	if err != nil {
+		return nil, err
+	}
+	for _, lf := range c.LedgerFields {
+		for _, e := range lf.Entries {
+			entry, trunc := e.Entry, 0
+			if len(entry) > 2000 {
+				// Report, never silently shorten: the full text stays recoverable from
+				// the source file, and `truncated` makes the shortfall queryable.
+				entry, trunc = truncRunes(entry, 2000), 1
+				st.LedgerTruncated++
+			}
+			if _, err := leStmt.ExecContext(ctx, lf.CitingKey, lf.CitingType, lf.Field,
+				e.Ord, entry, nullIf(e.Version), nullIf(e.Date), trunc); err != nil {
+				if isDuplicateKey(err) {
+					continue
+				}
+				return nil, fmt.Errorf("ledger_entry %s/%s#%d: %w", lf.CitingKey, lf.Field, e.Ord, err)
+			}
+			st.LedgerEntries++
+		}
+		st.LedgerFields++
+	}
+	_ = leStmt.Close()
+
 	// ---- STORY 12a: sub-artifacts as rows, then their typed links
 	saStmt, err := tx.PrepareContext(ctx, `INSERT INTO sub_artifact
 	  (owner_key, owner_type, kind, sub_id, statement, form, src_line) VALUES (?,?,?,?,?,?,?)`)
@@ -441,6 +499,20 @@ func Import(ctx context.Context, s *Store, root string, out io.Writer) (*ImportS
 			st.SubArtifacts, st.SubArtifactRefs, c.SubArtifactDupes)
 		fmt.Fprintf(out, "prose refs %d · version cites %d (over %d known cite targets)\n",
 			st.ProseRefs, st.VersionCites, c.CiteTargetsKnown)
+		// PER-FORM MATCH CENSUS. Instance nine (prism's 80 vp-*.md importing as zero
+		// rows) was invisible precisely because the report had no line that could say
+		// "this type matched 0 of 80 files". It says it now, every run, per type.
+		fmt.Fprintf(out, "matched    %s · %s · %s\n",
+			censusLine("bc", c.BCCensus), censusLine("vp", c.VPCensus),
+			censusLine("story", c.StoryCensus))
+		if st.KeyCollisions > 0 {
+			fmt.Fprintf(out, "key collisions %d KEPT as rows (duplicate natural keys; nothing dropped)\n",
+				st.KeyCollisions)
+		}
+		if st.LedgerFields > 0 {
+			fmt.Fprintf(out, "ledger fields %d -> %d entries (byte-exact reversible; %d entries truncated)\n",
+				st.LedgerFields, st.LedgerEntries, st.LedgerTruncated)
+		}
 		if !changed {
 			fmt.Fprintln(out, "no change since the last import (idempotent re-run)")
 		}
@@ -512,4 +584,22 @@ func fingerprint(c *Corpus) string {
 func hashOf(s string) string {
 	h := sha256.Sum256([]byte(s))
 	return hex.EncodeToString(h[:8])
+}
+
+// censusLine renders one type's match census. It always prints the SKIPPED count,
+// because the number that matters is the one nobody was printing.
+func censusLine(kind string, cen MatchCensus) string {
+	if !cen.DirExists {
+		return kind + "=n/a"
+	}
+	forms := ""
+	if len(cen.Forms) > 1 {
+		var fs []string
+		for f, n := range cen.Forms {
+			fs = append(fs, fmt.Sprintf("%s%d", f, n))
+		}
+		sort.Strings(fs)
+		forms = " forms[" + strings.Join(fs, " ") + "]"
+	}
+	return fmt.Sprintf("%s=%d/%d md (skipped %d)%s", kind, cen.Matched, cen.MDFiles, cen.Skipped, forms)
 }
