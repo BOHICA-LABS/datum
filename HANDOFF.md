@@ -49,6 +49,42 @@ keeps the first file, `vp` crashes.
 | **V-G** | **review identity: backfill the 4 declared key fields at migration.** Path is one-time EVIDENCE during backfill, never identity after (keeps D-C) |
 | **V-H** | **Spec Supremacy WINS.** STATE.md is a position report. Cohort G migrates as rebuildable operational data. `CLAUDE.md`'s precedence table gets corrected |
 | **V-I** | **model-family diversity RETIRED as a gate for now, explicitly KEPT as a capability to grow into.** See the spine §5b — it is written out in full on purpose |
+| **V-J** | ⭐ **`fa` IS RUN WITH AN AI, and the AI is the PARSER for messy input.** See the spine §5c |
+
+### ⭐ V-J is the newest and it corrected a posture running through all four layer designs
+
+`fa` is not a tool a human drives against tidy input. **Two boundaries, opposite postures:** the
+**INGEST** boundary is tolerant and interpretive — the AI reads the mess and says what it is — while the
+**WRITE** boundary stays strict and closed, which is the whole reason the mess cannot come back. I had
+been applying write-boundary strictness to ingestion, which is what produced most of the "declare it out
+of scope" and "needs hand adjudication" residue in the layer docs.
+
+**The rule that keeps it honest: AI interpretation is captured as DATA, never applied as a side effect.**
+Each classification/derivation becomes a transformation row with its `before`, evidence, confidence and
+the fact that an AI produced it. **Determinism moves from the parser to the recorded transformation** —
+a re-run REPLAYS decisions rather than re-inferring them. Without that rule, AI-assisted ingest collides
+head-on with invariant 15 and the conservation gate.
+
+**DISSOLVES these, which the top block previously listed as blockers:** the 1,338 untyped files and the
+76.3% round-trip ceiling (that ceiling was a property of assuming a regex had to do the typing, not of
+the corpus) · the 41 legacy stories with no frontmatter · V-G's un-derivable review-key residue · the 22
+missing render schemas (an AI infers a draft from existing instances) · the ~40 one-off types with 1–4
+files each · and the brittle-matcher CATEGORY (instance nine is still a bug; a regex deciding what a
+file is stops being the mechanism).
+
+**DOES NOT CHANGE:** all invariants 15–23 stand · `unevaluable = block` still holds **for gates** — an
+AI interprets INPUT, it never manufactures EVIDENCE (invariant 22 untouched) · no AI write path bypasses
+validation; AI output is a *proposal* through the same ops and the same 14-step ladder, which is exactly
+what L3–L4's `fa propose field` (exit 4) already is · and **the conservation gate gets STRICTER, not
+looser**, because a non-deterministic classifier makes silent loss easier and instance nine already
+proves the exposure.
+
+**Changes L7 (not yet designed):** the primary consumer is an AI agent, so error messages are
+*instructions to an agent*, output is stable and structured, exit codes are control flow, **MCP is a
+first-class surface not an afterthought**, and the ~800 generated op names become an asset rather than a
+usability problem. **Open: does the AI run inside `fa` or outside it? Recommend OUTSIDE** — keeps `fa`
+deterministic, testable and offline-capable, keeps model choice and cost with the caller, and matches the
+attestation plumbing V-I already needs. Not decided.
 
 Plus **9 new invariants (15–23)** on top of SPEC.md's 1–14, three of which were sharpened by the L1–L2
 design and are ratified in place: **21** covers artifact data only (a lease is not artifact data, so
@@ -112,16 +148,20 @@ register's E-1/E-2 are real git-level data-loss risks `fa` can *report* without 
 
 ### ⚠ FOUR OPEN ITEMS THE LAYER DESIGNS SURFACED — they live only in those docs, so they are repeated here
 
+⚠ **Items 1 and 2 are RESHAPED by V-J** — still work, no longer blockers. Read V-J first.
+
 1. **`fa render` is blocked on SCHEMAS, not on an engine.** **All 22 derived types declare ZERO
    sections**, and the three highest-churn indexes (BC-INDEX **218** commits, VP-INDEX 140,
    cycle-index 140) have no template either. No renderer can be written against a type that does not
-   say what it looks like. **Authoring those 22 render schemas is discrete, assignable, and on the
-   critical path** — invariant 15 cannot be gated without them. *Who authors them is an open question.*
+   say what it looks like — invariant 15 cannot be gated without them. **Under V-J the AI infers a draft
+   schema from existing instances of each type and proposes it for ratification**, so this is a review
+   task rather than 22 authoring tasks. Still on the critical path.
 2. **The 41 legacy stories in `stories/v1.0-legacy/` have NO frontmatter**, so there is nothing to
-   derive a scope FIELD from — and L3–L4 ruled that the scope predicate must be a **field** predicate,
-   not a path prefix (a prefix would promote path-as-identity, which D-C forbids). These 41 are the
-   same set whose deliberate omission from STORY-INDEX produced the scope-predicate result in the first
-   place. **Unresolved: they need either backfilled frontmatter or an explicit declared exemption.**
+   derive a scope FIELD from mechanically — and L3–L4 ruled that the scope predicate must be a **field**
+   predicate, not a path prefix (a prefix would promote path-as-identity, which D-C forbids). These 41
+   are the same set whose deliberate omission from STORY-INDEX produced the scope-predicate result in the
+   first place. **Under V-J the AI reads each body and derives the field, with the derivation recorded as
+   a transformation row.** The declared-exemption route is no longer needed.
 3. **`parallel-foreach` is a SEVENTH step type** (8 uses) that my own brief and every doc's
    "six step types" list omits — and **its iteration set is undocumented, which blocks byte-exact
    round-trip** of any workflow containing it.

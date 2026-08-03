@@ -322,6 +322,88 @@ and provider that executed every agent-attributable operation (F18/F22 attestati
 registry keeps the criterion present with `manual: true` and a named owner so it appears in every
 gate report as an open gap rather than disappearing from the schema.
 
+## 5c. V-J — `fa` IS RUN WITH AN AI. The AI is the parser for messy input.
+
+**Decision (2026-08-02):** `fa` is not a tool a human drives against tidy input. It runs **with an AI
+in the loop**, and **the AI is how the mess gets handled** — the accumulated drift across 6,537 files
+that no deterministic parser can fully absorb.
+
+This corrects a posture that ran through the first four layer designs. I had been treating messiness as
+something to **reject** — closed enums, a 14-step validation ladder, refusing unregistered paths,
+`unevaluable = block`, no escape hatch. That is right for the *store*. Applied to *ingestion* it is
+wrong, and it is what produced most of the "declare it out of scope" and "needs hand adjudication"
+residue in the layer docs.
+
+### The architecture this actually implies: two boundaries, opposite postures
+
+```
+   messy world                    THE ADAPTER                     the store
+   6,537 files                 (AI-mediated, tolerant,          (strict, closed,
+   70/150/51 raw types   ──▶   interpretive, records its  ──▶    deterministic,
+   1,338 with no type           reasoning as data)                validated)
+   no frontmatter at all
+```
+
+| | INGEST boundary | WRITE boundary |
+|---|---|---|
+| posture | **tolerant + interpretive** | **strict + closed** |
+| who handles ambiguity | **the AI**, and it records why | nobody — it is refused |
+| unknown input | classified, with confidence + evidence | rejected |
+| unevaluable | **surfaced for interpretation** | **blocks** (invariant 22 unchanged) |
+| determinism | the AI is not deterministic; **its recorded decision is** | fully deterministic |
+
+**The rule that keeps this honest: AI interpretation is captured as DATA, never applied as a side
+effect.** Every classification, field derivation and normalization becomes a transformation row
+carrying its `before`, its evidence, its confidence, and the fact that an AI produced it. Determinism
+moves from *the parser* to *the recorded transformation* — so a re-run **replays decisions** rather
+than re-inferring them, and only genuinely new input invokes the AI again. Without that rule,
+AI-assisted ingest would collide head-on with invariant 15 and with the conservation gate.
+
+### What this DISSOLVES — items I had recorded as blockers
+
+- **The 1,338 untyped files (20.5%) and the 76.3% typed-round-trip ceiling.** An AI reads a file and
+  says what it is. The ceiling is not a property of the corpus, it is a property of assuming a regex
+  had to do the typing. The bar in §6 stands, but the *route* to it changes: type the untyped rather
+  than blob them.
+- **The 41 legacy stories with no frontmatter.** Nothing to derive a scope *field* from mechanically —
+  but an AI reads the body and derives it, with the derivation recorded.
+- **V-G's review-key backfill residue.** I wrote "a residue that cannot be derived gets hand
+  adjudication". That residue is AI-adjudicated at scale, with the same recording discipline.
+- **The 22 missing render schemas.** An AI can infer a schema from existing instances of a type and
+  propose it for ratification — which is a far better first draft than authoring 22 from scratch.
+- **The ~40 one-off types with 1–4 files each.** These were the awkward tail in every layer design.
+  Interpretation, not modelling, is the right tool for a type with one instance.
+- **The brittle-matcher class generally.** Instance nine (`reVPFile` case-sensitivity) is still a bug
+  to fix, but the *category* — a regex deciding what a file is — stops being the mechanism.
+
+### What this does NOT change, and must not
+
+1. **Every invariant 15–23 stands.** Strictness at the write boundary is the entire reason the mess
+   cannot come back. An AI-tolerant *store* would just relocate the drift.
+2. **`unevaluable = block` remains, for gates.** An AI must never be the thing that decides a gate
+   passed. It interprets *input*; it does not manufacture *evidence*. Invariant 22 is untouched:
+   evidence exists only if `fa` produced it.
+3. **No AI write path into the store that bypasses validation.** The AI's output is a *proposal* that
+   goes through the same ops and the same ladder. L3–L4's `fa propose field` (exit 4) is exactly the
+   right shape — it was designed for this without knowing it.
+4. **The conservation gate gets stricter, not looser.** A non-deterministic classifier makes silent
+   loss *easier*, and instance nine already proves this codebase's exposure. Zero tolerance stands.
+
+### What it changes about L7, which is not yet designed
+
+The primary consumer is an **AI agent**, not a human — so L7 should be designed for that:
+error messages that are *instructions to an agent* rather than human diagnostics; stable structured
+output; exit codes as control flow (the `DENIED-ASYMMETRY` / exit-3 and `propose` / exit-4 discipline
+is already this); an **MCP surface as a first-class interface, not an afterthought**; and the ~800
+generated op names become an asset rather than a usability problem, because an agent can hold a
+vocabulary that would drown a human.
+
+**Open question this raises:** where does the AI run — inside `fa` (an LLM client in the binary), or
+outside it (`fa` emits work, the agent interprets, `fa` records the answer)? **Outside is the
+recommendation**, because it keeps `fa` deterministic, testable and offline-capable, keeps model choice
+and cost in the caller's hands, and matches the attestation plumbing V-I already requires. Not yet
+decided.
+
 ## 6. The production-grade bar
 
 "Production grade" is a measurable claim, so it gets acceptance criteria rather than adjectives:
