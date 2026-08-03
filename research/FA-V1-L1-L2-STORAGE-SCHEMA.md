@@ -41,6 +41,7 @@ counts as a finished decision:
 | **L1-E** | **Two-level store-side leases**: instance-local for narrow scopes, published for cross-instance scopes. Random 128-bit token presented on every write, fail-closed, store-side expiry clock. **No force path**; revocation is a human-authorized audited write to the lease table that touches no artifact. | inv 1 · inv 11 · inv 21 · F4 |
 | **L1-F** | **One append-only `audit` table**, PK `(txn_id, ord)`, written in the same transaction as the data, with a parity gate `audit ops == version ledger ops`. Read-denies record role+type+zone and **never the key**. | inv 3 · inv 18 · F18 |
 | **L1-G** | **Retention is a declared reachability predicate, not a time bound.** The pin-policy graph names the versions that must survive; pruned ≠ never-existed and is a recorded state. | inv 15 · registry `pinned-to-a-version-that-never-existed` |
+| **L1-0** | ⭐ **The engine is defined by a PROPERTY SET (P1–P7), not by a product name.** Any engine satisfying all seven is admissible; Dolt is retained because it satisfies all seven. A candidate failing **P1, P4 or P6** is rejected without further measurement. | V-L (spine §5e) |
 | **L2-A** | **The registry GENERATES the schema.** ONE uniform storage model (`artifact` + `artifact_field` + `artifact_ref` + body/section) plus **per-type generated VIEWS**. No typed tables, no hybrid, no second home. Materialize a view only on a measured need, with a parity gate. | inv 17 · inv 20 · V-C · V-F |
 | **L2-B** | **Natural keys parsed as typed component tuples** with a per-kind parser and canonical form; `path` is a UNIQUE derived column with a recompute gate; `id_alias` and `reserved_key` ledgers. | D-C · inv 20 · F11 |
 | **L2-C** | **Closed enums validated at write time**, with `illegal` refused on write, `migratable` accepted only on the import path, and `open_extension` names required to be declared in the project profile. `defaults.forbidden` fields are refused. | inv 20 · D-D · V-C |
@@ -575,6 +576,31 @@ times.
 ---
 
 # 2. L2 — SCHEMA
+
+
+### L1-0 · The engine property set (V-L)
+
+The real risk is defending *"Dolt"* because this repository is named `dolt-artifact-spike`. So the
+requirements are declared, and the engine is swappable against them.
+
+| # | required property | why it is load-bearing (all measured or invariant-pinned) |
+|---|---|---|
+| **P1** | **versioned, with a durable version identity** | invariants 15/18; `store_version` in every L7 response; `fa migrate verify` refuses on a moved pin |
+| **P2** | **branch + merge** | D-B (gitignored store, committed render); the PR/CI join; migration abandonable at any stage |
+| **P3** | **cell-level merge** | two agents editing DIFFERENT fields of one record must not conflict (D2/M3) |
+| **P4** | **SQL-queryable, including RECURSIVE CTEs** | gates are queries; and per V-L, **traversal is a query** — measured: reachability 1–13 ms, whole-graph closure 356 ms |
+| **P5** | **declarative referential integrity** | a dangling ref is REFUSED at write, not swept for — how 39 dangling refs and 27 `story.blocks` to never-written stories were found |
+| **P6** | **embeddable: no server, no external binary, offline** | 132 tests in ~12 s with no network and no `dolt` binary; V-K's offline-capable requirement |
+| **P7** | **transactional, one txn per unit of work** | invariant 18; measured **17×** (15.7 s → 0.9 s) |
+
+**P1, P4 and P6 are the veto properties** — they are what the invariants and V-K's harness constraint
+pin directly. Note P4 now includes recursive CTEs, which is a *new* requirement as of V-L: it was
+previously assumed that graph traversal needed a separate engine, and measurement showed otherwise.
+
+⚠ **Consequence for the graph:** the graph is a **projection**, not a second store. `artifact_ref`
+carries the edges, traversal is a recursive CTE, and the in-process CSR engine is retained only for the
+metrics SQL cannot express (articulation points; betweenness, which was tested and rejected). Do not
+introduce a second engine for the graph — see spine §5e for the measurements.
 
 ## 2.1 L2-A · The registry generates the schema
 

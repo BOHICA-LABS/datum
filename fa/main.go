@@ -40,7 +40,11 @@ usage: fa <command> [flags]
   refs --kind section|version-cite [--status X]  list prose refs / version cites (read-only)
   shadow <corpus>            STORY 7: generate each derived index ALONGSIDE the authored
                              one and report every disagreement. Never writes, never flips.
-  graph build|metrics|dot|diff   knowledge-graph projection + algorithms SQL cannot do
+  graph build|metrics|dot|diff   knowledge-graph projection + the metrics SQL cannot express
+                             (articulation points, betweenness). NOTE: traversal is NOT in
+                             that set -- reachability, shortest path, cycle detection and
+                             transitive closure all run as recursive CTEs, and degree is a
+                             GROUP BY. See TestGraphInSQL for the measured boundary.
   aggregate plan             staging-ref quarantine policy (phase 2 plumbing pending)
   version
 

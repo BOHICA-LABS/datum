@@ -142,7 +142,7 @@ derived ordinal section partition, gated byte-exact · **D-B** store gitignored,
 invariant 15 `import(render(store)) == store` · **D-C** per-type declared natural key, `path` derived
 and never identity, plus an `id_alias` ledger · **D-D** `verdict` retired into
 `gate_result`/`convergence`/`severity_max`, `status` narrowed to lifecycle). **Do not relitigate any
-of the eight.**
+of the eight — nor V-G..V-L, settled in §§5b–5e.**
 
 ## 1. What V-A actually buys — the reason this is smaller than it looks
 
@@ -297,6 +297,7 @@ are shared by all three projects; **80 of 103 canonical types are in use**; and 
 | **V-G** | **Review identity: backfill the four declared key fields at migration.** | `cycle` from the containing directory, `pass` from the filename (already on 402 of 435), `scope`/`target` from the filename pattern. Path is **one-time evidence during backfill**; thereafter identity is the tuple and the path is derived — which keeps D-C intact, because D-C forbids path as *identity*, not as a migration-time source. A residue that cannot be derived gets hand adjudication, counted and reported. Unblocks the convergence tables in L5–L6 and the projections in L3–L4, both of which called this a cutover blocker. |
 | **V-H** | **Spec Supremacy wins.** Specs outrank operational state. | STATE.md is a *position report* about progress against the contract, not a source of truth that outranks it. Cohort G therefore migrates as operational data that **can be rebuilt from the record**, which is precisely what makes crash-recovery-from-the-log possible. `CLAUDE.md`'s 12-level precedence table — where STATE.md outranks every spec — is **corrected in the factory change spec**, and `FACTORY.md:189` stands. |
 | **V-I** | **Model-family diversity is retired as a gate criterion for now — and explicitly KEPT as a capability to grow into.** | See below. Not deleted, not quietly dropped. |
+| **V-L** | ⭐ **SETTLED 2026-08-03: the store is a VERSIONED RELATIONAL engine holding a TRIPLE model; the graph is a PROJECTION served by recursive CTEs.** | Closes the one question the first 15 decisions left open — **no decision had ever named an engine.** L1 declares a swappable **property set P1–P7**; Dolt is retained because it satisfies all seven, not because the repo is named for it. Measured: GMS accepts recursive CTEs, so traversal is SQL (1–13 ms bounded, 356 ms whole-graph closure); the CSR engine narrows to articulation points. See §5e. |
 
 ### V-I in full, because a retired aspiration is the thing that gets forgotten
 
@@ -447,6 +448,107 @@ provider dependency, and model choice plus cost stay with the caller.**
    surface. A migration expressed as thousands of round trips only works if each is small, ordered,
    resumable and idempotent. **This is the biggest un-designed consequence of V-K and it belongs in
    L7.**
+
+## 5e. V-L — SETTLED: a VERSIONED RELATIONAL engine holding a TRIPLE model; the graph is a PROJECTION
+
+**Decision (2026-08-03).** This closes a question the first fifteen decisions left genuinely open:
+**none of D-A..D-D or V-A..V-K named a storage engine.** Dolt was this spike's *hypothesis* — the
+repository is named for testing it — and it had never been ratified. Asked directly ("should we commit
+to a graph database instead?"), the answer is measured rather than argued.
+
+### The question decomposes into two axes, and conflating them is the trap
+
+| axis | status | answer |
+|---|---|---|
+| **is the DATA MODEL graph or relational?** | **already decided, implicitly** | **graph.** `artifact_field(type, key_hash, field, ord, kind, v_text…)` **is subject–predicate–object**, and `artifact_ref` is edges. L2-A already specifies a **triple store, written in SQL.** So the live question was never graph-vs-relational; it was only *which engine stores the triples.* |
+| **is the STORE VERSIONED?** | **pinned by the invariants** | **yes, non-negotiably** — see below. This is the load-bearing axis. |
+
+**Versioning is not a preference; it is already several invariants.** Invariant 15
+(`import(render(store)) == store`) needs a version to compare *at*; invariant 18 versions and audits
+every write; **D-B** gitignores the store and commits the render; L7 puts `store_version` in every
+response envelope; `fa migrate verify` **refuses on a moved pin**; baselines and ratchets *are* diffs
+between versions; the PR/CI join is a branch join; and cell-level merge is what lets two agents editing
+different fields of one record merge cleanly. Remove versioning and every one of those moves into
+application code — which is precisely the *two homes for one fact* this spike exists to kill.
+
+### ⭐ Dolt IS the graph database for the TRAVERSAL workload — measured, not assumed
+
+`fa/graphsql_probe_test.go` (`TestGraphInSQL`). GMS — pure Go, **no `dolt` binary** — accepts
+**recursive CTEs**:
+
+| capability | result |
+|---|---|
+| `WITH RECURSIVE` | ✓ accepted |
+| reachability + shortest depth | ✓ correct (diamond resolved to depth 3 via both paths; no leak into a disconnected component) |
+| a cycle | ✓ **terminates** (`UNION` dedupes) |
+| cycle **detection** | ✓ exactly the 3 cyclic nodes |
+| descendants, real graph (1,547 edges) | depth 1 → **1 ms** · depth 3 → **2 ms** · depth 6 → **6 ms** · depth 12 → **13 ms** (fixpoint at 6) |
+| whole-graph transitive closure (depth ≤ 8) | 19,628 pairs in **356 ms** |
+
+⚠ **This CORRECTS an overclaim in `fa`'s own help text**, which said *"algorithms SQL cannot do."* That
+is true only for **articulation points** and **betweenness**. It is **false for traversal**: reachability,
+shortest path, cycle detection, topological order and transitive closure are all recursive CTEs, and
+**`degree` — the best measured predictor of adversary-flagged artifacts (AUC 0.871) — is a `GROUP BY`.**
+Help text fixed (`main.go`).
+
+**So the in-process CSR engine's live justification narrows to:** articulation points (50 found), plus
+the 250k-node scale case it was actually built for (96× less memory, ~100× faster than gonum). Its
+other headline metric, **betweenness, was tested and REJECTED** — it lost to free degree at 1/3000 the
+cost. Keep the engine (built, cheap, correct); do not let it justify a separate graph database.
+
+### Why a graph database loses, on this project's own measurements
+
+| | measured |
+|---|---|
+| graph size | 2,421 nodes / 4,060 edges — **average degree 3.35**, very sparse |
+| whole-graph metrics, in-process | **102 ms**, CSR at **0.1 MB** |
+| record mass, for comparison | **68,866** field rows (vsdd alone) — the graph is ~6% of the mass |
+| sophisticated graph algorithms | **tested and rejected** (betweenness < degree) |
+
+A graph DB would replace a 0.1 MB in-memory structure, and add a server, to accelerate the ~6% that is
+already measured in milliseconds — while giving up versioning, branch/merge, cell-level merge,
+FK-refusal-at-write, and SQL gates.
+
+**Dolt's real costs, stated honestly — and none is fixed by a graph DB:** push contention is
+per-branch and untunable (54 attempts with disjoint rows; **worse** in graph engines, which mostly have
+no branch model at all), **306.6×** journal write amplification on bulk load (answered by L7-M periodic
+GC), **152.9×** on full-type scans (a property of the *triple* model, which a graph DB shares), and no
+remote yet (phase-2 plumbing).
+
+**The one honest alternative is named rather than ignored: TerminusDB** — git-like versioning *and* a
+graph model. Declined for three measured reasons: SQL gates are load-bearing (*"a gate that is a query
+cannot disagree with the data it checks"*, proven at **67/67** Go-vs-Python parity); embedded pure-Go
+with **no server and no binary dependency** is load-bearing (132 tests, ~12 s, no network); and swapping
+engines would reset every baseline at the moment the design's last unmeasured assumption just closed.
+
+### ⭐ What v1 must do instead: defend a PROPERTY SET, not a product name
+
+The real risk is defending *"Dolt"* because the repo is named `dolt-artifact-spike`. So **L1 declares
+the requirements, and the engine is swappable against them:**
+
+| # | required property | why it is load-bearing |
+|---|---|---|
+| P1 | **versioned, with a durable version identity** | invariants 15/18; `store_version`; `migrate verify` refuses on a moved pin |
+| P2 | **branch + merge** | D-B; the PR/CI join; migration abandonable at any stage |
+| P3 | **cell-level merge** | two agents editing different fields of one record must not conflict (D2/M3) |
+| P4 | **SQL-queryable, incl. recursive CTEs** | gates are queries; traversal is a query (this decision) |
+| P5 | **declarative referential integrity** | a dangling ref is *refused at write*, not swept for — how 39 dangling refs and 27 `story.blocks` were found |
+| P6 | **embeddable: no server, no external binary, offline** | 132 tests in ~12 s, no network; V-K's offline-capable requirement |
+| P7 | **transactional, one txn per unit of work** | invariant 18; measured 17× (15.7 s → 0.9 s) |
+
+**Any engine satisfying P1–P7 is admissible.** Dolt satisfies all seven today and is retained on that
+basis, not on the repository's name. A candidate failing **P1, P4 or P6** is rejected without further
+measurement, because those three are what the invariants and the harness constraint pin directly.
+
+### Two caveats carried forward, both new
+
+1. **356 ms for whole-graph closure is not free**, and it was measured on 38% of the edges — the full
+   graph is plausibly ~1 s. Under **L7-D** that makes any projection performing whole-graph closure a
+   **chunked op**, not a single call. This is a real input to the unit budget and it was not previously
+   known.
+2. **Traversal interacts with the EAV model.** Traversal over `artifact_ref` is cheap and indexed, but
+   traversal that *filters on a field* pays the pivot cost (measured **2.9×** filtered, **21.7×**
+   aggregate). Measure before a projection leans on it.
 
 ## 6. The production-grade bar
 
