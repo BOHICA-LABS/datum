@@ -703,7 +703,13 @@ exactly the case that *should* conflict.
 | Cost | Mitigation | Status |
 |---|---|---|
 | A field's SQL type is not enforced by the database | `kind` column + write-time validation + a gate asserting every stored `kind` matches the catalog's declared kind | designed |
-| Wide-row reads become a pivot | generated views; field mass is order 10⁵ rows per corpus and the measured workload is small (2,421 nodes / 4,060 edges; 4-hop whole-corpus rollup **3 ms**; FULLTEXT over 1,959 bodies **0.15 s**) | **must be measured, not assumed** — see §9 |
+| Wide-row reads become a pivot | generated views. **MEASURED 2026-08-03:** record read by key **1.0×** (free — the dominant L3 shape) · filtered read **2.9×** · aggregate `GROUP BY` **21.7×** · full-type scan **152.9×**. Field mass is **order 10⁴ per corpus** (largest 68,866), *not* the 10⁵ this row originally claimed. | ✅ **MEASURED** (`FA-V1-PIVOT-MEASUREMENT.md`); trigger derived at 190,000 field rows, no type within 3.9× |
+
+⚠ **F4, from the adversarial review: the row above ORIGINALLY justified this choice with GRAPH and
+FULLTEXT numbers** (2,421 nodes / 4,060 edges; 4-hop rollup 3 ms; FULLTEXT over 1,959 bodies 0.15 s).
+Those are not the shape at risk. **L5's central mechanism is gates-as-queries**, which is the
+`GROUP BY` (21.7×) and filtered-read (2.9×) shape — so the conclusion was right, but by luck rather
+than by evidence. The gate-shaped latencies now stand in the row itself.
 | More rows per commit → faster history growth | ~6 KB/commit is the only measurement we have (over 40 commits) | **must be measured** |
 | A merge can synthesize an invalid artifact | mandatory post-merge revalidation, refuse not resolve (§1.4) | designed |
 
@@ -1130,7 +1136,7 @@ CREATE TABLE unmodeled_file (
 
 This is what makes M6's acceptance a **query** rather than a declaration: every file accounted for
 as migrated / declared-out-of-scope / rejected-with-reason, byte-exact round trip for 100% of
-bodies, count parity per type, the 18,826-finding baseline preserved across the move, and **zero
+bodies, count parity per type, **the conformance baseline preserved across the move — cited as the baseline ARTIFACT + its version, never as a literal count (F3; the total moved twice in one session), re-run `python3 registry/validate_registry.py`** — and **zero
 unmodeled `document_type` values** (VSDD-FACTORY-REVIEW.md:832–837).
 
 **The 108 singleton non-canonical values are deliberately NOT aliased.** "Aliasing 108 singletons
@@ -1285,10 +1291,17 @@ Stated once, plainly, so it is not discovered later.
    requires a human.
 4. **EAV loses database-level type enforcement.** Bought back by the `kind` column + write-time
    validation + a kind-parity gate.
-5. **Pivot performance is unmeasured.** The design ships with the measurement and a declared
-   materialization fallback. This is the one place where a wrong guess costs a rework.
-6. **History growth is unmeasured at field-per-row granularity.** More rows per commit than a wide
-   table. ~6 KB/commit over 40 commits is all we know.
+5. ✅ **Pivot performance — MEASURED, risk CLOSED 2026-08-03.** Record reads are free (1.0×);
+   whole-type scans cost 152.9×; the materialization trigger is derived at **190,000 field rows** and
+   no type in any corpus is within **3.9×** of it. See `FA-V1-PIVOT-MEASUREMENT.md`.
+6. ⚠ **History growth — MEASURED, AND THIS RISK WAS POINTED THE WRONG WAY.** It claimed "more rows per
+   commit than a wide table". Measured on the steady-state shape (one field changed on 100 artifacts):
+   **EAV 54.0 KB vs WIDE 640.7 KB — field-per-row is 12× CHEAPER**, because a field edit dirties one
+   small row instead of rewriting a wide row. At rest EAV is 2.37× larger, but **at-rest size is paid
+   ONCE while history growth is paid on every write, forever, in a store whose history never shrinks.**
+   (The wide figure of 6.4 KB per artifact edited independently reproduces this doc's own ~6 KB/commit
+   observation.) ⚠ Bulk load runs at **306.6× journal write amplification**, which is why L7-M requires
+   periodic GC during migration.
 7. **`version_alias` is a permanent-feeling migration table.** It retires with its baseline, but
    history resolves through it forever — the same shape as `id_alias`, and for the same reason.
 8. **119 generated views are 119 things to regenerate correctly.** Mitigated by generating them from
@@ -1354,10 +1367,21 @@ L1-A's "project = one lineage" argument needs re-derivation.
 is chosen* — naming a number now would be the "infer a consequence from a structural fact" error
 this repo has recorded five times.
 
-**Q9 — Pivot performance, and the materialization fallback.** The design's one genuinely unmeasured
-risk. *Authorize a measurement pass: generated-view pivot vs materialized table over 2,362 BCs and
-2,211 finding rows in embedded Dolt, including whether GMS supports the view definitions at all.*
-The fallback is specified; the trigger is not.
+**Q9 — Pivot performance, and the materialization fallback. ✅ ANSWERED 2026-08-03**
+(`FA-V1-PIVOT-MEASUREMENT.md`; repro `datum/pivot_probe_test.go`).
+GMS **does** support the generated view (tested first and separately, since a "no" would have
+invalidated L2-A outright), it is queryable, and a **parity gate passed before any timing was
+reported**. Latency: record read **1.0×** · filtered **2.9×** · aggregate **21.7×** · full scan
+**152.9×**; scan rate sub-linear across two points. **Trigger DERIVED: materialize above 190,000
+`artifact_field` rows** (≈1 s); largest type anywhere is 49,121 rows ≈ 260 ms, **3.9× headroom**, so
+nothing needs the fallback today.
+
+⚠ **F7 — this question was scoped to a population that CANNOT EXIST, and the error class is worth
+naming.** "2,362 BCs" is `1,959` (vsdd) `+ 269` (prism) `+ 134` (rivetry) — **summed across all three
+corpora**, when this document's own ratified decision is **one store per project**, so no store ever
+holds 2,362 BCs. The same mistake produced the "order 10⁵ field rows per corpus" claim (largest
+measures 68,866 = 10⁴). **Call it "summing corpora that never share a store"; it always errs toward
+overestimating scale.**
 
 **Q10 — Are `projects.yaml` and per-project write containment enough?** Multi-tenancy here is
 single-user, so no cross-project *confidentiality* is designed. *Confirm that assumption* — if a

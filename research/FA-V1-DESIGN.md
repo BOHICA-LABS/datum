@@ -2,13 +2,18 @@
 title: FA-V1-DESIGN — the production-grade v1 architecture spine
 date: 2026-08-02
 purpose: settle the layering, invariants and acceptance bar for datum v1, where datum is the SOLE HOME of every factory artifact
-status: SPINE — layer designs in progress; nothing implemented (design-only by direction)
-decisions_settled: 2026-08-02 (authoring surface · v1 scope · type system · write access)
+status: SPINE — all seven layers L1–L7 designed; PARTLY BUILT (the importer ingests all three corpora; still no write path, no render, no section table)
+decisions_settled: 16 — D-A..D-D (2026-07-31) + V-A..V-L (V-A..V-F 2026-08-02 · V-G..V-K 2026-08-02 · V-L 2026-08-03)
+last_reconciled: 2026-08-03 — stale claims corrected after the pivot measurement, the importer fixes and the adversarial review
 ---
 
 # `datum` v1 — the spine
 
-## 0. The four decisions taken 2026-08-02
+## 0. The first six decisions (2026-08-02)
+
+> ⚠ **There are now SIXTEEN settled decisions, not four.** This section holds V-A..V-F; V-G..V-I are
+> in §5b, V-J in §5c, V-K in §5d, **V-L in §5e**, and D-A..D-D were settled 2026-07-31. The heading
+> said "four" and was left behind by its own document — the drift class this project exists to kill.
 
 | # | Decision | Consequence |
 |---|---|---|
@@ -17,7 +22,11 @@ decisions_settled: 2026-08-02 (authoring surface · v1 scope · type system · w
 | **V-C** | **The canonical type set is designed, and the corpus migrates onto it.** | The registry's 103 canonical types + 180 aliases + 17 closed enums are the starting point, not the ceiling. Variant spellings are not ported; they resolve at migration and are then unrepresentable. |
 | **V-D** | **vsdd-factory is writable on a branch; local commits only, ask before push.** | Template→schema conversion, hook retirement and the 2 namespace renames can proceed as local commits on a branch. |
 | **V-E** | **This workstream builds `datum` only. The vsdd-factory changes are a separate workstream and are DOCUMENTED here, not made.** | Deliverable: `research/FA-V1-FACTORY-CHANGES.md` — a change spec precise enough to execute against without re-deriving it. |
-| **V-F** | **Every project using the factory migrates, not just vsdd-factory.** | Multi-tenancy is a v1 requirement, not a later feature. Measured today: vsdd-factory **6,951** conformance findings · prism **10,843** · rivetry **1,032** (18,826 total). prism is the largest and is edited by a concurrent session — **re-measure before trusting any prism count.** |
+| **V-F** | **Every project using the factory migrates, not just vsdd-factory.** | Multi-tenancy is a v1 requirement, not a later feature. ⚠ **The per-project conformance counts are DELIBERATELY NOT quoted here as live scalars.** They moved
+twice in a single session (18,826 → 18,831 → 18,936, entirely prism, whose concurrent session adds
+files), which is F3's volatile-scalar class. **Re-measure with `python3 registry/validate_registry.py`;**
+as of 2026-08-03 it reported vsdd-factory 6,951 · prism 10,953 · rivetry 1,032. prism is the largest and
+is concurrently edited — never trust a quoted prism count. |
 
 ### Ratified consequences of the L1–L2 design (2026-08-02)
 
@@ -37,10 +46,17 @@ Two of its calls change the spine and are adopted:
   rejected on this project's own evidence: 5 types carry 3,801 of ~3,900 artifacts while 62 of 119
   have 0–1 files, and **two homes for one field is precisely the defect this spike exists to kill.**
 
-⚠ **The one genuinely unmeasured risk in the whole design** is the pivot cost of the field-per-row
-model at corpus scale. Per this repo's standing rule it gets measured before it gets committed to —
-a materialization fallback is specified but has **no trigger**, and a design resting on an
-unmeasured assumption is exactly what "never report a number a test could contradict" forbids.
+✅ **CLOSED 2026-08-03 — this was "the one genuinely unmeasured risk in the whole design" and it is
+now measured** (`research/FA-V1-PIVOT-MEASUREMENT.md`, repro `datum/pivot_probe_test.go`).
+**The dominant op shape is FREE:** reading/writing one artifact by key costs **1.0×** (57 vs 58 µs),
+which is what every L3 semantic op — and therefore nearly every harness tool call — actually does.
+The penalty concentrates in whole-type scans: filtered read **2.9×**, aggregate `GROUP BY` **21.7×**,
+full-type scan **152.9×**. GMS was verified to support the generated view at all, and a parity gate
+(wide vs pivot byte-identical) passed before any timing was reported.
+**The missing trigger is DERIVED, not asserted:** materialize a type's view above **190,000
+`artifact_field` rows** (≈1 s scan, the per-tool-call budget V-K implies). The largest type in any
+corpus is `behavioral-contract` at **49,121** rows ≈ 260 ms, so **no type needs the fallback and the
+closest is 3.9× away.** Three of this document's own numbers were wrong and are corrected below.
 
 ### Ratified consequences of the L5–L6 design (2026-08-02)
 
@@ -241,7 +257,17 @@ before it moves burst logs.
 
 ### Ratified consequences of the migration design (2026-08-02)
 
-**⚠ INSTANCE NINE OF THE SILENT-INPUT-LOSS DEFECT IS ALREADY LIVE — IN `datum` ITSELF.** Verified
+✅ **FIXED 2026-08-03 — `datum import` now ingests ALL THREE corpora** (it ingested one). The
+case-insensitive matchers landed, every extracted id goes through `canonicalID`, and a per-type
+`MatchCensus` now PRINTS matched/skipped/per-case-form on every run so a zero can never again be
+silent; a type directory holding markdown but matching nothing is a finding. Duplicate keys got ONE
+behaviour — file a finding and KEEP BOTH via `key_collision` — and `prose_ref.raw`/`target` widened to
+1000 with truncate-and-report replacing abort. **Two further defects were found by fixing these:**
+INSTANCE TEN in the frontmatter parser (a comment stripper ate `#` inside quoted scalars, discarding
+**171,284 characters**) and a subsystem catalog that encoded vsdd-factory's LAYOUT, zeroing 269 of
+prism's BCs. The historical account below is retained as the record of what was wrong:
+
+**⚠ INSTANCE NINE OF THE SILENT-INPUT-LOSS DEFECT WAS LIVE — IN `datum` ITSELF.** Verified
 directly, not relayed: `reVPFile = ^(VP-\d+)` (`datum/corpus.go:138`) is **case-sensitive** and is used as
 the *filter* in `walkMD` (`:373`); prism names all **80** of its verification properties
 `vp-001-*.md`; non-matching files are skipped with no error. **prism's entire L4 layer imports as zero
@@ -250,7 +276,7 @@ ninth instance — it turns out #9 predates the migration and would have *been* 
 
 Two more importer defects, also verified: **prism cannot be imported at all** (hard abort on a
 `VARCHAR(220)` overflow in `prose_ref.target`), and **rivetry cannot** (duplicate `VP-001` from its 211
-`.DELTA-ARCHIVE` sidecars — 143 key collisions). So **`datum import` today ingests one of three corpora.**
+`.DELTA-ARCHIVE` sidecars — 143 key collisions). So **`datum import` ingested one of three corpora** (fixed 2026-08-03; it now ingests all three).
 And duplicate keys are handled **three incompatible ways**: `bc` files a finding, `story` silently keeps
 the first file, `vp` crashes. Three behaviours for one condition is its own defect.
 
@@ -283,7 +309,7 @@ are shared by all three projects; **80 of 103 canonical types are in use**; and 
 - **`datum migrate verify` refuses on a moved corpus pin** — you cannot verify a migration against a
   corpus that changed underneath it.
 - **Order:** Cohort A (schema prerequisites: bodies, sections, verbatim frontmatter, `datum render`,
-  scope predicates out of Go, **the three importer defects**) → rivetry `delta-archive` retirement →
+  scope predicates out of Go, ~~the three importer defects~~ **✅ done 2026-08-03**) → rivetry `delta-archive` retirement →
   **B record spine** (bc/story/vp/adr/epic — 59.4% of mass) → **C review family** (23.5%, and the whole
   convergence dependency) → **D ledgers** (58 files, 26,632 references) → **E tail** → **F derived**
   (continuous) → **G live operational state, last**.
@@ -596,5 +622,8 @@ budget tiers that never downgrade the five protected reviewers.
 
 ---
 
-*Layer designs (L1–L2 storage/schema · L3–L4 ops/projections · L5–L6 policy/engine · migration and
-cutover) follow as separate sections.*
+*Layer designs, ALL SEVEN now written: L1–L2 storage/schema · L3–L4 ops/projections · L5–L6
+policy/engine · **L7 interfaces + the phased delivery plan** (`FA-V1-L7-INTERFACES-DELIVERY.md`) ·
+migration and cutover. Plus `FA-V1-PIVOT-MEASUREMENT.md` (the measurement that closed the one
+unmeasured risk) and `FA-V1-ADVERSARIAL-REVIEW.md` (**8 findings against these designs — read it
+before building; F1 is systematic**).*

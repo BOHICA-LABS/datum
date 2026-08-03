@@ -259,12 +259,29 @@ my misreading.
 
 ## Priority
 
-| | finding | action |
-|---|---|---|
-| **1** | **F1** locations encoded in Go | add `sources:` to the registry **+ ship the zero-universe guard immediately** (it converts all four instances from silent to loud, cheaply) |
-| **2** | **F8** X1's denominator | require a **total whole-corpus partition** into types ∪ `unmodeled_file` |
-| **3** | **F2** hash gate re-coupling | version-compatibility gate, keep hash as drift detector |
-| **4** | **F3** volatile scalar in X4 | cite artifact + version, never the count |
-| 5 | **F5 · F7** | correct the text (risk #6's sign; the 10⁵ and 2,362 figures) |
-| 6 | **F4** | cite the gate-shaped latencies in L1–L2's cost table |
-| 7 | **F6** | already built this session; keep the *category* lesson |
+> ⭐ **APPLIED 2026-08-03.** The text corrections this table asks for (F5, F7, F4) **have now been made
+> in the layer docs**, along with the F3 de-scalaring of the two migration gates. Recording it here so
+> "correct the text" cannot sit forever as an unactioned finding — which is the failure mode this
+> review itself is about. What is applied vs still open is marked in the table.
+>
+> **Applied:** F5 (risk #6 corrected — it was inverted) · F7 (the 2,362-BC and 10⁵ figures corrected,
+> and the error class NAMED as *"summing corpora that never share a store"*) · F4 (L1–L2's cost table
+> now cites the **gate-shaped** latencies instead of graph/fulltext ones) · F3 (X4 and V4 now cite the
+> baseline **artifact + version**, never a literal count; the per-project table is date-stamped) · plus
+> the spine's stale state (4→16 decisions, "one unmeasured risk" → CLOSED, instance nine → FIXED,
+> "ingests one of three corpora" → all three, L7 added to the layer list).
+>
+> **STILL OPEN — these are code/design changes, not text:** **F1** (locations must become registry
+> data; ship the zero-universe guard first) and **F8** (X1 needs an independent denominator — a total
+> whole-corpus partition into types ∪ `unmodeled_file`). **F2** (version-compatibility gate instead of
+> hash equality) is also still open.
+
+| | finding | action | status |
+|---|---|---|---|
+| **1** | **F1** locations encoded in Go | add `sources:` to the registry **+ ship the zero-universe guard immediately** (it converts all four instances from silent to loud, cheaply) | ⛔ **OPEN** |
+| **2** | **F8** X1's denominator | require a **total whole-corpus partition** into types ∪ `unmodeled_file` | ⛔ **OPEN** |
+| **3** | **F2** hash gate re-coupling | version-compatibility gate, keep hash as drift detector | ⛔ **OPEN** |
+| **4** | **F3** volatile scalar in X4 | cite artifact + version, never the count | ✅ applied |
+| 5 | **F5 · F7** | correct the text (risk #6's sign; the 10⁵ and 2,362 figures) | ✅ applied |
+| 6 | **F4** | cite the gate-shaped latencies in L1–L2's cost table | ✅ applied |
+| 7 | **F6** | already built this session; keep the *category* lesson | ✅ built |
