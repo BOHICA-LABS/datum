@@ -1,5 +1,27 @@
 # HANDOFF — dolt-artifact-spike
 
+## ⛔⛔⛔ STANDING USER DIRECTIVE — PRODUCTION GRADE FROM DAY 1 (set 2026-08-03)
+
+> **"Remember we want to always default to production grade from day 1, spend the time to do it
+> right, don't defer unless I tell you to."** — the user, 2026-08-03
+
+**This outranks any instinct to descope.** It applies to every session, every task, in this repo.
+
+- **Do not defer.** No TODOs, no "filed as a follow-up", no "left for the migration" *unless the user
+  says so explicitly*. If the right fix is bigger than the ticket, build the right fix.
+- **Do not narrow a fix to its symptom.** The assigned task was "three importer defects"; doing it
+  properly meant also fixing instance TEN (a silent 171,284-character loss in `fa`'s own frontmatter
+  parser) and the subsystem-catalog gap that was zeroing 269 of prism's BCs. Both were found *because*
+  the work was taken to completion instead of to the ticket boundary.
+- **Every fix ships with its gate.** A fix without a test that would have caught it is not done. Prefer
+  a gate over the REAL corpora to a gate over a fixture — the values that matter (a 51,566-byte
+  ledger, an escaped quote at offset 18,287) are exactly the ones a hand-written fixture lacks.
+- **Widening a limit is not a fix.** `VARCHAR(220)`→`1000` buys headroom; TRUNCATE-AND-REPORT instead
+  of abort is the fix. A ledger in a scalar is not a too-small column.
+- ⚠ **Where the user has explicitly chosen a LARGER scope, that choice stands** — e.g. "also make the
+  importer split ledger fields into rows now" was chosen over my recommendation to file it. Build it.
+
+
 ## ⭐⭐⭐⭐⭐ SESSION SNAPSHOT — 2026-08-02 (wrap at `1d2024b`) — READ THIS FIRST
 
 **THE PROJECT CHANGED SHAPE THIS SESSION.** It is no longer "can Dolt back a tool that shadows the
