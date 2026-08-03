@@ -1,6 +1,214 @@
 # HANDOFF — dolt-artifact-spike
 
-## ⭐⭐⭐⭐⭐ SESSION SNAPSHOT — 2026-08-01 (wrap at `983df3d`) — READ THIS FIRST
+## ⭐⭐⭐⭐⭐ SESSION SNAPSHOT — 2026-08-02 (wrap at `1d2024b`) — READ THIS FIRST
+
+**THE PROJECT CHANGED SHAPE THIS SESSION.** It is no longer "can Dolt back a tool that shadows the
+factory's artifacts". The user set the goal: **`fa` becomes the SOLE HOME of every artifact for EVERY
+project using the vsdd-factory methodology — new projects start in `fa`, existing projects migrate in
+— and v1 must be production grade.** This session did the operational review and the v1 DESIGN.
+**No v1 implementation exists yet, by direction ("for now, we are just designing").**
+
+Repo: `~/Dev/scrap/dolt-artifact-spike`, **local-only git, NO remote**, clean at `1d2024b`.
+The 148 MB `fa/fa` binary is gitignored — rebuild it (kick-start below).
+
+| commit | what |
+|---|---|
+| `c66bbf6` | **story 12b follow-up — sampled the 214 dangling refs.** dangling 214→**30**, resolved 1408→**2035**, 81 refs that were never extracted at all now visible. 6 resolver defects, 2 new addressing schemes (now five, all test-pinned). |
+| `b20f8c4` `490d05f` `1e725d3` | **six-area operational review of vsdd-factory** → `research/VSDD-FACTORY-REVIEW.md` (1,181 lines) |
+| `f931ec8` | **TIER 0** — the migration/cutover tier the first feature list missed |
+| `14068c6` | **the v1 SPINE** — `research/FA-V1-DESIGN.md`: decisions V-A..V-F, invariants 15–23, 7 layers |
+| `157917e` | **L1–L2 storage/schema** (1,350 lines) + ratified its 3 corrections to the spine |
+| `bc4f6cd` | **L5–L6 policy/engine** (1,562 lines) + **six corrections to my own review's numbers** |
+| `76f41cb` | **L3–L4 ops/projections** (1,696 lines) — invalidated part of my production-grade bar |
+| `726e419` | **migration + factory change spec** (724 + 639) — and **instance NINE is live in `fa`** |
+| `1d2024b` | **validation against an independent prism register** + round-2 decisions V-G/V-H/V-I |
+
+### ⛔⛔ THE ONE THING TO FIX FIRST — instance NINE of silent input loss, live in OUR code
+
+`reVPFile = regexp.MustCompile("^(VP-\\d+)")` at **`fa/corpus.go:138`** is **case-sensitive** and is
+used as the **filter** in `walkMD` at `:373`. prism names all **80** of its verification properties
+`vp-001-*.md`. Non-matching files are skipped **with no error**, so **prism's entire L4 layer imports
+as zero rows and nothing reports it.** Verified directly, not relayed.
+
+Two more, also verified: **prism cannot be imported at all** (hard abort, `VARCHAR(220)` overflow on
+`prose_ref.target`, `fa/schema.go:277`) and **rivetry cannot** (duplicate `VP-001` from its 211
+`.DELTA-ARCHIVE` sidecars, 143 key collisions). **`fa import` today ingests ONE of THREE corpora.**
+And duplicate keys are handled **three incompatible ways** — `bc` files a finding, `story` silently
+keeps the first file, `vp` crashes.
+
+### The nine settled decisions — DO NOT RELITIGATE (four more join D-A..D-D)
+
+| | |
+|---|---|
+| **V-A** | `fa` is the SOURCE OF TRUTH; markdown is a **rendered view** |
+| **V-B** | v1 scope is the **whole operational substrate** — store, gates, engine, scheduler, PR/CI join, cost, attestation |
+| **V-C** | the canonical type set is **designed**; the corpus migrates onto it; variant spellings become unrepresentable |
+| **V-D** | vsdd-factory writable **on a branch, local commits only, ASK before push** |
+| **V-E** | this workstream builds **`fa` only**; factory changes are DOCUMENTED (`research/FA-V1-FACTORY-CHANGES.md`), not made |
+| **V-F** | **every project migrates** — vsdd 6,951 findings / prism 10,843 / rivetry 1,032. Multi-tenancy is a v1 requirement |
+| **V-G** | **review identity: backfill the 4 declared key fields at migration.** Path is one-time EVIDENCE during backfill, never identity after (keeps D-C) |
+| **V-H** | **Spec Supremacy WINS.** STATE.md is a position report. Cohort G migrates as rebuildable operational data. `CLAUDE.md`'s precedence table gets corrected |
+| **V-I** | **model-family diversity RETIRED as a gate for now, explicitly KEPT as a capability to grow into.** See the spine §5b — it is written out in full on purpose |
+
+Plus **9 new invariants (15–23)** on top of SPEC.md's 1–14, three of which were sharpened by the L1–L2
+design and are ratified in place: **21** covers artifact data only (a lease is not artifact data, so
+revocation is TTL-or-human-authorized and **writes no artifact**); **16** binds **per shape** ("16 at
+capture, 15 at cutover"); **17** permits **declared derived caches** but forbids an authored field
+duplicating a derivable one.
+
+### The reframe that makes the maximal scope tractable
+
+Under V-A + V-C most of the ~40 review defects are **not fixed — they become UNREPRESENTABLE.** 7
+`document_type` spellings, 23 verdict tokens in a 2-value field, six BC totals, 37 phantom index rows,
+~14 finding ID families, the SHA-transcription class, epic-ids-in-capability-fields: all impossible
+once enums close at write time, counts are projections, and **no op accepts a path, an id, or a
+count.** That is story 7's argument generalized: **eliminate rather than detect.** The honest residue
+`fa` CANNOT make impossible is semantic correctness — measured at **26.3% of class C**.
+
+### ⭐ Validated against an INDEPENDENT register (`research/FA-V1-VALIDATION-PRISM-SESSION.md`)
+
+Tested the design against `~/Dev/scrap/prism-session-findings-2026-08-02.md` (21 real findings, a
+different project): **11 PREVENTED · 5 DETECTED mechanically · 1 mitigated · 3 out of scope · 1 not a
+defect.** Best result: the **PROCESS-GAP** (third dual-commit breach, with a story + an open arch
+question queued to build a *better detector*) **disappears** — the single-commit protocol exists only
+because a SHA must be transcribed into content, and invariant 23 removes the requirement. Three
+entries (S-2/S-3/E-4) are one failure in three costumes — *a check reported green without running* —
+closed by one rule: **unevaluable = block, no fail-open**, + a vacuity guard, + a static binary with no
+external dep to be missing. **Nothing in that register tests the engine, so L6 is unvalidated.**
+
+### Verified state — every number re-runnable from the kick-start
+
+| | |
+|---|---|
+| `fa` | **124 tests** (+9 benchmarks), ~7 s, no network, no `dolt` binary. Schema v4. |
+| `validate_registry.py` | exit **0** · **18,826** findings (vsdd 6,951 · prism 10,843 · rivetry 1,032) |
+| `fa validate` / `--registry` / `shadow` | **776** / **7,487** / **658** — all unchanged by the prose-ref work |
+| `fa refs --kind section` | resolved **2035** · dangling **30** · unresolvable **1550** · total 3,615 |
+| migration reality | vsdd 3,085 files/28.0 MB/71 raw types/21.3% can't round-trip · prism 2,784/47.6 MB/**150 types**/**67.8%** · rivetry 668/19.4 MB/51/**68.0%** |
+| coverage gaps | **18 of 70** observed `document_type` values have a table · **1,338 files (20.5%) carry no type at all** · 940 typed files in 75 types with no table · 80 of 103 canonical types in use |
+| bodies | only `bc`/`vp`/`story` carry one; **no `section` table**; max body **1.57 MB** (not the 211 KB SPEC.md says) |
+
+### ▶▶▶ TOP PRIORITY NEXT — the user chose ALL THREE. Nothing is in flight.
+
+**Session task list: 3 of 5 ✓ completed** (dangling-ref sampling · the factory review · the v1 design).
+Two carried over and are now REFRAMED by the design, do not do them standalone:
+- ~~"move the scope predicate into the registry"~~ → it is **Cohort A** of the migration, and L3–L4 adds
+  that it must be a **FIELD predicate, not a path prefix** (a prefix would promote path-as-identity).
+- ~~"STORY 6 — ledgers to rows"~~ → it is **Cohort D** (58 files, 26,632 refs).
+
+1. **MEASURE the field-per-row pivot cost, then fix the three importer defects.** The pivot is the
+   design's **one unmeasured assumption** (materialization fallback specified, **no trigger**) — and a
+   design resting on an unmeasured number is what "never report a number a test could contradict"
+   forbids. Then fix `corpus.go:138` case-sensitivity, the `VARCHAR(220)` overflow, and the three
+   incompatible duplicate-key behaviours. All are Cohort A, all in `fa`, none in the factory.
+2. **Design L7 (interfaces: CLI/MCP/CI) + the phased delivery plan with per-phase exit criteria.**
+3. **Adversarially review the four layer designs with FRESH EYES** — ~6,200 lines written partly in
+   parallel, so the seams are worth attacking. Do this in a fresh session on purpose; reviewing them
+   with the authoring context still loaded is the anchoring the factory's own fresh-context rule exists
+   to prevent.
+
+**Also queued, smaller:** add "surface unpushed/dirty worktrees" to `fa fsck`'s scope (F20) — the prism
+register's E-1/E-2 are real git-level data-loss risks `fa` can *report* without pretending to own.
+
+### ⚠ FOUR OPEN ITEMS THE LAYER DESIGNS SURFACED — they live only in those docs, so they are repeated here
+
+1. **`fa render` is blocked on SCHEMAS, not on an engine.** **All 22 derived types declare ZERO
+   sections**, and the three highest-churn indexes (BC-INDEX **218** commits, VP-INDEX 140,
+   cycle-index 140) have no template either. No renderer can be written against a type that does not
+   say what it looks like. **Authoring those 22 render schemas is discrete, assignable, and on the
+   critical path** — invariant 15 cannot be gated without them. *Who authors them is an open question.*
+2. **The 41 legacy stories in `stories/v1.0-legacy/` have NO frontmatter**, so there is nothing to
+   derive a scope FIELD from — and L3–L4 ruled that the scope predicate must be a **field** predicate,
+   not a path prefix (a prefix would promote path-as-identity, which D-C forbids). These 41 are the
+   same set whose deliberate omission from STORY-INDEX produced the scope-predicate result in the first
+   place. **Unresolved: they need either backfilled frontmatter or an explicit declared exemption.**
+3. **`parallel-foreach` is a SEVENTH step type** (8 uses) that my own brief and every doc's
+   "six step types" list omits — and **its iteration set is undocumented, which blocks byte-exact
+   round-trip** of any workflow containing it.
+4. **Greenfield cannot reach COMPLETE today.** **140 `depends_on` edges point at conditional steps —
+   26% of the graph** — and `session-review:1379` depends on `post-feature-validation:1364`, which is
+   **off by default**, so the post-pipeline tail is unreachable. The fix is L5–L6's three-valued
+   condition model where **UNKNOWN blocks rather than skips**, with `step_dep.on_skip` non-nullable.
+
+### Design doc sizes, for orientation before opening one
+
+`FA-V1-DESIGN.md` **≈390** (the spine — read this first, it is the shortest and everything keys off it) ·
+`FA-V1-L1-L2-STORAGE-SCHEMA.md` 1,350 · `FA-V1-L3-L4-OPS-PROJECTIONS.md` 1,696 ·
+`FA-V1-L5-L6-POLICY-ENGINE.md` 1,562 · `FA-V1-MIGRATION.md` 724 ·
+`FA-V1-FACTORY-CHANGES.md` 639 · `VSDD-FACTORY-REVIEW.md` 1,181 · `FA-V1-VALIDATION-PRISM-SESSION.md` ≈200.
+**Each layer doc ends with its own OPEN QUESTIONS section** — L1–L2 has 12, L5–L6 has 13, L3–L4 has 15.
+The blocking ones are already lifted into this handoff; the rest stay in place.
+
+### ⛔ BLOCKED ON THE USER
+
+- **The 2 namespace renames** (`story-spec`→`story`, `state`→`pipeline-state`) are now a **hard
+  PRECONDITION of schema generation**, not the cleanup item they were filed as. `validate_registry.py`
+  prints `EXIT CRITERION NOT MET: 2` until they land. They are one-line edits in vsdd-factory, which
+  V-E makes a separate workstream.
+- **Opening the ADR** and registering the policy · **answering #671**.
+- From the migration design: does prism **rename its 80 `vp-*.md` files**, or does the matcher become
+  case-insensitive (my read: fix the matcher — it is `fa`'s defect, not prism's naming)? Are prism's 7
+  `FOLLOWUP` story-id collisions versions or new ids? Is rivetry's `delta-archive` safe to **delete**
+  after backfill?
+- From the prism register's own queue: **FINDING-A** (6 PROPOSED ADRs cited as authoritative) and
+  **FINDING-G** (CLAUDE.md documents detector arms that do not exist) both need human mandates.
+
+### Read, in this order, for the next session
+
+`research/FA-V1-DESIGN.md` (**the spine — 9 decisions, 23 invariants, 7 layers; everything keys off
+it**) → `research/FA-V1-VALIDATION-PRISM-SESSION.md` (what the design does and does not prevent) →
+then the layer you are working on: `FA-V1-L1-L2-STORAGE-SCHEMA.md` · `FA-V1-L3-L4-OPS-PROJECTIONS.md` ·
+`FA-V1-L5-L6-POLICY-ENGINE.md` · `FA-V1-MIGRATION.md` · `FA-V1-FACTORY-CHANGES.md`.
+`research/VSDD-FACTORY-REVIEW.md` is the problem statement + its own corrections block.
+
+### Kick-start
+
+```sh
+cd ~/Dev/scrap/dolt-artifact-spike/fa
+CGO_ENABLED=1 go build -tags gms_pure_go -o fa .      # BOTH flags mandatory
+CGO_ENABLED=1 go test -tags gms_pure_go ./...          # 121 tests, ~7 s
+cd .. && python3 registry/validate_registry.py         # exit 0 · 18,826
+./fa/fa init --db /tmp/fadb && ./fa/fa import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
+./fa/fa validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 7,487
+./fa/fa shadow   --db /tmp/fadb ~/Dev/vsdd-factory/.factory              # 658
+./fa/fa refs     --db /tmp/fadb --kind section --status dangling         # 30
+# these two FAIL TODAY — that is finding #1, not your setup being wrong:
+./fa/fa import --db /tmp/fap ~/Dev/prism/.factory      # aborts: VARCHAR(220) overflow
+./fa/fa import --db /tmp/far ~/Dev/rivetry/.factory    # aborts: duplicate VP-001
+```
+
+⚠ **Corpora were READ-ONLY all session and verified so at wrap:** 0 md/yaml modified in vsdd-factory,
+0 in prism, and rivetry's 1 (`sidecar-learning.md`) is dated **2026-07-27**, six days before this
+session. prism advanced 5 commits / 75 md files past the registry pin mid-session but its 10,843 total
+and its type census are **byte-identical** — re-measure anyway before trusting a prism number.
+
+### Nothing was left running
+
+All 10 sub-agents (6 review + 4 design) completed and their outputs are committed as the `research/`
+documents above. No background commands, no WIP, no uncommitted work.
+
+### Operating principles — every one earned by a real error here
+
+- **Measure, don't assume. NEVER infer a consequence from a structural fact.**
+- **MEASURE THE ALTERNATIVES TO A LEVER BEFORE PULLING IT** — it has deleted planned work three times
+  now (free `degree` beat betweenness; rows-vs-prose split story 12; and the registry already
+  collapsing 14 adversary spellings meant V-C was not a taxonomy exercise).
+- **CHECK YOUR FIX'S PREDICTION, don't tune.** Failed again this session: predicted ~70 resolutions,
+  got 17. Reading ONE case rather than tuning is what found the real cause — second session running.
+- **A parser that silently loses input is the most repeated defect class here — now NINE instances,
+  the ninth in `fa`'s own importer.** Print per-form counts; report malformed; never drop.
+- **A hand-maintained vocabulary drifts from another one** — five instances. Read vocabulary FROM the
+  registry.
+- **Rule ORDER is a correctness property** (emptiness-before-counting asserted the *opposite* of the
+  truth on 18 rows) — so the L3 validation ladder's order is TESTED.
+- **A green check that never ran is not evidence.** Three separate prism findings; one rule closes them.
+- **Never report a number a test could contradict.** Chase every "off by a little".
+- **Parity, not inspection.** **Counting files is not counting artifacts.**
+- **Corpora are READ-ONLY. Never push without confirmation. No AI attribution in commits.**
+
+---
+
+## SESSION SNAPSHOT — 2026-08-01 (wrap at `983df3d`)
 
 **STORY 7 (shadow stage), STORY 4 (findings as rows) and STORY 12 (split into 12a + 12b) ALL
 SHIPPED, plus the three registry pattern defects they depended on.** Nothing in flight, no WIP.
