@@ -290,6 +290,38 @@ are shared by all three projects; **80 of 103 canonical types are in use**; and 
 - **Project order: rivetry (pilot) → vsdd-factory → prism.** rivetry is smallest; prism is both
   concurrently edited and un-importable, so it goes last.
 
+## 5b. Decisions taken 2026-08-02 (second round)
+
+| # | Decision | Consequence |
+|---|---|---|
+| **V-G** | **Review identity: backfill the four declared key fields at migration.** | `cycle` from the containing directory, `pass` from the filename (already on 402 of 435), `scope`/`target` from the filename pattern. Path is **one-time evidence during backfill**; thereafter identity is the tuple and the path is derived — which keeps D-C intact, because D-C forbids path as *identity*, not as a migration-time source. A residue that cannot be derived gets hand adjudication, counted and reported. Unblocks the convergence tables in L5–L6 and the projections in L3–L4, both of which called this a cutover blocker. |
+| **V-H** | **Spec Supremacy wins.** Specs outrank operational state. | STATE.md is a *position report* about progress against the contract, not a source of truth that outranks it. Cohort G therefore migrates as operational data that **can be rebuilt from the record**, which is precisely what makes crash-recovery-from-the-log possible. `CLAUDE.md`'s 12-level precedence table — where STATE.md outranks every spec — is **corrected in the factory change spec**, and `FACTORY.md:189` stands. |
+| **V-I** | **Model-family diversity is retired as a gate criterion for now — and explicitly KEPT as a capability to grow into.** | See below. Not deleted, not quietly dropped. |
+
+### V-I in full, because a retired aspiration is the thing that gets forgotten
+
+**Now:** the Phase-4 criterion "different model family (GPT-5.4, not Claude)" is retired as a *gate*.
+It is unverifiable today — 44 agent files pin `opus`/`sonnet`, the 23 `model_tier:` keys have no
+resolver, and the `openclaw.json` they route through does not exist — and under "unevaluable = block"
+it would make Phase 4 unpassable on cutover day. What remains enforced is the part that genuinely is:
+**fresh context, information asymmetry (now a `DENIED-ASYMMETRY` return code rather than a prompt),
+and perspective-diverse prompting.**
+
+**Intended:** route the six diversity-mandated roles — adversary, holdout-evaluator, code-reviewer,
+pr-reviewer, spec-reviewer, session-reviewer — to genuinely different model families, with `fa`
+**attesting the model that actually ran**. This is a deliberate growth target, not a discarded idea.
+
+**Why it must not be silently dropped:** the adversarial method's whole claim to catching what the
+builder cannot rests on independence. Fresh context gives *forgetting*; a different model family gives
+*different priors*. Retiring the gate removes an unverifiable assertion; it does not make the
+underlying property unnecessary, and the honest accounting is that **the adversarial review is
+currently weaker than FACTORY.md claims.** Recorded so the gap stays visible.
+
+**What v1 must build now so this is a config change later, not a redesign:** `fa` records the model
+and provider that executed every agent-attributable operation (F18/F22 attestation), and the gate
+registry keeps the criterion present with `manual: true` and a named owner so it appears in every
+gate report as an open gap rather than disappearing from the schema.
+
 ## 6. The production-grade bar
 
 "Production grade" is a measurable claim, so it gets acceptance criteria rather than adjectives:
