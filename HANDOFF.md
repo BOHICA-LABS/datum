@@ -28,8 +28,10 @@
 methodology. **v1 is DESIGNED (now L1–L7, all seven layers) and PARTLY BUILT.** This session moved the
 code for the first time in three sessions.
 
-**Repo:** `~/Dev/datum` · **local-only git, NO REMOTE** · clean at `b3d1bdc` ·
-8 commits this session. The 148 MB `datum/datum` binary is gitignored — rebuild it (kick-start below).
+**Repo:** `~/Dev/datum` — **RENAMED and MOVED 2026-08-03** from `~/Dev/scrap/dolt-artifact-spike`,
+and the binary `fa` was renamed to `datum` (see the RENAME block below). **NOW HAS A REMOTE:**
+`https://github.com/BOHICA-LABS/datum`, **PUBLIC**, `main` tracking `origin/main`. Clean and synced.
+The ~150 MB `datum/datum` binary is gitignored — rebuild it (kick-start below).
 
 **ONE-LINE RESUME:** read this block, then `research/FA-V1-DESIGN.md` (the spine — now **16** settled
 decisions), then the task list below.
@@ -46,6 +48,70 @@ decisions), then the task list below.
 | `71a651f` | **adversarial review** of the four layer designs — 8 findings CONFIRMED, 3 WITHDRAWN |
 | `02b4e00` | **RAN the storyboard process against `datum`** — 6 NEW gaps nothing else surfaced |
 | `b3d1bdc` | ⭐ **V-L SETTLED** — the engine question the first 15 decisions left open |
+
+### ⭐ RENAMED, MOVED, AND PUBLISHED — 2026-08-03
+
+| | |
+|---|---|
+| name | `dolt-artifact-spike` → **`datum`** |
+| location | `~/Dev/scrap/dolt-artifact-spike` → **`~/Dev/datum`** (out of the scrap workspace) |
+| binary | **`fa` → `datum`** (module `fa` → `datum`, dir `fa/` → `datum/`) |
+| remote | **NEW: `https://github.com/BOHICA-LABS/datum`, PUBLIC**, `main` ↔ `origin/main` |
+
+**Why the name had to change, and it is not cosmetic:** V-L settled that the engine is defended by a
+**property set (P1–P7)**, not a product name — written precisely so we are not defending "Dolt"
+because the repo is called `dolt-artifact-spike`. Keeping a `dolt-` prefix re-creates the exact bias
+V-L exists to remove. And it stopped being a *spike* three sessions ago.
+
+**Why `datum`:** in GD&T a datum is the authoritative reference surface from which every measurement
+is taken — which is **V-A** exactly. Runner-up was `invar` (the alloy that does not drift), rejected
+only because `drift-lab` already exists in `~/Dev`.
+
+**The rename was done the way the lexical-variant defect class demands**, because a naive
+`s/fa/datum/g` would have destroyed `factory`, `false`, `default`, `fail`, `fatal`, `interface`,
+`satisfies`, `fabric`: enumerate + count the forms first (1,498 bare `fa`, 415 backticked, 52 distinct
+`FA_*`, 42 `./fa/fa`, 205 `fa/` paths, module, `.fa-db`, workflow names, `fa@local`) → 26 **anchored**
+most-specific-first rules with **per-form counts** (1,260 / 87 files, then 197 / 42, then 157 for
+paths) → **damage scan** for mid-word corruption signatures (**zero** hits; all `fa`-containing words
+verified intact at their original counts) → **residual scan** reading all **59** remaining distinct
+contexts to confirm each was the product.
+
+⭐ **PROOF THE RENAME IS INERT — every measured number is identical afterwards:** 134 tests PASS /
+0 fail · vsdd `bc=1959 findings=121` · prism `bc=269 findings=355` · rivetry `bc=134 findings=123` ·
+validate **7,502** · shadow **658**. That invariance is the evidence, not the absence of complaints.
+
+⚠ **SCOPE DECISION, stated not silent:** `poc/` keeps its historical `FA_GH_*`/`FA_ST_*`/`FA_CI_*`/
+`FA_GT_*`/`FA_DC_*`/`FA_OPT_*` harness variables. It is a standalone throwaway measurement harness
+that does not invoke the binary; renaming 30 files of scratch would be churn with risk and no product
+benefit. The **product** env vars did rename to `DATUM_*`.
+
+⚠ **A DEFECT I INTRODUCED AND ONLY GITHUB CAUGHT.** `git mv fa datum` moved the built binary from
+`fa/fa` to `datum/fa`, which matched **neither** the old ignore (`fa/fa`) nor the new one
+(`datum/datum`) — so `git add -A` committed a **144.8 MB binary**, and **GitHub's 100 MB limit is what
+found it, not any check of mine.** I had verified tests and every corpus number and never looked at
+*what I was committing*. Fixed (removed from the amended commit; `.gitignore` now ignores the binary
+by **shape** rather than by one exact name). **Lesson: after a rename, check the DIFF, not just the
+tests.**
+
+### ⛔ VSDD IS NOT TURNED ON — the user will activate it separately
+
+I began scaffolding it (orphan `factory-artifacts` branch + `.factory` worktree, mirroring how
+vsdd-factory and rivetry do it) and the user stopped it. **Everything was torn down: no
+`factory-artifacts` branch, no `.factory`, single `main`, clean and synced. Do not scaffold it.**
+
+Two facts learned while looking, worth keeping because they are load-bearing:
+- ⭐ **`.factory/` is a git WORKTREE mounted on an orphan `factory-artifacts` branch** — verified
+  identically in vsdd-factory (`0aaba144`, which is exactly the registry pin our docs cite) and
+  rivetry (`2aea395`), with `.factory/` gitignored on the source branch. **So artifacts already live
+  on their own branch, separate from source — which is what makes D-B's gitignored-store /
+  committed-render split coherent**, and it is the branch multiple devs would contend on.
+- vsdd-factory's `STATE.md` already carries `document_type: pipeline-state` (one of the two namespace
+  renames listed as blocked on the user) **and** a `last_amended` in the `[Prior: … ]` ledger-in-a-
+  scalar form our new `ledger_entry` table exists for.
+
+When VSDD is activated, note it makes `datum` **both the tool and a tenant** — its own `.factory`
+artifacts would eventually migrate into `datum` itself — and it would be the **fourth corpus and the
+first one we own**, which is what unlocks the write-path testing the three READ-ONLY corpora cannot.
 
 ### ⭐ V-L — the engine is now settled, and defended by a PROPERTY SET not a product name
 
@@ -375,10 +441,13 @@ OPERATING PRINCIPLES — every one earned by a real error here:
     failing is that same defect (I shipped one this session and had to fix it).
   - Never report a number a test could contradict.
   - Corpora are READ-ONLY. `git status` MISSES gitignored/untracked-dir changes — check counts
-    and mtimes. No AI attribution in commits. This repo has NO remote.
+    and mtimes. No AI attribution in commits. The repo now HAS a public remote (origin/main) —
+    pushes still need confirmation.
 
-STATE: clean at b3d1bdc, local-only git, NO remote. 8 commits last session. Nothing in flight,
-no WIP, nothing running.
+STATE: clean and SYNCED WITH origin/main. The project was RENAMED dolt-artifact-spike -> datum and
+MOVED to ~/Dev/datum, the binary fa -> datum, and it now has a PUBLIC remote at
+github.com/BOHICA-LABS/datum. Nothing in flight, no WIP, nothing running.
+⚠ VSDD IS NOT TURNED ON YET — the user will activate it separately. Do not scaffold .factory.
 ```
 
 ### Kick-start (shell only)
