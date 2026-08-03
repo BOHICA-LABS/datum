@@ -79,12 +79,39 @@ what L3–L4's `fa propose field` (exit 4) already is · and **the conservation 
 looser**, because a non-deterministic classifier makes silent loss easier and instance nine already
 proves the exposure.
 
-**Changes L7 (not yet designed):** the primary consumer is an AI agent, so error messages are
-*instructions to an agent*, output is stable and structured, exit codes are control flow, **MCP is a
-first-class surface not an afterthought**, and the ~800 generated op names become an asset rather than a
-usability problem. **Open: does the AI run inside `fa` or outside it? Recommend OUTSIDE** — keeps `fa`
-deterministic, testable and offline-capable, keeps model choice and cost with the caller, and matches the
-attestation plumbing V-I already needs. Not decided.
+| **V-K** | ⭐ **SETTLED: the AI runs OUTSIDE. `fa` is a TOOL for an LLM harness (Claude Code, Codex, …), via CLI or MCP.** Spine §5d |
+
+### ⭐ V-K — `fa` is a tool, never an agent
+
+**No LLM client, no API keys, no model config, no provider network calls in `fa`.** The control flow is
+**inverted** from what "AI-assisted ingest" suggests: `fa` never calls an AI for help — **`fa` emits
+work, the agent interprets, `fa` records the answer**, and replays it thereafter. That preserves
+deterministic / testable / offline-capable / no-provider-dependency, and keeps model choice and cost with
+the caller.
+
+- **Two co-equal surfaces, one op set:** CLI + MCP over the same registry-generated ops. MCP is
+  first-class, not a later wrapper. The ~800 op names are an ASSET here — an agent holds a vocabulary
+  that would drown a human.
+- **Harness-portable:** must work under Codex as well as Claude Code ⇒ **no harness-specific assumptions
+  anywhere.** MCP is the rich surface, CLI the universal fallback.
+- **The harness supplies identity** — role token (F16), session/trace id, model identity for V-I. The
+  earlier access-control work already proved an unforgeable role can ONLY come from the harness injecting
+  it (a `PreToolUse`-style hook), because `fa` cannot distinguish agents sharing a process and a uid.
+  V-K makes that the declared mechanism.
+
+**⚠ TWO CONSEQUENCES NOT YET IN ANY LAYER DESIGN — both belong in L7:**
+
+1. **`fa` cannot VERIFY a model claim, only record what the caller ASSERTS.** Attestation rows must be
+   typed **caller-asserted, never verified**, and queries must distinguish them. This matters because
+   V-I's original defect was *an unverifiable claim treated as a gate* — recording an assertion honestly
+   is progress; recording it as proof repeats the bug somewhere new.
+2. **Tool-call ergonomics are now a hard constraint, and this is the load-bearing one.** A harness tool
+   call **cannot block for a 6,537-file migration**, so **no op may be long-running**: work must be
+   **chunked, resumable, progress-reporting and batchable**, with `fa` emitting the NEXT unit rather than
+   doing the whole job. Plus **harnesses RETRY tool calls, so every op needs an idempotence key**
+   (F2/M-series already specify this). A migration expressed as thousands of round trips only works if
+   each one is small, ordered, resumable and idempotent. **This reshapes the entire migration surface and
+   is the biggest un-designed consequence of V-K.**
 
 Plus **9 new invariants (15–23)** on top of SPEC.md's 1–14, three of which were sharpened by the L1–L2
 design and are ratified in place: **21** covers artifact data only (a lease is not artifact data, so

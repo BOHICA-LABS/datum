@@ -398,11 +398,55 @@ is already this); an **MCP surface as a first-class interface, not an afterthoug
 generated op names become an asset rather than a usability problem, because an agent can hold a
 vocabulary that would drown a human.
 
-**Open question this raises:** where does the AI run — inside `fa` (an LLM client in the binary), or
-outside it (`fa` emits work, the agent interprets, `fa` records the answer)? **Outside is the
-recommendation**, because it keeps `fa` deterministic, testable and offline-capable, keeps model choice
-and cost in the caller's hands, and matches the attestation plumbing V-I already requires. Not yet
-decided.
+## 5d. V-K — SETTLED: the AI runs OUTSIDE. `fa` is a TOOL for an LLM harness, via CLI or MCP.
+
+**Decision (2026-08-02), closing V-J's open question:** `fa` contains **no LLM client, no API keys, no
+model configuration and no provider network calls.** It is a **tool designed to be used BY an LLM
+harness** — Claude Code, Codex, or any other — exposed as a **CLI and an MCP server**. `fa` is not an
+agent and never becomes one.
+
+### The control flow is INVERTED from what "AI-assisted ingest" suggests
+
+`fa` never calls an AI for help. **`fa` emits work; the agent interprets; `fa` records the answer.**
+
+```
+   harness/agent  ──calls──▶  fa           "what still needs classifying?"
+   fa             ──emits──▶  work unit    the file, its content, its candidates
+   agent          ──reads──▶  interprets   (this is the part fa cannot do)
+   agent          ──calls──▶  fa           records the classification + evidence
+   fa             ──validates, versions, audits, and REPLAYS thereafter
+```
+
+That keeps every property the design depends on: **deterministic, fully testable, offline-capable, no
+provider dependency, and model choice plus cost stay with the caller.**
+
+### Consequences already covered by the design
+
+- **Two co-equal surfaces, one op set.** CLI and MCP both expose the same registry-generated ops — MCP
+  is a first-class surface, not a wrapper bolted on later. The ~800 generated op names are an asset
+  here, because an agent can hold a vocabulary that would drown a human.
+- **Harness-portable.** It must work under Codex as well as Claude Code, so **no harness-specific
+  assumptions** anywhere. MCP is the rich surface; the CLI is the universal fallback.
+- **The harness supplies identity.** The role token (F16), session/trace id, and the model identity V-I
+  wants. The earlier access-control work already established that an unforgeable role can only come
+  from the harness injecting it — a `PreToolUse`-style hook — because `fa` cannot distinguish agents
+  that share a process and a uid. V-K makes that the declared mechanism rather than a hypothetical.
+
+### ⚠ Two consequences NOT yet in any layer design
+
+1. **`fa` cannot VERIFY a model claim — only record what the caller asserts.** So an attestation row
+   must be typed as **caller-asserted**, never as verified, and queries must be able to tell the two
+   apart. This matters precisely because V-I's original defect was an *unverifiable claim treated as a
+   gate*. Recording an assertion honestly is progress; recording it as proof would repeat the bug in a
+   new place.
+2. **Tool-call ergonomics become a hard design constraint, and this one is load-bearing.** A harness
+   tool call cannot block for a 6,537-file migration. Therefore **no op may be long-running**: work must
+   be **chunked, resumable, progress-reporting and batchable**, with `fa` emitting the *next* unit
+   rather than doing the whole job. Combined with retry-safety — **harnesses retry tool calls, so every
+   op needs an idempotence key** (F2/M-series already specify this) — this shapes the entire migration
+   surface. A migration expressed as thousands of round trips only works if each is small, ordered,
+   resumable and idempotent. **This is the biggest un-designed consequence of V-K and it belongs in
+   L7.**
 
 ## 6. The production-grade bar
 
