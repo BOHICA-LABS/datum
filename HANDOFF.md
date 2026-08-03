@@ -228,7 +228,116 @@ then the layer you are working on: `FA-V1-L1-L2-STORAGE-SCHEMA.md` · `FA-V1-L3-
 `FA-V1-L5-L6-POLICY-ENGINE.md` · `FA-V1-MIGRATION.md` · `FA-V1-FACTORY-CHANGES.md`.
 `research/VSDD-FACTORY-REVIEW.md` is the problem statement + its own corrections block.
 
-### Kick-start
+### ⭐ THE RESUME PROMPT — paste this whole block into a fresh session
+
+```text
+READ FIRST — ~/Dev/scrap/dolt-artifact-spike/HANDOFF.md, the TOP BLOCK. It is a complete,
+self-sufficient zero-context resume: all 14 commits, the 15 settled decisions, the 23 invariants,
+every re-runnable number, what is blocked on me, and the corrections I made to my own claims.
+Read it before anything else.
+
+Then, as the work requires:
+  research/FA-V1-DESIGN.md      THE SPINE — 15 settled decisions (V-A..V-K + D-A..D-D), 23
+                                invariants, 7 layers. Shortest doc; everything keys off it.
+                                Read this second, always.
+  research/FA-V1-VALIDATION-PRISM-SESSION.md  what the design does and does NOT prevent, tested
+                                against an independent register (11 of 21 prevented)
+  research/FA-V1-L1-L2-STORAGE-SCHEMA.md   one store per project; the registry GENERATES the schema
+  research/FA-V1-L3-L4-OPS-PROJECTIONS.md  ops generated from the registry; render; invariant 15
+  research/FA-V1-L5-L6-POLICY-ENGINE.md    gates as queries; convergence computed, not claimed
+  research/FA-V1-MIGRATION.md              the per-(project,type) cohort ladder
+  research/FA-V1-FACTORY-CHANGES.md        a SEPARATE workstream — documented, NOT to be done here
+  research/VSDD-FACTORY-REVIEW.md          the problem statement + its own corrections block
+Each layer doc ends with its own OPEN QUESTIONS (12 / 15 / 13). The blocking ones are already
+lifted into the HANDOFF top block.
+
+WHAT THIS PROJECT IS NOW: `fa` becomes the SOLE HOME of every artifact for EVERY project using the
+vsdd-factory methodology — new projects start in fa, vsdd-factory + prism + rivetry migrate in —
+production grade for v1. v1 is DESIGNED, NOT BUILT (~6,300 lines of design). The code is still
+phase-1 read-only shadow: no write path, no `fa render`, no section table.
+
+REBUILD AND RE-VERIFY (the 148 MB binary is gitignored):
+  cd fa && CGO_ENABLED=1 go build -tags gms_pure_go -o fa .    # BOTH flags mandatory
+  CGO_ENABLED=1 go test -tags gms_pure_go ./...                # 124 tests, ~7s
+  cd .. && python3 registry/validate_registry.py               # exit 0 · 18,826
+  ./fa/fa init --db /tmp/fadb && ./fa/fa import --db /tmp/fadb ~/Dev/vsdd-factory/.factory
+  ./fa/fa validate --db /tmp/fadb --registry ~/Dev/vsdd-factory/.factory   # 7,487
+  ./fa/fa shadow   --db /tmp/fadb ~/Dev/vsdd-factory/.factory              # 658
+  ./fa/fa refs     --db /tmp/fadb --kind section --status dangling         # 30
+  # these two FAIL — that is task 1 below, NOT your setup being wrong:
+  ./fa/fa import --db /tmp/fap ~/Dev/prism/.factory     # aborts: VARCHAR(220) overflow
+  ./fa/fa import --db /tmp/far ~/Dev/rivetry/.factory   # aborts: duplicate VP-001
+
+REFERENCE CORPORA — LOCAL and READ-ONLY. DO NOT WRITE to any of them, not even a branch.
+  ~/Dev/vsdd-factory/.factory  3,085 files · 71 raw types · pin 0aaba144
+  ~/Dev/prism/.factory         2,784 files · 150 raw types · CONCURRENTLY EDITED, re-measure it
+  ~/Dev/rivetry/.factory       668 files · 51 raw types
+Verified at wrap: 0 md/yaml modified in vsdd-factory, 0 in prism; rivetry's 1 predates by 6 days.
+
+TASK — all three, in this order:
+ 1. MEASURE the field-per-row pivot cost at corpus scale, THEN fix the three verified importer
+    defects. The pivot is the design's ONE unmeasured assumption (materialization fallback
+    specified, no trigger), and a design resting on an unmeasured number violates this repo's own
+    rule. Then: (a) fa/corpus.go:138 `reVPFile` is CASE-SENSITIVE and is the walkMD FILTER, so
+    prism's 80 `vp-001-*.md` import as ZERO ROWS with no error — INSTANCE NINE of this repo's
+    most-repeated defect class, in our own importer; (b) the VARCHAR(220) overflow on
+    prose_ref.target; (c) duplicate keys handled THREE incompatible ways (bc files a finding,
+    story silently keeps the first, vp crashes). All Cohort A, all in fa, none in the factory.
+ 2. DESIGN L7 (interfaces) + the phased delivery plan with per-phase exit criteria. L7 has hard
+    new inputs from V-J/V-K: the consumer is an LLM HARNESS (Claude Code, Codex) via CLI or MCP;
+    fa is NEVER an agent; NO op may be long-running (a harness call cannot block for a 6,537-file
+    migration ⇒ chunked, resumable, progress-reporting, batchable, fa emits the NEXT unit); every
+    op needs an IDEMPOTENCE KEY because harnesses retry; and fa CANNOT VERIFY a model claim, only
+    record what the caller ASSERTS (type it caller-asserted, never verified).
+ 3. ADVERSARIALLY REVIEW the four layer designs with FRESH EYES — ~6,300 lines written partly in
+    parallel, so the seams are worth attacking. Doing this in a fresh session is deliberate.
+
+DO NOT DO THESE STANDALONE — the design reframed both:
+  "move the scope predicate into the registry" is Cohort A, and it must be a FIELD predicate, not
+  a path prefix (a prefix would promote path-as-identity, which D-C forbids).
+  "STORY 6 — ledgers to rows" is Cohort D (58 files, 26,632 references).
+
+BLOCKED ON THE USER — ASK, do not assume: the 2 namespace renames (story-spec->story,
+state->pipeline-state) are now a HARD PRECONDITION of schema generation, not cleanup · opening the
+ADR · answering #671 · does prism rename its 80 vp-*.md files, or does the matcher become
+case-insensitive (my read: fix the matcher — it is fa's defect, not prism's naming) · are prism's 7
+FOLLOWUP story-id collisions versions or new ids · is rivetry's delta-archive safe to DELETE after
+backfill.
+
+DO NOT RELITIGATE the 15 settled decisions — D-A..D-D (prose = verbatim body bytes + a derived
+ordinal section partition, gated byte-exact · gitignored store + committed render + invariant 15 ·
+declared natural keys with path DERIVED and never identity, plus an id_alias ledger · verdict
+retired into gate_result/convergence/severity_max) and V-A..V-K (fa is the source, markdown a
+rendered view · v1 scope is the whole operational substrate · the canonical type set is designed
+and migrated onto · vsdd-factory writable on a branch, local commits only, ASK before push · this
+workstream builds fa ONLY, factory changes are DOCUMENTED not made · EVERY project migrates ·
+review identity by backfilling the 4 declared key fields · Spec Supremacy beats STATE.md ·
+model-diversity retired as a gate but KEPT as a capability to grow into · fa is run WITH an AI and
+the AI is the PARSER for messy input — ingest tolerant, write strict, interpretation captured as
+DATA never applied as a side effect · the AI runs OUTSIDE: fa is a TOOL for an LLM harness).
+
+OPERATING PRINCIPLES — every one earned by a real error here:
+  - Measure, don't assume. NEVER infer a consequence from a structural fact.
+  - MEASURE THE ALTERNATIVES TO A LEVER BEFORE PULLING IT — it has deleted planned work 3 times.
+  - CHECK YOUR FIX'S PREDICTION, don't tune. Failed again last session (predicted ~70, got 17);
+    reading ONE case rather than tuning found the real cause, two sessions running.
+  - A parser that silently loses input is the most repeated defect class here — NINE instances, the
+    ninth in fa's own importer. Print per-form counts; report malformed; never drop.
+  - A hand-maintained vocabulary drifts from another one — 5 instances. Read vocabulary FROM the
+    registry.
+  - RULE ORDER is a correctness property (emptiness-before-counting asserted the OPPOSITE of the
+    truth on 18 rows).
+  - A green check that never ran is not evidence. Three separate prism findings; one rule closes all.
+  - NEVER report a number a test could contradict — including in the handoff. I wrote "121 tests"
+    from arithmetic last session; it was 124.
+  - Parity, not inspection. Counting files is not counting artifacts.
+  - Corpora are READ-ONLY. Never push without confirmation. No AI attribution in commits.
+
+STATE: clean at 653dd2b, local-only git, NO remote. 14 commits last session. Nothing in flight, no
+WIP, nothing running. All 10 sub-agents completed; their outputs are the research/ docs above.
+```
+
+### Kick-start (shell only)
 
 ```sh
 cd ~/Dev/scrap/dolt-artifact-spike/fa
