@@ -155,37 +155,87 @@ L7 design · adversarial review · storyboard run) **+ V-L settled on request.**
      not defaulted — a default that looks like a real identity is worse than absence
      (`unevaluable = block`).
 
-   WARNING - THE HARDER HALF, AND IT IS UNSETTLED ANYWHERE: **under D-B the store is GITIGNORED and
-   the render is COMMITTED, so two devs NEVER SHARE A STORE — they share markdown through git.** That
-   means store-side leases (invariant 21) protect nothing *across* devs today, and multi-instance
-   convergence happens by git merge on the render, not in the store. **The decision that determines
-   everything else: does each dev keep a PRIVATE store converging only through the committed render,
-   or does a project's store become SHARED — which re-opens SCALE.md's per-branch push contention,
-   measured at 54 attempts with disjoint rows and made WORSE by backoff tuning?**
+   ⛔⛔ **CORRECTION (2026-08-03, after the user challenged this and I re-read the IMPLEMENTATION).
+   MY FIRST WRITE-UP OF THIS TASK WAS WRONG ON THREE OF FOUR CLAIMS. The multi-dev coordination model
+   is DESIGNED, MEASURED and largely SETTLED — it is NOT unmodelled, and `factory-lock` is not being
+   reimplemented in `fa`, it is being made UNNECESSARY.** What follows replaces the wrong version.
 
-   **This is not new scope — `fa` already promised it.** vsdd-factory has `factory-lock` /
-   `factory-unlock`: a cross-session lock on the factory-artifacts orphan branch, CAS-protected push,
-   and a `--force` break-glass with a mandatory audit event. The six-area review flagged that
-   machinery's defects (*lock inside the protected file, CAS-push-as-force, fetch-before-check that
-   reads a local file*) as things **`fa` replaces with store-side leases.** So `fa` has committed to
-   owning multi-dev coordination and has never modelled it.
+   **HOW IT ACTUALLY WORKS — D3 staging refs + CI as the singleton aggregator**
+   (`research/SCALE.md`, `research/CI-AGGREGATOR.md`, `poc/workflows/fa-aggregate.yml`,
+   `fa/quarantine.go`):
 
-   **Sub-tasks:** (a) settle private-vs-shared store; (b) the three-axis identity triple on every
-   write, failing closed; (c) coordination primitives — lease TTL/ownership/revocation, task+story
-   claims, and what replaces CAS/break-glass; (d) pipeline-state per dev or per project (V-H helps:
-   STATE.md is a position report, not truth); (e) **TEST IT** — two identities, overlapping AND
-   disjoint writes, a crashed lease holder, a retry storm, a stale-render merge; extend SCALE.md's
-   10/20-clone and 200-agent harnesses; (f) impacts — invariant 18 attribution, whether a HUMAN has a
-   role in the perimeter model or only agents do, and whether **one-store-per-project survives contact
-   with multiple devs.**
+   ```
+   each writer  ──▶ dolt push refs/dolt/stage/<id>    a ref IT ALONE OWNS, outbound HTTPS only
+                ──▶ fire repository_dispatch
+   CI (singleton by construction):
+     1 clone the artifact ref   2 enumerate refs/dolt/stage/*   3 merge each, deterministic order
+     4 `fa validate`  ← ADMISSION CONTROL, before the artifact branch ever sees it
+     5 ONE push to the artifact ref   6 delete consumed refs VIA THE API, only after the push landed
+   ```
+
+   - ✅ **Devs DO share the store** — through per-writer refs plus one aggregator. The committed
+     render is a REVIEW SURFACE, not the sharing mechanism. *(My claim that "two devs never share a
+     store, they share markdown through git" was simply wrong.)*
+   - ✅ **Contention is ELIMINATED, not arbitrated.** SCALE.md rates D3 **"N (parallel,
+     contention-free) → 1 push"**. The merge slot is supplied by the platform:
+     `concurrency: {group: fa-aggregate, cancel-in-progress: false}`, which the workflow's own comment
+     says replaces *"the entire O1-B lock-ref mechanism and every lock-ref cost: **no TTL, no
+     break-glass, no unique-sha discipline**."* **That is why `factory-lock`/`unlock` go away — not
+     replaced by store-side leases, made UNNECESSARY.** No lease is needed at the branch level.
+   - ✅ **MEASURED, not just designed:** CI-AGGREGATOR **4/4 standard + 5/5 stressed at 20 writers,
+     ~30 s median**, against real GitHub Actions; REMOTE.md **21/21** against a real github.com remote.
+     `fa/quarantine.go` implements the stuck-ref policy today (pure, clock-free, tested): bounded
+     re-attempts, then MOVE to `refs/dolt/quarantine/*` — **never delete, a quarantined ref still
+     holds a writer's work.**
+   - ⚠ **My "54 attempts with disjoint rows" citation was MISLEADING.** That figure is from the
+     REJECTED one-branch free-for-all options; it is what MOTIVATED staging refs, not a cost of the
+     chosen design.
+   - The workflow already handles the failure modes I would have listed as gaps: a conflict isolates
+     ONE writer while the others drain; an unrelated lineage is caught by *"no common ancestor"* and
+     flagged loudly rather than merged; refs are deleted only AFTER the push lands so a crash leaves
+     everything re-consumable; deletion goes through the refs API with the result **ASSERTED** (a
+     swallowed `| tail -1` once produced an infinite re-dispatch livelock with five green runs); and
+     re-dispatch fires **only on measurable progress**.
+
+   **WHAT IS GENUINELY OPEN — and it is IDENTITY, which is worse than I first said:**
+   - `fa` sets `fa <fa@local>` by default; the real data commit recorded **`committer="root"
+     email="root@%"`**. The aggregator sets `user.name=fa-aggregate` / `user.email=fa-aggregate@ci`.
+   - ⚠⚠ **The ONLY place a writer's identity exists is the staging ref NAME
+     `refs/dolt/stage/<id>` — and step 6 DELETES that ref after consuming it.** So unless identity is
+     written into the ROW DATA or set correctly on the writer's OWN commits, it is destroyed by
+     design. **Invariant 18's "attributable" bar is false by MECHANISM, not by omission.**
+   - ⚠ **NOT VERIFIED, and it decides the fix:** do merged writer commits retain their own authorship
+     through the aggregator's DAG? Git/Dolt merge semantics say they should, but there is no remote
+     here to test it against. **Test this first** — if authorship survives, the fix is at the writer
+     (set the identity correctly); if not, it needs a row-level `written_by`.
+   - **The three-axis identity model still stands** (human / agent role / session), and
+     `refs/dolt/stage/<id>` is exactly where the human+session axes would come from. What generates
+     `<id>` today is unknown — the workflow only globs `refs/dolt/stage/*`.
+
+   **PHASE GAP, real:** `fa aggregate` is **"phase 2 plumbing pending"**;
+   `poc/workflows/fa-aggregate.yml` is explicitly a **throwaway prototype** shelling out to the `dolt`
+   CLI ("the real implementation is `fa aggregate`, a subcommand of the Go binary");
+   `fa/workflows/fa-validate.yml` is phase-1 and states **"NO REMOTE, NO PUSH, NO DAEMON"**. So the
+   MODEL is proven and the `fa`-NATIVE implementation is not written. **This repo has no remote.**
+
+   **Sub-tasks, corrected:** (a) **test whether authorship survives aggregation** — it decides
+   everything below; (b) the three-axis identity triple on every write, `caller-asserted`, failing
+   CLOSED, and decide where `<id>` comes from; (c) get identity into the ROW DATA if the DAG does not
+   carry it; (d) task/story CLAIMS — the one coordination primitive the aggregator model does NOT
+   address (it serialises MERGES, not who is allowed to work on what); (e) pipeline-state per dev or
+   per project (V-H helps: STATE.md is a position report, not truth); (f) build `fa aggregate` as the
+   Go-native subcommand, retiring the prototype workflow.
 
 **TWO DECISIONS TO SETTLE BEFORE BUILDING (do not assume):**
 - Derive each agent's read/write needs from **its agent file** (what it says it does) or from **what
   the corpus shows it actually did**? Those will disagree — **and the disagreement is itself a
   finding.**
 - Does a persona needing **zero writes** stay a persona, or become a pure reader?
-- ⭐ **Private store per dev, or one shared store per project?** This gates the whole multi-dev model
-  (task 5) and nothing in D-A..D-D or V-A..V-L answers it.
+- ⭐ ~~Private store per dev, or one shared store per project?~~ **ANSWERED by the implementation, not
+  open:** per-writer clones publishing to per-writer staging refs, aggregated by CI into one artifact
+  ref. The real open question is narrower — **does writer authorship survive the aggregator's merge
+  DAG?** Untested, and it decides whether identity is fixed at the writer or needs a row-level
+  `written_by`.
 - ⭐ **Does a HUMAN hold a role in the perimeter model, or only agents?** L3's authorization is
   role-based; if humans have roles, the 34-agent roster is not the whole cast.
 
@@ -281,13 +331,17 @@ THE TASK — personas re-based on the FACTORY AGENTS, then their queries and the
     invariant 18's "attributable" bar is currently FALSE. Should it read git identity? Yes, but as
     ONE OF THREE AXES — human (git, forgeable, PROVENANCE ONLY) / agent role (the harness's role
     token, which is what AUTHORIZATION uses) / session id — recorded as a triple on every write,
-    typed caller-asserted, failing CLOSED with no silent fallback. THE HARDER HALF, unsettled
-    anywhere: under D-B the store is GITIGNORED and the render COMMITTED, so two devs never share a
-    store, they share markdown through git, and store-side leases protect nothing across devs.
-    Settle private-vs-shared store FIRST; it gates everything else and re-opens SCALE.md's per-branch
-    push contention. Not new scope: fa already promised to replace factory-lock's CAS/break-glass
-    with store-side leases. Then TEST it (two identities, overlapping+disjoint writes, crashed lease
-    holder, retry storm, stale-render merge).
+    typed caller-asserted, failing CLOSED with no silent fallback. ⛔ READ THE CORRECTION BLOCK IN
+    TASK 5 FIRST: my first write-up was WRONG on three of four claims. The coordination model is
+    DESIGNED AND MEASURED — D3 per-writer staging refs + CI as a singleton aggregator, contention
+    ELIMINATED not arbitrated, and factory-lock goes away because GitHub's `concurrency:` group IS
+    the merge slot (no TTL, no break-glass). 4/4 + 5/5 at 20 writers, ~30 s median; REMOTE 21/21.
+    WHAT IS ACTUALLY OPEN: identity. The ONLY record of a writer is the staging ref NAME, and the
+    aggregator DELETES it after consuming. So test FIRST whether writer authorship survives the
+    merge DAG — that decides whether the fix is at the writer or needs a row-level written_by. Also
+    open: task/story CLAIMS (the aggregator serialises MERGES, not who may work on what), and
+    building `fa aggregate` as a Go-native subcommand (today it is a throwaway prototype workflow
+    shelling out to the dolt CLI; fa is "phase 2 plumbing pending" and this repo has NO remote).
 
 TWO DECISIONS TO SETTLE WITH ME FIRST, do not assume: (a) derive each agent's needs from its
 AGENT FILE or from WHAT THE CORPUS SHOWS IT DID — they will disagree, and the disagreement is
