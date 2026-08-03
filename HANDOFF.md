@@ -385,97 +385,134 @@ zero porcelain output. Check file counts and mtimes, not just `git status`.
 
 ### ⭐ THE RESUME PROMPT — paste this whole block into a fresh session
 
+*(Rewritten wholesale 2026-08-03. The previous version had become a patchwork: it said "8 commits",
+still claimed "NO remote", and its task 5 told you to read a correction block inside task 5.)*
+
 ```text
-READ FIRST — ~/Dev/datum/HANDOFF.md. Read (a) the STANDING DIRECTIVE at the
-very top, then (b) the CURRENT SNAPSHOT — 2026-08-03 block. Together they are a complete,
-self-sufficient zero-context resume: the 8 commits, the 16 settled decisions, every re-runnable
-number, what is outstanding, and what is blocked on me. Ignore the 2026-08-02 block's resume
-prompt — it is marked stale and its tasks are done.
+READ FIRST — ~/Dev/datum/HANDOFF.md: (a) the STANDING DIRECTIVE at the very top, then (b) the
+CURRENT SNAPSHOT — 2026-08-03 block. Together they are a complete zero-context resume. The
+2026-08-02 block below them is SUPERSEDED and its resume prompt is marked stale — ignore it.
 
-STANDING DIRECTIVE, which outranks any instinct to descope: production grade from day 1. Spend
-the time to do it right. DO NOT DEFER unless I tell you to. Do not narrow a fix to its symptom.
-Every fix ships with its gate, preferably over the REAL corpora rather than a fixture.
+PROJECT: `datum` at ~/Dev/datum. PUBLIC remote github.com/BOHICA-LABS/datum, main tracking
+origin/main, clean and synced at 5f98f07 (87 commits total, 14 last session).
+⚠ It was RENAMED from dolt-artifact-spike and MOVED out of ~/Dev/scrap on 2026-08-03, and the
+binary `fa` was renamed to `datum`. The rename was REQUIRED by V-L, not cosmetic: the engine is
+defended by a property set P1-P7, not by the name "Dolt", so a dolt- prefix re-created the exact
+bias V-L exists to remove. Because it left ~/Dev/scrap, the resume-project/wrap-project skills and
+the scrap auto-memory no longer apply — THIS FILE is the durable state and it travels with the repo.
+⛔ VSDD IS NOT TURNED ON. The user activates it separately. Do not scaffold .factory.
 
-WHAT THIS PROJECT IS: `datum` becomes the SOLE HOME of every artifact for EVERY project using the
+STANDING DIRECTIVE, which outranks any instinct to descope: production grade from day 1. Spend the
+time to do it right. DO NOT DEFER unless I tell you to. Do not narrow a fix to its symptom. Every
+fix ships with its gate, preferably over the REAL corpora rather than a fixture.
+
+WHAT THIS IS: `datum` becomes the SOLE HOME of every artifact for EVERY project using the
 vsdd-factory methodology. v1 is DESIGNED across all seven layers L1-L7 and PARTLY BUILT — the
-importer now ingests all three corpora, but there is still NO write path, NO `datum render`, and NO
-section table.
+importer now ingests all THREE corpora, but there is still NO write path, NO `datum render`, and no
+section table. 134 tests PASS / 0 FAIL, schema v5.
 
 THE TASK — personas re-based on the FACTORY AGENTS, then their queries and their CRUD:
  1. RE-BASE the storyboard personas on the 34 real vsdd-factory agents at
-    ~/Dev/vsdd-factory/plugins/vsdd-factory/agents/*.md. The existing cast (SYS-CC/SYS-ALT/
-    SYS-CI/HUM-OP) is the TRANSPORT axis, not the ROLE axis — transport is a dimension, the
-    AGENT is the identity. This matters because L3 already says "a role is a set of permitted
-    operations", so the persona roster and the role->operation manifest are THE SAME ARTIFACT,
-    and X7 needs that manifest before any type can dual-write. Collapse 34 -> ~8-12 personas
-    using the runbook's OWN Stage 1 Step 2 distinct-behavioural-cluster test (merge on identical
-    decision authority + goals; split only on two materially different authorization sets),
-    otherwise the coverage cube becomes 34 x 42 hand-built cells.
- 2. Per persona: what QUESTIONS does it ask of the store? Concrete queries, not shapes. Then
-    VERIFY the store can answer each one AND TEST IT.
+    ~/Dev/vsdd-factory/plugins/vsdd-factory/agents/*.md. The existing cast (SYS-CC/SYS-ALT/SYS-CI/
+    HUM-OP) is the TRANSPORT axis, not the ROLE axis — transport is a dimension, the AGENT is the
+    identity. This matters because L3 already says "a role is a set of permitted operations", so the
+    persona roster and the role->operation manifest are THE SAME ARTIFACT, and X7 needs that manifest
+    before any type can dual-write. Collapse 34 -> ~8-12 using the runbook's OWN Stage 1 Step 2
+    distinct-behavioural-cluster test (merge on identical decision authority + goals; split only on
+    two materially different authorization sets), else the coverage cube becomes 34 x 42 hand cells.
+ 2. Per persona: what QUESTIONS does it ask of the store? Concrete queries, not shapes. Then VERIFY
+    the store can answer each one AND TEST IT.
  3. Per persona: what CRUD ops does it need? Expect a very uneven distribution over the ~800
-    generated ops — that distribution IS the least-privilege argument. Output: the
-    role->operation manifest.
- 4. FINISH the storyboard stages that were mapped but not executed. Honest state: only ONE
-    journey exists, Stages 6/6.5/7/8 were mapped not run, and the cube says 0 of 42 workflows
+    generated ops — that distribution IS the least-privilege argument. Output: the role->operation
+    manifest.
+ 4. FINISH the storyboard stages that were mapped but NOT run. Honest state: only ONE journey exists
+    (journey-sys-cc), Stages 6/6.5/7/8 were mapped only, and the coverage cube says 0 of 42 workflows
     are evidenced — so by the runbook's own rule every workflow currently fails its evidence gate.
- 5. MODEL AND TEST MULTI-DEV / MULTI-INSTANCE. datum does NOT read git identity today, and attribution
-    is effectively UNSET (a probe showed committer="root" email="root@%" on the real data commit), so
-    invariant 18's "attributable" bar is currently FALSE. Should it read git identity? Yes, but as
-    ONE OF THREE AXES — human (git, forgeable, PROVENANCE ONLY) / agent role (the harness's role
-    token, which is what AUTHORIZATION uses) / session id — recorded as a triple on every write,
-    typed caller-asserted, failing CLOSED with no silent fallback. ⛔ READ THE CORRECTION BLOCK IN
-    TASK 5 FIRST: my first write-up was WRONG on three of four claims. The coordination model is
-    DESIGNED AND MEASURED — D3 per-writer staging refs + CI as a singleton aggregator, contention
-    ELIMINATED not arbitrated, and factory-lock goes away because GitHub's `concurrency:` group IS
-    the merge slot (no TTL, no break-glass). 4/4 + 5/5 at 20 writers, ~30 s median; REMOTE 21/21.
-    WHAT IS ACTUALLY OPEN: identity. The ONLY record of a writer is the staging ref NAME, and the
-    aggregator DELETES it after consuming. So test FIRST whether writer authorship survives the
-    merge DAG — that decides whether the fix is at the writer or needs a row-level written_by. Also
-    open: task/story CLAIMS (the aggregator serialises MERGES, not who may work on what), and
-    building `datum aggregate` as a Go-native subcommand (today it is a throwaway prototype workflow
-    shelling out to the dolt CLI; datum is "phase 2 plumbing pending" and this repo has NO remote).
 
-TWO DECISIONS TO SETTLE WITH ME FIRST, do not assume: (a) derive each agent's needs from its
-AGENT FILE or from WHAT THE CORPUS SHOWS IT DID — they will disagree, and the disagreement is
-itself a finding; (b) does a persona needing ZERO writes stay a persona or become a pure reader?
+ 5. MULTI-DEV / MULTI-INSTANCE — but ⛔ START BY READING THE EXISTING HARNESSES, NOT BY DESIGNING.
+    I was wrong about this area THREE TIMES, always the same way: reasoning from the design docs
+    instead of looking at what exists. What is already there:
+      - the coordination model is DESIGNED AND MEASURED: D3 per-writer staging refs
+        (refs/dolt/stage/<id>, a ref each writer alone owns) + CI as a SINGLETON aggregator
+        (enumerate, merge in deterministic order, `datum validate` as ADMISSION CONTROL, ONE push,
+        delete consumed refs via the API only after the push lands). Contention is ELIMINATED not
+        arbitrated, and factory-lock/unlock go away because GitHub's `concurrency:` group IS the
+        merge slot — no TTL, no break-glass. Measured 4/4 + 5/5 at 20 writers, ~30 s median vs real
+        GitHub Actions; REMOTE.md 21/21 vs real github.com; poc/quarantine policy implemented in Go.
+      - poc/test_identity.py already states the hole ("DATUM_ROLE is SELF-DECLARED ... a hint, not
+        an identity"), defines THREE enforcement tiers (advisory+harness path denial = today's
+        parity / OS user per agent / per-role DB credentials) and tests ID1-ID7 — including ID1
+        (self-declared role is trivially forgeable, which QUANTIFIES the gap) and ID7 ("identity
+        gives ATTRIBUTION: writes are traceable to the acting agent").
+      - poc/test_two_devs.py IS the topology: two devs, two machines, one repo, agent fleets each,
+        testing whether THREE coordination layers COMPOSE (flock per machine / push rejection between
+        machines / Dolt 3-way cell merge on pull). Real subprocesses.
+      - siblings: test_multi_instance, test_multimachine, test_locking, test_mutex,
+        test_serverless_lock, test_cas_patterns, test_stress_fleet, test_stress_opt, test_scale,
+        test_zones, test_asymmetry. All 30 poc harnesses are TRACKED and on the remote.
+    SO: read these and their results FIRST, then state what is ACTUALLY left. Likely still open but
+    CHECK rather than assume: (a) does writer authorship survive the CI aggregator's merge DAG? —
+    untested, and it decides whether the identity fix is at the writer or needs a row-level
+    written_by; (b) how does the HUMAN identity axis compose with the agent-role tiers
+    test_identity.py already defines; (c) task/story CLAIMS — the aggregator serialises MERGES, not
+    who may work on what; (d) `datum aggregate` as a Go-native subcommand (today a throwaway
+    prototype workflow shelling out to the dolt CLI; "phase 2 plumbing pending").
+    ONE MEASURED FACT WORTH CARRYING: attribution is effectively UNSET — a probe showed the real
+    data commit recording committer="root" email="root@%", with datum <datum@local> only on Dolt's
+    own init commit, so invariant 18's "attributable" bar is currently FALSE.
 
-ALSO OUTSTANDING, highest first — F1 (locations are Go literals, not registry data; SYSTEMATIC,
-contradicts V-F, and MANUFACTURES false findings: epic/fr/nfr are 0/0/0 for two of three
-projects, producing 114 false "missing epic" findings; ship the zero-universe guard first, it is
-cheap) · F8 (X1's denominator shares its numerator's enumerator, so it cannot catch a LOCATION
-bug) · F2 (the registry hash gate re-couples every project) · F3 (X4 embeds a volatile scalar) ·
-G-4..G-9 from the storyboard run, which share one shape: A STATE ENTERED WITH NO ROUTE BACK OUT.
+TWO DECISIONS TO SETTLE WITH ME FIRST, do not assume: (a) derive each agent's needs from its AGENT
+FILE or from WHAT THE CORPUS SHOWS IT DID — they will disagree, and the disagreement is itself a
+finding; (b) does a persona needing ZERO writes stay a persona, or become a pure reader?
 
-BLOCKED ON ME — ASK, do not assume: the 2 namespace renames (a HARD PRECONDITION of schema
-generation) · opening the ADR · answering #671 · rivetry's delta-archive disposition · prism's 7
-FOLLOWUP story-id collisions.
+ALSO OUTSTANDING, highest first (research/FA-V1-ADVERSARIAL-REVIEW.md; its text-correction findings
+F3/F4/F5/F7 are already APPLIED to the layer docs, these three are not):
+  F1 — locations are Go path literals, not registry data. SYSTEMATIC across every layer, contradicts
+       V-F, and MANUFACTURES FALSE FINDINGS: epic/fr/nfr are 17/48/88 for vsdd and 0/0/0 for BOTH
+       other projects, producing 114 false "missing epic" findings in prism, while adr/cap/di load
+       fine — which is what makes it survive review. SHIP THE ZERO-UNIVERSE GUARD FIRST (any universe
+       empty while >=1 artifact references it is a finding); it makes all four instances loud, cheaply.
+  F8 — X1's denominator shares its numerator's enumerator, so the anti-instance-nine conservation
+       gate catches FILTER bugs but never LOCATION bugs (prism's epics: enumerate 0, compare 0, PASS).
+       Needs a total whole-corpus partition into types union unmodeled_file.
+  F2 — the registry hash gate re-couples every project, contradicting V-F. Version compatibility,
+       not hash equality; registry_state already records the version.
+  G-4..G-9 from the storyboard run, which share ONE shape: A STATE ENTERED WITH NO ROUTE BACK OUT
+       (timing side channel on DENIED-ASYMMETRY; a cursor must carry its project; erasure has no
+       anti-persona; an abandoned CONTINUATION is undetectable; a recorded classification is replayed
+       forever with no reclassify path; exit 2's escalation is unrouted).
 
-DO NOT RELITIGATE the 16 settled decisions D-A..D-D and V-A..V-L (spine §§0, 5b-5e). V-L is the
-newest: the store is a VERSIONED RELATIONAL engine holding a TRIPLE model, the graph is a
-PROJECTION served by recursive CTEs, and the engine is defended by the property set P1-P7 (L1-0)
-rather than by the name "Dolt".
+BLOCKED ON ME — ASK, do not assume: the 2 namespace renames (story-spec->story, state->pipeline-state)
+which are a HARD PRECONDITION of schema generation · opening the ADR · answering #671 · rivetry's
+delta-archive disposition · prism's 7 FOLLOWUP story-id collisions.
+⚠ Note vsdd-factory's own STATE.md ALREADY carries document_type: pipeline-state, so check whether
+that rename is partly done before treating it as untouched.
+
+DO NOT RELITIGATE the 16 settled decisions D-A..D-D and V-A..V-L (spine §§0, 5b-5e). V-L is newest:
+the store is a VERSIONED RELATIONAL engine holding a TRIPLE model (artifact_field IS
+subject-predicate-object), the graph is a PROJECTION served by RECURSIVE CTEs (measured: reachability
+1-13 ms, whole-graph closure ~356 ms; GMS supports them), and the engine is defended by the property
+set P1-P7 (L1-0) with P1/P4/P6 as VETO properties — not by the name "Dolt".
 
 OPERATING PRINCIPLES — every one earned by a real error here:
   - Measure, don't assume. NEVER infer a consequence from a structural fact.
+  - LOOK AT WHAT EXISTS BEFORE DESIGNING IT. I was wrong three times about multi-dev/identity by
+    reasoning from design docs while poc/test_identity.py and poc/test_two_devs.py sat right there.
   - MEASURE THE ALTERNATIVES TO THE LEVER BEFORE PULLING IT.
-  - CHECK YOUR FIX'S PREDICTION, don't tune. Reading ONE case beat tuning twice more this
-    session (instance ten, then the escaped-quote truncation).
-  - A parser that silently loses input is the most repeated defect class here — TEN instances,
-    two of them inside datum itself. Print per-form counts; report malformed; never drop.
-  - A hand-maintained vocabulary drifts from another one. Read vocabulary FROM the registry.
-  - A green check that never ran is not evidence — and a test that LOGS a failure instead of
-    failing is that same defect (I shipped one this session and had to fix it).
-  - Never report a number a test could contradict.
-  - Corpora are READ-ONLY. `git status` MISSES gitignored/untracked-dir changes — check counts
-    and mtimes. No AI attribution in commits. The repo now HAS a public remote (origin/main) —
-    pushes still need confirmation.
+  - CHECK YOUR FIX'S PREDICTION, don't tune. Reading ONE case beat tuning twice more last session.
+  - A parser that silently loses input is the most repeated defect class here — TEN instances, two
+    inside datum itself. Print per-form counts; report malformed; never drop.
+  - A test that LOGS a failure instead of FAILING is the green-check-that-never-ran defect. I shipped
+    one and had to fix it.
+  - AFTER A RENAME, CHECK THE DIFF, NOT JUST THE TESTS. I committed a 144.8 MB binary and GitHub's
+    100 MB limit caught it, not me; and a content sweep left three FILENAMES stale.
+  - Never report a number a test could contradict. Cite an artifact + version, never a live count.
+  - Corpora are READ-ONLY. `git status` MISSES gitignored/untracked-dir changes — check counts and
+    mtimes. No AI attribution in commits. Pushes need confirmation.
 
-STATE: clean and SYNCED WITH origin/main. The project was RENAMED dolt-artifact-spike -> datum and
-MOVED to ~/Dev/datum, the binary fa -> datum, and it now has a PUBLIC remote at
-github.com/BOHICA-LABS/datum. Nothing in flight, no WIP, nothing running.
-⚠ VSDD IS NOT TURNED ON YET — the user will activate it separately. Do not scaffold .factory.
+STATE: clean and synced with origin/main at 5f98f07. Nothing in flight, no WIP, nothing running.
 ```
+
 
 ### Kick-start (shell only)
 
@@ -485,11 +522,11 @@ CGO_ENABLED=1 go build -tags gms_pure_go -o datum .      # BOTH flags mandatory
 CGO_ENABLED=1 go test -tags gms_pure_go ./...          # 134 PASS, 0 fail, ~15 s
 cd .. && python3 registry/validate_registry.py         # exit 0 · 18,936 (prism drifts — re-measure)
 for c in vsdd-factory prism rivetry; do                # ALL THREE now import (exit 0)
-  rm -rf /tmp/fa_$c && ./datum/datum init --db /tmp/fa_$c >/dev/null
-  ./datum/datum import --db /tmp/fa_$c ~/Dev/$c/.factory
+  rm -rf /tmp/datum_$c && ./datum/datum init --db /tmp/datum_$c >/dev/null
+  ./datum/datum import --db /tmp/datum_$c ~/Dev/$c/.factory
 done
-./datum/datum validate --db /tmp/fa_vsdd-factory --registry ~/Dev/vsdd-factory/.factory   # 7,502
-./datum/datum shadow   --db /tmp/fa_vsdd-factory ~/Dev/vsdd-factory/.factory              # 658
+./datum/datum validate --db /tmp/datum_vsdd-factory --registry ~/Dev/vsdd-factory/.factory   # 7,502
+./datum/datum shadow   --db /tmp/datum_vsdd-factory ~/Dev/vsdd-factory/.factory              # 658
 # the measurement probes (opt-in; they need a corpus)
 cd datum && CGO_ENABLED=1 go test -tags gms_pure_go -run TestWideRowCeiling -v .
 DATUM_PIVOT_CORPUS=~/Dev/vsdd-factory/.factory CGO_ENABLED=1 go test -tags gms_pure_go \
